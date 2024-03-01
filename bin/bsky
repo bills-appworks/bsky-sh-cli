@@ -1,0 +1,239 @@
+#!/bin/sh
+FILE_DIR=`dirname $0`
+FILE_DIR=`(cd ${FILE_DIR} && pwd)`
+TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
+TOOLS_ROOT_DIR="${FILE_DIR}/.."
+TOOLS_ROOT_DIR=`(cd ${TOOLS_ROOT_DIR} && pwd)`
+. "${TOOLS_ROOT_DIR}/lib/util.sh"
+. "${TOOLS_ROOT_DIR}/lib/bsky_core.sh"
+
+# debug mode
+# log output to $HOME/.bsky-sh-cli/bsky-sh-cli_debug.log
+# activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line.
+#BSKYSHCLI_DEBUG=1
+
+output_help_general()
+{
+  debug 'output_help_general' 'START'
+
+  cat << 'EOS'
+bsky - A Bluesky CLI (Command Line Interface) implemented with shell script
+usage: bsky <command> [parameters]
+
+commands:
+  login     login to Bluesky for create session.
+  logout    logout from Bluesky for clear session.
+  timeline  show timeline.
+  help      show this help.
+
+To see command help:
+  bsky <command> help
+EOS
+
+  debug 'output_help_general' 'END'
+}
+
+output_help_login()
+{
+  debug 'output_help_login' 'START'
+
+  cat << 'EOS'
+bsky login command help'
+
+usage: bsky login --handle <handle> --password <password>
+
+parameters:
+  --handle <handle>
+    Specify Bluesky handle. Default domain (.bsky.social) can be omitted.
+  --password <password>
+    Specify the password corresponding to the handle.
+
+note:
+  A local file containing login session information is generated.
+  Login session information is deleted using the logout command.
+EOS
+
+  debug 'output_help_login' 'END'
+}
+
+output_help_logout()
+{
+  debug 'output_help_logout' 'START'
+
+  cat << 'EOS'
+bsky logout command help
+
+usage: bsky logout
+
+parameters:
+  none
+
+note:
+  Local files containing login session information are deleted.
+EOS
+
+  debug 'output_help_logout' 'END'
+}
+
+output_help_timeline()
+{
+  debug 'output_help_timeline' 'START'
+
+  cat << 'EOS'
+bsky timeline help
+
+usage: bsky timeline
+
+parameters:
+  <under construction>
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_timeline' 'END'
+}
+
+parse_parameters()
+{
+  debug 'parse_parameters' 'START'
+
+  while [ $# -gt 0 ]
+  do
+    case $1 in
+      help)
+        PARAM_HELP='help'
+        ;;
+      --handle)
+        if [ -z $2 ]
+        then
+          error 'Handle parameter value not specified.'
+          exit 1
+        fi
+        PARAM_HANDLE=$2
+        shift
+        ;;
+      --password)
+        if [ -z $2 ]
+        then
+          error 'Password parameter value not specified.'
+          exit 1
+        fi
+        PARAM_PASSWORD=$2
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+  done
+
+  debug 'parse_parameters' 'END'
+}
+
+command_login()
+{
+  debug 'command_login' 'START'
+
+  parse_parameters "$@"
+
+  if [ -n "${PARAM_HELP}" ]
+  then
+    output_help_login
+    return 0
+  fi
+
+  if [ -z "${PARAM_HANDLE}" ]
+  then
+    error 'Handle not specified.'
+    return 1
+  fi
+
+  if [ -z "${PARAM_PASSWORD}" ]
+  then
+    error 'Password not specified.'
+    return 1
+  fi
+
+  core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
+  read_session_file
+  echo "login session of ${SESSION_HANDLE}"
+
+  debug 'command_login' 'END'
+
+  return 0
+}
+
+command_logout()
+{
+  debug 'command_logout' 'START'
+
+  read_session_file
+  clear_session_file
+  if [ -n "${SESSION_HANDLE}" ]
+  then
+    echo "logout session of ${SESSION_HANDLE}"
+    unset SESSION_HANDLE
+    unset SESSION_ACCESS_JWT
+    unset SESSION_REFRESH_JWT
+  else
+    error 'session not found'
+    return 1
+  fi
+
+  debug 'command_logout' 'END'
+
+  return 0
+}
+
+command_timeline()
+{
+  debug 'command_timeline' 'START'
+
+  core_get_timeline
+
+  debug 'command_timeline' 'END'
+}
+
+# entry point
+
+mkdir -p "${TOOLS_WORK_DIR}"
+if [ $? -ne 0 ]
+then
+  error "cannot make work directory '${TOOLS_WORK_DIR}'"
+  exit 1
+fi
+
+debug 'bsky' 'START'
+debug 'bsky' "command parameters: $@"
+
+case $1 in
+  login)
+    shift
+    command_login "$@"
+    ;;
+  logout)
+    shift
+    command_logout "$@"
+    ;;
+  timeline)
+    shift
+    command_timeline "$@"
+    ;;
+  help)
+    output_help_general
+    ;;
+  *)
+    output_help_general
+    ;;
+esac
+
+debug 'bsky' 'END'
+
+exit 0
+

@@ -1,0 +1,38 @@
+#!/bin/sh
+FILENAME='com.atproto.server.createSession'
+FILE_DIR=`dirname $0`
+FILE_DIR=`(cd ${FILE_DIR} && pwd)`
+DIRECT_CALL=0
+if [ -z $TOOLS_WORK_DIR ]
+then
+  DIRECT_CALL=1
+  # direct call this script
+  TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
+fi
+if [ -z $TOOLS_ROOT_DIR ]
+then
+  # direct call this script
+  TOOLS_ROOT_DIR="${FILE_DIR}/../.."
+  TOOLS_ROOT_DIR=`(cd ${TOOLS_ROOT_DIR} && pwd)`
+  . "${TOOLS_ROOT_DIR}/lib/util.sh"
+fi
+. "${TOOLS_ROOT_DIR}/lib/api/proxy.sh"
+
+PARAM_BLUESKY_HANDLE=$1
+PARAM_BLUESKY_PASSWORD=$2
+
+debug "${FILENAME}" 'START'
+
+# debug mode turn off (prevent password recording)
+debug_mode_suppress
+
+RESULT=`api_post_nobearer 'com.atproto.server.createSession' '{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}'`
+
+# restore debug mode
+debug_mode_restore
+
+ACCESS_JWT=`echo "${RESULT}" | jq '.accessJwt'`
+REFRESH_JWT=`echo "${RESULT}" | jq '.refreshJwt'`
+create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
+
+debug "${FILENAME}" 'END'
