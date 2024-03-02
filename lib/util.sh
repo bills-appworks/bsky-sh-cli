@@ -6,8 +6,11 @@ BSKYSHCLI_DEBUG_ROOT_PATH="${TOOLS_WORK_DIR}"
 BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky-sh-cli_debug.log"
 BSKYSHCLI_DEBUG_SINGLE=''
 
+BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+
+SESSION_FILENAME_DEFAULT_PREFIX='_bsky-sh-cli'
+SESSION_FILENAME_SUFFIX='_session'
 SESSION_DIR="${TOOLS_WORK_DIR}"
-SESSION_FILENAME='bsky-sh-cli_session'
 SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
@@ -110,7 +113,7 @@ api()
 
   shift
   debug_single 'api'
-  RESULT=`sh ${TOOLS_ROOT_DIR}/lib/api/${API} $@ | tee $BSKYSHCLI_DEBUG_SINGLE`
+  RESULT=`. ${TOOLS_ROOT_DIR}/lib/api/${API} $@ | tee $BSKYSHCLI_DEBUG_SINGLE`
   ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
@@ -118,10 +121,10 @@ api()
     case "${ERROR}" in
       ExpiredToken)
         # TODO: refresh session
-        error 'Session expired (session auto refresh not yet implemented).'
+        error 'session expired (session auto refresh not yet implemented).'
         ;;
       *)
-        error 'Unknown error.'
+        error "unknown error: ${ERROR}"
         ;;
     esac
   fi
@@ -132,9 +135,31 @@ api()
   return 0
 }
 
+verify_profile_name()
+{
+  PROFILE="$1"
+
+  debug 'verify_profile_name' 'START'
+  debug 'verify_profile_name' "PROFILE:${PROFILE}"
+
+  VERIFY=`echo ${PROFILE} | sed 's/^[A-Za-z0-9][A-Za-z0-9_-.]*//g'`
+  if [ -n "${VERIFY}" ]
+  then
+    error "invalid profile name '${PROFILE}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
+  fi
+
+  debug 'verify_profile_name' 'END'
+}
+
 get_session_filepath()
 {
   debug 'get_session_filepath' 'START'
+  if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
+  then
+    SESSION_FILENAME="${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${SESSION_FILENAME_SUFFIX}"
+  else
+    SESSION_FILENAME="${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}"
+  fi
 
   SESSION_FILEPATH="${SESSION_DIR}/${SESSION_FILENAME}"
 
@@ -156,7 +181,7 @@ create_session_file()
 #  debug 'create_session_file' "ACCESS_JWT:${ACCESS_JWT}"
 #  debug 'create_session_file' "REFRESH_JWT:${REFRESH_JWT}"
 
-  SESSION_FILEPATH=`get_session_filepath "${HANDLE}"`
+  SESSION_FILEPATH=`get_session_filepath`
   echo "${SESSION_KEY_HANDLE}=${HANDLE}" > "${SESSION_FILEPATH}"
   echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}" >> "${SESSION_FILEPATH}"
   echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}" >> "${SESSION_FILEPATH}"
@@ -168,10 +193,12 @@ read_session_file()
 {
   debug 'read_session_file' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath "${HANDLE}"`
+  SESSION_FILEPATH=`get_session_filepath`
   if [ -e $SESSION_FILEPATH ]
   then
     . "${SESSION_FILEPATH}"
+  else
+    error "session not found: ${SESSION_FILEPATH}"
   fi
 
   debug 'read_session_file' 'END'
@@ -179,10 +206,12 @@ read_session_file()
 
 update_session_file()
 {
+  PROFILE="$1"
+
   debug 'update_session_file' 'START'
 
   # TODO
-  SESSION_FILEPATH=`get_session_filepath "${HANDLE}"`
+  SESSION_FILEPATH=`get_session_filepath`
 
   debug 'update_session_file' 'END'
 }
@@ -191,7 +220,7 @@ clear_session_file()
 {
   debug 'clear_session_file' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath "${HANDLE}"`
+  SESSION_FILEPATH=`get_session_filepath`
   if [ -e $SESSION_FILEPATH ]
   then
     rm -f "${SESSION_FILEPATH}"

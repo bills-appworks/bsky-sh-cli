@@ -12,7 +12,8 @@ TOOLS_ROOT_DIR=`(cd ${TOOLS_ROOT_DIR} && pwd)`
 # activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line.
 #BSKYSHCLI_DEBUG=1
 
-BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+# global option (default value)
+BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
 
 output_help_general()
 {
@@ -136,6 +137,42 @@ parse_parameters()
   debug 'parse_parameters' 'END'
 }
 
+parse_global_option()
+{
+  debug 'parse_global_option' 'START'
+
+  OPTIONS=0
+  while [ $# -gt 0 ]
+  do
+    case $1 in
+      --P|--profile)
+        if [ -z $2 ]
+        then
+          error 'profile option value not specified.'
+        fi
+        BSKYSHCLI_GLOBAL_OPTION_PROFILE=$2
+        verify_profile_name "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}"
+        OPTIONS=`expr ${OPTIONS} + 1`
+        shift
+        ;;
+      --)
+        OPTIONS=`expr ${OPTIONS} + 1`
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+    OPTIONS=`expr ${OPTIONS} + 1`
+    shift
+  done
+
+  debug 'parse_global_option' 'END'
+
+  return $OPTIONS
+}
+
 command_login()
 {
   debug 'command_login' 'START'
@@ -212,7 +249,14 @@ then
 fi
 
 debug 'bsky' 'START'
-debug 'bsky' "command parameters: $@"
+debug 'bsky' "command parameters: $*"
+
+parse_global_option "$@"
+OPTIONS=$?
+for INDEX in `seq 1 ${OPTIONS}`
+do
+  shift
+done
 
 case $1 in
   login)
