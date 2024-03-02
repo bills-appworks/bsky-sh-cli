@@ -110,7 +110,6 @@ parse_parameters()
         if [ -z $2 ]
         then
           error 'Handle parameter value not specified.'
-          exit 1
         fi
         PARAM_HANDLE=$2
         shift
@@ -119,7 +118,6 @@ parse_parameters()
         if [ -z $2 ]
         then
           error 'Password parameter value not specified.'
-          exit 1
         fi
         PARAM_PASSWORD=$2
         shift
@@ -153,13 +151,11 @@ command_login()
   if [ -z "${PARAM_HANDLE}" ]
   then
     error 'Handle not specified.'
-    return 1
   fi
 
   if [ -z "${PARAM_PASSWORD}" ]
   then
     error 'Password not specified.'
-    return 1
   fi
 
   HANDLE_CHECK=`echo ${PARAM_HANDLE} | sed 's/[^.]//g'`
@@ -191,7 +187,6 @@ command_logout()
     unset SESSION_REFRESH_JWT
   else
     error 'session not found'
-    return 1
   fi
 
   debug 'command_logout' 'END'
@@ -214,7 +209,6 @@ mkdir -p "${TOOLS_WORK_DIR}"
 if [ $? -ne 0 ]
 then
   error "cannot make work directory '${TOOLS_WORK_DIR}'"
-  exit 1
 fi
 
 debug 'bsky' 'START'

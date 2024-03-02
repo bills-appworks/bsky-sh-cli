@@ -98,6 +98,7 @@ error()
   MESSAGE="$1"
 
   echo "ERROR: ${MESSAGE}" 1>&2
+  exit 1
 }
 
 api()
@@ -123,8 +124,6 @@ api()
         error 'Unknown error.'
         ;;
     esac
-    debug 'api' 'END'
-    return 1
   fi
 
   debug 'api' 'END'
