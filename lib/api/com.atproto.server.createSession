@@ -34,8 +34,8 @@ fi
 # restore debug mode
 debug_mode_restore
 
-ACCESS_JWT=`echo "${RESULT}" | jq '.accessJwt'`
-REFRESH_JWT=`echo "${RESULT}" | jq '.refreshJwt'`
+ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
+REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
 create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
 
 debug "${FILENAME}" 'END'

@@ -49,6 +49,11 @@ ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
 # using GNU sed -z option
 ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
 
+get_timestamp()
+{
+  echo `date '+%Y/%m/%d %H:%M:%S'`
+}
+
 debug_mode_suppress()
 {
   EVACUATED_BSKYSHCLI_DEBUG="${BSKYSHCLI_DEBUG}"
@@ -67,7 +72,7 @@ debug()
 
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
-    TIMESTAMP=`date '+%Y/%m/%d %H:%M:%S'`
+    TIMESTAMP=`get_timestamp`
     echo "${TIMESTAMP} ${ID}: ${MESSAGE}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
   fi
 }
@@ -182,7 +187,9 @@ create_session_file()
 #  debug 'create_session_file' "REFRESH_JWT:${REFRESH_JWT}"
 
   SESSION_FILEPATH=`get_session_filepath`
-  echo "${SESSION_KEY_HANDLE}=${HANDLE}" > "${SESSION_FILEPATH}"
+  TIMESTAMP=`get_timestamp`
+  echo "# session create at ${TIMESTAMP}" > "${SESSION_FILEPATH}"
+  echo "${SESSION_KEY_HANDLE}=${HANDLE}" >> "${SESSION_FILEPATH}"
   echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}" >> "${SESSION_FILEPATH}"
   echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}" >> "${SESSION_FILEPATH}"
 
