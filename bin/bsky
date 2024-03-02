@@ -12,6 +12,8 @@ TOOLS_ROOT_DIR=`(cd ${TOOLS_ROOT_DIR} && pwd)`
 # activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line.
 #BSKYSHCLI_DEBUG=1
 
+BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+
 output_help_general()
 {
   debug 'output_help_general' 'START'
@@ -158,6 +160,12 @@ command_login()
   then
     error 'Password not specified.'
     return 1
+  fi
+
+  HANDLE_CHECK=`echo ${PARAM_HANDLE} | sed 's/[^.]//g'`
+  if [ -z "${HANDLE_CHECK}" ]
+  then
+    PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
   fi
 
   core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
