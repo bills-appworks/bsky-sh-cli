@@ -110,7 +110,7 @@ api()
   shift
   debug_single 'api'
   RESULT=`sh ${TOOLS_ROOT_DIR}/lib/api/${API} $@ | tee $BSKYSHCLI_DEBUG_SINGLE`
-  ERROR=`echo "${RESULT}" | jq -r '.error // empty'`
+  ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
     debug 'api' "ERROR:${ERROR}"

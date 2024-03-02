@@ -2,10 +2,8 @@
 FILENAME='app.bsky.feed.getTimeline'
 FILE_DIR=`dirname $0`
 FILE_DIR=`(cd ${FILE_DIR} && pwd)`
-DIRECT_CALL=0
 if [ -z $TOOLS_WORK_DIR ]
 then
-  DIRECT_CALL=1
   # direct call this script
   TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
 fi
@@ -23,6 +21,11 @@ PARAM_LIMIT=$2
 PARAM_CURSOR=$3
 
 debug "${FILENAME}" 'START'
+
+if [ "${BSKYSHCLI_API_RAWLIKE:=0}" -eq 1 ]
+then
+  ESCAPE_BSKYSHCLI=$ESCAPE_NEWLINE
+fi
 
 debug_single "${FILENAME}"
 echo -n `api_get 'app.bsky.feed.getTimeline' "${PARAM_ALGORITHM}" "${PARAM_LIMIT}" "${PARAM_CURSOR}"` | $ESCAPE_BSKYSHCLI | tee $BSKYSHCLI_DEBUG_SINGLE
