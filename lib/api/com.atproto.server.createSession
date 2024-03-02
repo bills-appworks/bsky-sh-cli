@@ -2,10 +2,8 @@
 FILENAME='com.atproto.server.createSession'
 FILE_DIR=`dirname $0`
 FILE_DIR=`(cd ${FILE_DIR} && pwd)`
-DIRECT_CALL=0
 if [ -z $TOOLS_WORK_DIR ]
 then
-  DIRECT_CALL=1
   # direct call this script
   TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
 fi
@@ -27,6 +25,11 @@ debug "${FILENAME}" 'START'
 debug_mode_suppress
 
 RESULT=`api_post_nobearer 'com.atproto.server.createSession' '{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}'`
+
+if [ ${BSKYSHCLI_API_RAWLIKE:=0} -eq 1 ]
+then
+  echo -n "${RESULT}"
+fi
 
 # restore debug mode
 debug_mode_restore
