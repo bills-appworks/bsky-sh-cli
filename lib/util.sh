@@ -160,7 +160,7 @@ verify_profile_name()
   debug 'verify_profile_name' 'START'
   debug 'verify_profile_name' "PROFILE:${PROFILE}"
 
-  VERIFY=`echo "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9_-.]*//g'`
+  VERIFY=`echo "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9._-]*//g'`
   if [ -n "${VERIFY}" ]
   then
     error "invalid profile name '${PROFILE}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
