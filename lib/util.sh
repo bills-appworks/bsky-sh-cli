@@ -1,11 +1,13 @@
 #!/bin/sh
-FILE_DIR=`dirname $0`
-FILE_DIR=`(cd ${FILE_DIR} && pwd)`
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 BSKYSHCLI_DEBUG_ROOT_PATH="${TOOLS_WORK_DIR}"
 BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky-sh-cli_debug.log"
 BSKYSHCLI_DEBUG_SINGLE=''
 
+# variable use at this file include(source) script
+# shellcheck disable=SC2034
 BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 
 SESSION_FILENAME_DEFAULT_PREFIX='_bsky-sh-cli'
@@ -16,28 +18,27 @@ SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 
 ## for restore (keeping) original JSON response 
-##  in script expanded escape sequence at function/command return value
+##  in script expanded escape sequence at function/command return value by standard output
 ## strategy:
 ##   no calibration
-##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR}"} and return to caller()
-##       caller receive in $VAR1  <-  callee return in $VAR
+##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR2}"} and return to caller()
+##       caller receive in $VAR1  <-  callee return in $VAR2
 ##         \"                     <-    \"
 ##         \a                     <-    \\a
 ##         \n                     <-    \\n
 ##         (line break)           <-    \n
 ##         (line break)           <-    (line break)
 ##   do calibration
-##     caller(){VAR1=`callee`} calls callee(){...;VAR=`echo "${VAR}" | $ESCAPE_BSKYSHCLI`;echo "${VAR}"} and return to caller()
-##       caller receive in $VAR1  <-  callee return in $VAR (after process ESCAPE_DOUBLEBACKSLASH) <- callee original $VAR (before process ESCAPE_DOUBLEBACKSLASH)
-##         \"                     <-    \"                                                         <-   \"
-##         \\a                    <-    \\\\a                                                      <-   \\a
-##         \\n                    <-    \\\\n                                                      <-   \\n
-##         (line break)           <-    \n                                                         <-   \n
-##         (line break)           <-    (line break)                                               <-   (line break)
+##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR2}" | $ESCAPE_BSKYSHCLI and return to caller()
+##       caller receive in $VAR1  <-  callee return in $VAR2 (after process ESCAPE_BSKYSHCLI) <- callee original $VAR (before process ESCAPE_BSKYSHCLI)
+##         \"                     <-    \"                                                    <-   \"
+##         \\a                    <-    \\\\a                                                 <-   \\a
+##         \\n                    <-    \\\\n                                                 <-   \\n
+##         (line break)           <-    \n                                                    <-   \n
+##         (line break)           <-    \n                                                    <-   (line break)
 ##   doing calibration each function layers
 ##   this logic is original \n(non escaped newline escape sequence literally) lacks and mix together with line break (0x0A)
 ##   this code assuming there are no line breaks in the original JSON
-##   in the top level function restore \n from line break by ESCPAE_NEWLINE
 ##
 # (line break) -> \n(literally), \n(literally) at the end of line -> (remove)
 # using GNU sed -z option
@@ -45,13 +46,17 @@ ESCAPE_NEWLINE_PATTERN='s/\n/\\n/g;s/\\n$//g'
 ESCAPE_NEWLINE="sed -z ${ESCAPE_NEWLINE_PATTERN}"
 # \\ -> \\\\ (literally in left variable of VAR=`echo "${VAR}" | $ESCAPE_DOUBLEBACKSLASH`)
 ESCAPE_DOUBLEBACKSLASH_PATTERN='s/\\\\/\\\\\\\\/g'
+# variable use at this file include(source) script
+# shellcheck disable=SC2034
 ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
 # using GNU sed -z option
+# variable use at this file include(source) script
+# shellcheck disable=SC2034
 ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
 
 get_timestamp()
 {
-  echo `date '+%Y/%m/%d %H:%M:%S'`
+  date '+%Y/%m/%d %H:%M:%S'
 }
 
 debug_mode_suppress()
@@ -85,7 +90,7 @@ debug_single()
   then
     BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_ROOT_PATH}/${FILE}"
   else
-    BSKYSHCLI_DEBUG_SINGLE=''
+    BSKYSHCLI_DEBUG_SINGLE='/dev/null'
   fi
 }
 
@@ -118,7 +123,12 @@ api()
 
   shift
   debug_single 'api'
-  RESULT=`. ${TOOLS_ROOT_DIR}/lib/api/${API} $@ | tee $BSKYSHCLI_DEBUG_SINGLE`
+  # BSKYSHCLI_API_PARAM use in API script
+  # shellcheck disable=SC2034
+  BSKYSHCLI_API_PARAM="$*"
+  # SC1090 disable for dynamical(variable) path source(.) using
+  # shellcheck source=/dev/null
+  RESULT=`. "${TOOLS_ROOT_DIR}"/lib/api/"${API}" | $ESCAPE_DOUBLEBACKSLASH | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
@@ -136,7 +146,10 @@ api()
 
   debug 'api' 'END'
 
-  echo "${RESULT}"
+  if [ -n "${RESULT}" ]
+  then
+    echo "${RESULT}"
+  fi
   return 0
 }
 
@@ -147,7 +160,7 @@ verify_profile_name()
   debug 'verify_profile_name' 'START'
   debug 'verify_profile_name' "PROFILE:${PROFILE}"
 
-  VERIFY=`echo ${PROFILE} | sed 's/^[A-Za-z0-9][A-Za-z0-9_-.]*//g'`
+  VERIFY=`echo "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9_-.]*//g'`
   if [ -n "${VERIFY}" ]
   then
     error "invalid profile name '${PROFILE}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
@@ -188,10 +201,12 @@ create_session_file()
 
   SESSION_FILEPATH=`get_session_filepath`
   TIMESTAMP=`get_timestamp`
-  echo "# session create at ${TIMESTAMP}" > "${SESSION_FILEPATH}"
-  echo "${SESSION_KEY_HANDLE}=${HANDLE}" >> "${SESSION_FILEPATH}"
-  echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}" >> "${SESSION_FILEPATH}"
-  echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}" >> "${SESSION_FILEPATH}"
+  {
+    echo "# session create at ${TIMESTAMP}"
+    echo "${SESSION_KEY_HANDLE}=${HANDLE}"
+    echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
+    echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
+  } > "${SESSION_FILEPATH}"
 
   debug 'create_session_file' 'END'
 }
@@ -201,8 +216,10 @@ read_session_file()
   debug 'read_session_file' 'START'
 
   SESSION_FILEPATH=`get_session_filepath`
-  if [ -e $SESSION_FILEPATH ]
+  if [ -e "${SESSION_FILEPATH}" ]
   then
+    # SC1090 disable for dynamial(variable) path source(.) using
+    # shellcheck source=/dev/null
     . "${SESSION_FILEPATH}"
   else
     error "session not found: ${SESSION_FILEPATH}"
@@ -228,7 +245,7 @@ clear_session_file()
   debug 'clear_session_file' 'START'
 
   SESSION_FILEPATH=`get_session_filepath`
-  if [ -e $SESSION_FILEPATH ]
+  if [ -e "${SESSION_FILEPATH}" ]
   then
     rm -f "${SESSION_FILEPATH}"
   fi

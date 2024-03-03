@@ -1,9 +1,9 @@
 #!/bin/sh
-FILE_DIR=`dirname $0`
-FILE_DIR=`(cd ${FILE_DIR} && pwd)`
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
 TOOLS_ROOT_DIR="${FILE_DIR}/.."
-TOOLS_ROOT_DIR=`(cd ${TOOLS_ROOT_DIR} && pwd)`
+TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
 . "${TOOLS_ROOT_DIR}/lib/util.sh"
 . "${TOOLS_ROOT_DIR}/lib/bsky_core.sh"
 
@@ -108,7 +108,7 @@ parse_parameters()
         PARAM_HELP='help'
         ;;
       --handle)
-        if [ -z $2 ]
+        if [ -z "$2" ]
         then
           error 'Handle parameter value not specified.'
         fi
@@ -116,7 +116,7 @@ parse_parameters()
         shift
         ;;
       --password)
-        if [ -z $2 ]
+        if [ -z "$2" ]
         then
           error 'Password parameter value not specified.'
         fi
@@ -146,17 +146,17 @@ parse_global_option()
   do
     case $1 in
       --P|--profile)
-        if [ -z $2 ]
+        if [ -z "$2" ]
         then
           error 'profile option value not specified.'
         fi
         BSKYSHCLI_GLOBAL_OPTION_PROFILE=$2
         verify_profile_name "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}"
-        OPTIONS=`expr ${OPTIONS} + 1`
+        OPTIONS=`expr "${OPTIONS}" + 1`
         shift
         ;;
       --)
-        OPTIONS=`expr ${OPTIONS} + 1`
+        OPTIONS=`expr "${OPTIONS}" + 1`
         shift
         break
         ;;
@@ -164,13 +164,13 @@ parse_global_option()
         break
         ;;
     esac
-    OPTIONS=`expr ${OPTIONS} + 1`
+    OPTIONS=`expr "${OPTIONS}" + 1`
     shift
   done
 
   debug 'parse_global_option' 'END'
 
-  return $OPTIONS
+  return "${OPTIONS}"
 }
 
 command_login()
@@ -195,7 +195,7 @@ command_login()
     error 'Password not specified.'
   fi
 
-  HANDLE_CHECK=`echo ${PARAM_HANDLE} | sed 's/[^.]//g'`
+  HANDLE_CHECK=`echo "${PARAM_HANDLE}" | sed 's/[^.]//g'`
   if [ -z "${HANDLE_CHECK}" ]
   then
     PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
@@ -242,8 +242,10 @@ command_timeline()
 
 # entry point
 
+# equal to if ! mkdir...; does not written for compatible with Solaris sh
 mkdir -p "${TOOLS_WORK_DIR}"
-if [ $? -ne 0 ]
+RESULT=$?
+if [ $RESULT -ne 0 ]
 then
   error "cannot make work directory '${TOOLS_WORK_DIR}'"
 fi
@@ -253,7 +255,7 @@ debug 'bsky' "command parameters: $*"
 
 parse_global_option "$@"
 OPTIONS=$?
-for INDEX in `seq 1 ${OPTIONS}`
+for _ in `seq 1 ${OPTIONS}`
 do
   shift
 done

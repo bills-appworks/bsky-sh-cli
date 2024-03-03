@@ -1,0 +1,9 @@
+# SC1091 disable for dynamical(variable) path source(.) using
+external-sources=true
+
+# recommendation expr -> $((...)) disable for compatible with Solaris sh
+disable=SC2003
+
+# recommendation `...` -> $(...) disable for compatible with Solaris sh
+disable=SC2006
+
