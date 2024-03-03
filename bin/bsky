@@ -145,7 +145,7 @@ parse_global_option()
   while [ $# -gt 0 ]
   do
     case $1 in
-      --P|--profile)
+      -P|--profile)
         if [ -z "$2" ]
         then
           error 'profile option value not specified.'
