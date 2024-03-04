@@ -17,15 +17,19 @@ create_authorization_header()
 api_get()
 {
   ENDPOINT="$1"
+  BEARER="$2"
 
   debug 'api_get' 'START'
   debug 'api_get' "ENDPOINT:${ENDPOINT}"
 
-  read_session_file
-  HEADER_AUTHORIZATION=`create_authorization_header "${SESSION_ACCESS_JWT}"`
+  if [ -z "${BEARER}" ]
+  then
+    read_session_file
+    BEARER="${SESSION_ACCESS_JWT}"
+  fi
+  HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
   debug_single 'api_get'
   curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
-  # TODO: refresh session
 
   debug 'api_get' 'END'
 }
@@ -42,8 +46,26 @@ api_post_nobearer()
   debug_single 'api_post_nobearer'
   curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_CONTENT_TYPE}" -d "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-# WARNING: result value may contain sensitive information (e.g. session token) and will remain in the debug log
-#  debug_json 'api_post_nobearer' "${RESULT}"
   debug 'api_post_nobearer' 'END'
 }
 
+api_post()
+{
+  ENDPOINT="$1"
+  BEARER="$2"
+  BODY="$3"
+
+  debug 'api_post' 'START'
+  debug 'api_post' "ENDPOINT:${ENDPOINT}"
+
+  if [ -z "${BEARER}" ]
+  then
+    read_session_file
+    BEARER="${SESSION_ACCESS_JWT}"
+  fi
+  HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
+  debug_single 'api_post'
+  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+  debug 'api_post' 'END'
+}

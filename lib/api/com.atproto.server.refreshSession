@@ -1,5 +1,5 @@
 #!/bin/sh
-FILENAME='app.bsky.feed.getTimeline'
+FILENAME='com.atproto.server.refreshSession'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 if [ -z "${TOOLS_WORK_DIR}" ]
@@ -22,14 +22,18 @@ then
   # shellcheck disable=SC2086
   set -- $BSKYSHCLI_API_PARAM
 fi
-PARAM_ALGORITHM=$1
-PARAM_LIMIT=$2
-PARAM_CURSOR=$3
+PARAM_REFRESH_JWT=$1
 
 debug "${FILENAME}" 'START'
 
-# TODO: params convert to URL parameter for api_get
 debug_single "${FILENAME}"
-api_get 'app.bsky.feed.getTimeline' '' "${PARAM_ALGORITHM}" "${PARAM_LIMIT}" "${PARAM_CURSOR}" | tr -d '\n' | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+RESULT=`api_post 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+
+echo "${RESULT}" | tr -d '\n'
+
+HANDLE=`echo "${RESULT}" | jq -r '.handle | @sh'`
+ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
+REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
+update_session_file "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
 
 debug "${FILENAME}" 'END'

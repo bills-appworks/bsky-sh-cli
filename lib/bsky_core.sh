@@ -23,14 +23,7 @@ core_get_timeline()
   debug 'core_get_timeline' 'START'
 
   debug_single 'core_get_timeline'
-  RESULT=`api app.bsky.feed.getTimeline | $ESCAPE_BSKYSHCLI | tee "$BSKYSHCLI_DEBUG_SINGLE"`
-  RETURN_CODE=$?
-
-  if [ $RETURN_CODE -ne 0 ]
-  then
-    debug 'core_get_timeline' 'END'
-    return $RETURN_CODE
-  fi
+  RESULT=`api app.bsky.feed.getTimeline | $ESCAPE_NEWLINE | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
 #  FEED_COUNT=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq '.feed | length'`
   echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r 'foreach .feed[] as $feed (0; 0; 

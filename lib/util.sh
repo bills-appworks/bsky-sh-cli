@@ -18,7 +18,7 @@ SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 
 ## for restore (keeping) original JSON response 
-##  in script expanded escape sequence at function/command return value by standard output
+##  in script expanded escape sequence at function/command return value by echo to standard output
 ## strategy:
 ##   no calibration
 ##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR2}"} and return to caller()
@@ -114,29 +114,31 @@ error()
   exit 1
 }
 
-api()
+api_core()
 {
   API="$1"
+  # various API params continue
 
-  debug 'api' 'START'
-  debug 'api' "API:${API}"
+  debug 'api_core' 'START'
+  debug 'api_core' "API:${API}"
 
   shift
-  debug_single 'api'
+  debug_single 'api_core-1'
   # BSKYSHCLI_API_PARAM use in API script
   # shellcheck disable=SC2034
   BSKYSHCLI_API_PARAM="$*"
   # SC1090 disable for dynamical(variable) path source(.) using
   # shellcheck source=/dev/null
-  RESULT=`. "${TOOLS_ROOT_DIR}"/lib/api/"${API}" | $ESCAPE_DOUBLEBACKSLASH | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  RESULT=`. "${TOOLS_ROOT_DIR}"/lib/api/"${API}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
-    debug 'api' "ERROR:${ERROR}"
+    debug 'api_core' "ERROR:${ERROR}"
     case "${ERROR}" in
       ExpiredToken)
         # TODO: refresh session
-        error 'session expired (session auto refresh not yet implemented).'
+        #error 'session expired (session auto refresh not yet implemented).'
+        return 2
         ;;
       *)
         error "unknown error: ${ERROR}"
@@ -144,13 +146,48 @@ api()
     esac
   fi
 
-  debug 'api' 'END'
-
   if [ -n "${RESULT}" ]
   then
-    echo "${RESULT}"
+    debug_single 'api_core-2'
+    echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"
   fi
+
+  debug 'api_core' 'END'
   return 0
+}
+
+api()
+{
+  # TODO: retry any time for api_core error
+  API="$1"
+  # various API params continue
+
+  debug 'api' 'START'
+  debug 'api' "API:${API}"
+
+  RESULT=`api_core "$@"`
+  STATUS=$?
+  debug_single 'api-1'
+  RESULT=`echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  debug 'api' "api_core status: ${STATUS}"
+  case $STATUS in
+    0)
+      debug_single 'api-2'
+      echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      ;;
+    1)
+      error "unknown error: ${ERROR}"
+      ;;
+    2)
+      # session expired
+      read_session_file
+      api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
+      debug_single 'api-3'
+      api_core "$@" | $ESCAPE_DOUBLEBACKSLASH | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      ;;
+  esac
+
+  debug 'api' 'END'
 }
 
 verify_profile_name()
@@ -187,6 +224,42 @@ get_session_filepath()
   echo "${SESSION_FILEPATH}"
 }
 
+create_session_info()
+{
+  OPS="$1"
+  HANDLE="$2"
+  ACCESS_JWT="$3"
+  REFRESH_JWT="$4"
+
+  debug 'create_session_info' 'START'
+
+  debug 'create_session_info' "PROFILE: ${PROFILE}"
+  debug 'create_session_info' "UPDATE_MODE: ${UPDATE_MODE}"
+  debug 'create_session_info' "HANDLE: ${HANDLE}"
+  if [ -n "${ACCESS_JWT}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'create_session_info' "ACCESS_JWT: ${MESSAGE}"
+  if [ -n "${REFRESH_JWT}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
+
+  TIMESTAMP=`get_timestamp`
+  echo "# session ${OPS} at ${TIMESTAMP}"
+  echo "${SESSION_KEY_HANDLE}=${HANDLE}"
+  echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
+  echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
+
+  debug 'create_session_info' 'END'
+}
+
 create_session_file()
 {
   HANDLE="$1"
@@ -200,13 +273,7 @@ create_session_file()
 #  debug 'create_session_file' "REFRESH_JWT:${REFRESH_JWT}"
 
   SESSION_FILEPATH=`get_session_filepath`
-  TIMESTAMP=`get_timestamp`
-  {
-    echo "# session create at ${TIMESTAMP}"
-    echo "${SESSION_KEY_HANDLE}=${HANDLE}"
-    echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
-    echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
-  } > "${SESSION_FILEPATH}"
+  create_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
 
   debug 'create_session_file' 'END'
 }
@@ -230,12 +297,21 @@ read_session_file()
 
 update_session_file()
 {
-  PROFILE="$1"
+  HANDLE="$1"
+  ACCESS_JWT="$2"
+  REFRESH_JWT="$3"
 
   debug 'update_session_file' 'START'
 
-  # TODO
   SESSION_FILEPATH=`get_session_filepath`
+  case $BSKYSHCLI_SESSION_FILE_UPDATE in
+    append)
+      create_session_info 'update' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" >> "${SESSION_FILEPATH}"
+      ;;
+    overwrite|*)
+      create_session_info 'update' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
+      ;;
+  esac
 
   debug 'update_session_file' 'END'
 }
