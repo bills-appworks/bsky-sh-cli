@@ -1,0 +1,15 @@
+#!/bin/sh
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implemented with shell script
+# Author Bluesky:@billsbs.bills-appworks.net
+# 
+# Copyright (c) 2024 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# resource config
+
+# debug mode
+#BSKYSHCLI_DEBUG=1
+# library path
+#BSKYSHCLI_LIB_PATH='path/to/bsky-sh-cli/lib'

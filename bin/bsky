@@ -8,6 +8,28 @@
 # http://opensource.org/licenses/mit-license.php
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
+BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
+BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/.."
+BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && pwd)`
+
+# read resource config
+if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  BSKYSHCLI_RESOURCE_CONFIG_PATH="${BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH}"
+elif [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  :
+else
+  echo "specified resource config path (BSKYSHCLI_RESOURCE_CONFIG_PATH) is not readable: ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+  exit 1
+fi
+if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+fi
+
 TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 TOOLS_ROOT_DIR="${FILE_DIR}/.."
 TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
@@ -21,6 +43,8 @@ TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
 
 # global option (default value)
 BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
+
+# functions
 
 output_help_general()
 {
