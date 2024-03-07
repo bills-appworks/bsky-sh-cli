@@ -9,6 +9,9 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then
+BSKYSHCLI_DEFINE_UTIL='defined'
+
 BSKYSHCLI_DEBUG_ROOT_PATH="${TOOLS_WORK_DIR}"
 BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky_sh_cli_debug.log"
 BSKYSHCLI_DEBUG_SINGLE=''
@@ -336,3 +339,5 @@ clear_session_file()
   debug 'clear_session_file' 'END'
 }
 
+# ifndef BSKYSHCLI_DEFIN_UTIL
+fi
