@@ -12,7 +12,7 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 if [ -z "${TOOLS_WORK_DIR}" ]
 then
   # direct call this script
-  TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
+  TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 fi
 if [ -z "${TOOLS_ROOT_DIR}" ]
 then

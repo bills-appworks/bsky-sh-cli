@@ -8,14 +8,14 @@
 # http://opensource.org/licenses/mit-license.php
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
-TOOLS_WORK_DIR="${HOME}/.bsky-sh-cli"
+TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 TOOLS_ROOT_DIR="${FILE_DIR}/.."
 TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
 . "${TOOLS_ROOT_DIR}/lib/util.sh"
 . "${TOOLS_ROOT_DIR}/lib/bsky_core.sh"
 
 # debug mode
-# log output to $HOME/.bsky-sh-cli/bsky-sh-cli_debug.log
+# log output to $HOME/.bsky_sh_cli/bsky_sh_cli_debug.log
 # activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line.
 #BSKYSHCLI_DEBUG=1
 

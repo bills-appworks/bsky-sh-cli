@@ -10,14 +10,14 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 BSKYSHCLI_DEBUG_ROOT_PATH="${TOOLS_WORK_DIR}"
-BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky-sh-cli_debug.log"
+BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky_sh_cli_debug.log"
 BSKYSHCLI_DEBUG_SINGLE=''
 
 # variable use at this file include(source) script
 # shellcheck disable=SC2034
 BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 
-SESSION_FILENAME_DEFAULT_PREFIX='_bsky-sh-cli'
+SESSION_FILENAME_DEFAULT_PREFIX='_bsky_sh_cli'
 SESSION_FILENAME_SUFFIX='_session'
 SESSION_DIR="${TOOLS_WORK_DIR}"
 SESSION_KEY_HANDLE='SESSION_HANDLE'
