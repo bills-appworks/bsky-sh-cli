@@ -13,3 +13,5 @@
 #BSKYSHCLI_DEBUG=1
 # library path
 #BSKYSHCLI_LIB_PATH='path/to/bsky-sh-cli/lib'
+# timezone (value format same to TZ environment variable)
+#BSKYSHCLI_TZ=

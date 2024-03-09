@@ -64,6 +64,14 @@ ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
 # shellcheck disable=SC2034
 ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
 
+set_timezone()
+{
+  if [ -n "${BSKYSHCLI_TZ}" ]
+  then
+    export TZ="${BSKYSHCLI_TZ}"
+  fi
+}
+
 get_timestamp()
 {
   date '+%Y/%m/%d %H:%M:%S'

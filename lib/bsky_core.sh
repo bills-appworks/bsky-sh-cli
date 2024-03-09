@@ -33,7 +33,8 @@ core_get_timeline()
 
 #  FEED_COUNT=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq '.feed | length'`
   echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r 'foreach .feed[] as $feed (0; 0; 
-"\($feed.post.author.displayName) @\($feed.post.author.handle) \($feed.post.record.createdAt)
+$feed.post.record.createdAt | [split(".")[0],"Z"] | join("") | fromdate | strflocaltime("%F %X(%Z)") as $postCreatedAt |
+"\($feed.post.author.displayName) @\($feed.post.author.handle) \($postCreatedAt)
 \($feed.post.record.text)
 Reply:\($feed.post.replyCount) Repost:\($feed.post.repostCount) Like:\($feed.post.likeCount)
 ")'
