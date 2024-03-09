@@ -9,19 +9,17 @@
 FILENAME='com.atproto.server.refreshSession'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
-if [ -z "${TOOLS_WORK_DIR}" ]
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  # direct call this script
-  TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  # SC1091
+  # shellcheck source=SCRIPTDIR/common.sh
+  . "${BSKYSHCLI_API_PATH}/common.sh"
 fi
-if [ -z "${TOOLS_ROOT_DIR}" ]
-then
-  # direct call this script
-  TOOLS_ROOT_DIR="${FILE_DIR}/../.."
-  TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
-  . "${TOOLS_ROOT_DIR}/lib/util.sh"
-fi
-. "${TOOLS_ROOT_DIR}/lib/api/proxy.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
 
 if [ -n "${BSKYSHCLI_API_PARAM}" ]
 then
@@ -38,9 +36,14 @@ RESULT=`api_post 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | te
 
 echo "${RESULT}" | tr -d '\n'
 
-HANDLE=`echo "${RESULT}" | jq -r '.handle | @sh'`
-ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
-REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
-update_session_file "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
+ERROR=`echo "${RESULT}" | jq -r '.error // empty'`
+
+if [ -z "${ERROR}" ]
+then
+  HANDLE=`echo "${RESULT}" | jq -r '.handle | @sh'`
+  ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
+  REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
+  update_session_file "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
+fi
 
 debug "${FILENAME}" 'END'

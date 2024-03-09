@@ -8,7 +8,6 @@
 # http://opensource.org/licenses/mit-license.php
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
-. "${TOOLS_ROOT_DIR}/lib/util.sh"
 
 core_create_session()
 {

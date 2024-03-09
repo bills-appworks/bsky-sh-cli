@@ -12,8 +12,8 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then
 BSKYSHCLI_DEFINE_UTIL='defined'
 
-BSKYSHCLI_DEBUG_ROOT_PATH="${TOOLS_WORK_DIR}"
-BSKYSHCLI_DEBUG_LOG_FILEPATH="${TOOLS_WORK_DIR}/bsky_sh_cli_debug.log"
+BSKYSHCLI_DEBUG_ROOT_PATH="${BSKYSHCLI_TOOLS_WORK_DIR}"
+BSKYSHCLI_DEBUG_LOG_FILEPATH="${BSKYSHCLI_TOOLS_WORK_DIR}/bsky_sh_cli_debug.log"
 BSKYSHCLI_DEBUG_SINGLE=''
 
 # variable use at this file include(source) script
@@ -22,7 +22,7 @@ BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 
 SESSION_FILENAME_DEFAULT_PREFIX='_bsky_sh_cli'
 SESSION_FILENAME_SUFFIX='_session'
-SESSION_DIR="${TOOLS_WORK_DIR}"
+SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
 SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
@@ -139,7 +139,7 @@ api_core()
   BSKYSHCLI_API_PARAM="$*"
   # SC1090 disable for dynamical(variable) path source(.) using
   # shellcheck source=/dev/null
-  RESULT=`. "${TOOLS_ROOT_DIR}"/lib/api/"${API}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  RESULT=`. "${BSKYSHCLI_API_PATH}/${API}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
@@ -295,7 +295,7 @@ read_session_file()
   SESSION_FILEPATH=`get_session_filepath`
   if [ -e "${SESSION_FILEPATH}" ]
   then
-    # SC1090 disable for dynamial(variable) path source(.) using
+    # SC1090 disable for dynamical(variable) path source(.) using and generize on runtime
     # shellcheck source=/dev/null
     . "${SESSION_FILEPATH}"
   else
@@ -339,5 +339,6 @@ clear_session_file()
   debug 'clear_session_file' 'END'
 }
 
-# ifndef BSKYSHCLI_DEFIN_UTIL
+# ifndef BSKYSHCLI_DEFINE_UTIL
 fi
+

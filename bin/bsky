@@ -9,10 +9,22 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+# debug mode
+# log output to $HOME/.bsky_sh_cli/bsky_sh_cli_debug.log
+# activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line or define at resource config.
+#BSKYSHCLI_DEBUG=1
+
+# following definitions are same to lib/api/common.sh
+# for indipendence of this bsky command
+
+# global option (default value)
+BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
+
 BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/.."
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && pwd)`
+BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
 
 # read resource config
 if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
@@ -27,22 +39,48 @@ else
 fi
 if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
 then
+  # SC1090 disable for resource config file generize on runtime
+  # shellcheck source=/dev/null
   . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
 fi
 
-TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
-TOOLS_ROOT_DIR="${FILE_DIR}/.."
-TOOLS_ROOT_DIR=`(cd "${TOOLS_ROOT_DIR}" && pwd)`
-. "${TOOLS_ROOT_DIR}/lib/util.sh"
-. "${TOOLS_ROOT_DIR}/lib/bsky_core.sh"
+if [ -z "${BSKYSHCLI_TOOLS_WORK_DIR}" ]
+then
+  BSKYSHCLI_TOOLS_WORK_DIR="${BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR}"
+fi
+if [ -z "${BSKYSHCLI_TOOLS_ROOT_DIR}" ]
+then
+  BSKYSHCLI_TOOLS_ROOT_DIR="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}"
+fi
+if [ -z "${BSKYSHCLI_LIB_PATH}" ]
+then
+  BSKYSHCLI_LIB_PATH="${BSKYSHCLI_DEFAULT_LIB_PATH}"
+fi
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${BSKYSHCLI_LIB_PATH}/api"
+fi
 
-# debug mode
-# log output to $HOME/.bsky_sh_cli/bsky_sh_cli_debug.log
-# activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line.
-#BSKYSHCLI_DEBUG=1
-
-# global option (default value)
-BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
+UTILITY_PATH="${BSKYSHCLI_LIB_PATH}/util.sh"
+if [ -r "${UTILITY_PATH}" ]
+then
+  # SC1090
+  # shellcheck source=SCRIPTDIR/../lib/util.sh
+  . "${UTILITY_PATH}"
+else
+  error "tools internal configured file util.sh is not readable: ${UTILITY_PATH}"
+  exit 1
+fi
+BSKY_CORE_PATH="${BSKYSHCLI_LIB_PATH}/bsky_core.sh"
+if [ -r "${BSKY_CORE_PATH}" ]
+then
+  # SC1090
+  # shellcheck source=SCRIPTDIR/../lib/bsky_core.sh
+  . "${BSKY_CORE_PATH}"
+else
+  error "tools internal configured file bsky_core.sh is not readable: ${BSKY_CORE_PATH}"
+  exit 1
+fi
 
 # functions
 
@@ -274,7 +312,7 @@ command_timeline()
 # entry point
 
 # equal to if ! mkdir...; does not written for compatible with Solaris sh
-mkdir -p "${TOOLS_WORK_DIR}"
+mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
 RESULT=$?
 if [ $RESULT -ne 0 ]
 then

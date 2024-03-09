@@ -17,6 +17,8 @@ TARGETS='
 for TARGET in $TARGETS
 do
   echo "shellcheck >>>> ${TARGET}"
-  shellcheck "${TARGET}"
+# if checking SC1090:source to resource config file, set source-path to home directory
+##  shellcheck --source-path="${HOME}" "$@" "${TARGET}"
+  shellcheck "$@" "${TARGET}"
 done
 

@@ -9,6 +9,9 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+if [ -z "${BSKYSHCLI_DEFINE_PROXY}" ]; then
+BSKYSHCLI_DEFINE_PROXY='defined'
+
 ENDPOINT_BASE_URL='https://bsky.social/xrpc/'
 HEADER_ACCEPT='Accept: application/json'
 HEADER_AUTHORIZATION_PREFIX='Authorization: Bearer'
@@ -76,3 +79,6 @@ api_post()
 
   debug 'api_post' 'END'
 }
+
+# ifndef BSKYSCHCLI_DEFINE_PROXY
+fi
