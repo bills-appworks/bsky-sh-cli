@@ -311,10 +311,10 @@ command_timeline()
 
 # entry point
 
+set_timezone
+
 debug 'bsky' 'START'
 debug 'bsky' "command parameters: $*"
-
-set_timezone
 
 # equal to if ! mkdir...; does not written for compatible with Solaris sh
 mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
