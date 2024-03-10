@@ -6,7 +6,7 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-FILENAME='com.atproto.server.refreshSession'
+FILENAME='com.atproto.repo.createRecord'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -32,7 +32,7 @@ PARAM_REFRESH_JWT=$1
 debug "${FILENAME}" 'START'
 
 debug_single "${FILENAME}"
-RESULT=`api_post_bearer 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+RESULT=`api_post 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
 echo "${RESULT}" | tr -d '\n'
 
