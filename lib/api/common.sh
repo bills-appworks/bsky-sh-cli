@@ -1,6 +1,6 @@
 #!/bin/sh
 # Bluesky in the shell
-# A Bluesky CLI (Command Line Interface) implemented with shell script
+# A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@billsbs.bills-appworks.net
 #
 # Copyright (c) 2024 bills-appworks
