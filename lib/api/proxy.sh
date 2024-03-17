@@ -21,7 +21,11 @@ create_authorization_header()
 {
   BEARER="$1"
 
+  debug 'create_authorization_header' 'START'
+
   echo "${HEADER_AUTHORIZATION_PREFIX} ${BEARER}"
+
+  debug 'create_authorization_header' 'END'
 }
 
 api_get()
@@ -87,7 +91,7 @@ api_post()
   BEARER="${SESSION_ACCESS_JWT}"
   HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
   debug_single 'api_post'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" -d "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" -d "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post' 'END'
 }

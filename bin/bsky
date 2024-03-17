@@ -96,6 +96,7 @@ commands:
   login     login to Bluesky for create session.
   logout    logout from Bluesky for clear session.
   timeline  show timeline.
+  post      post text.
   help      show this help.
 
 To see command help:
@@ -166,9 +167,29 @@ EOS
   debug 'output_help_timeline' 'END'
 }
 
-parse_parameters()
+output_help_post()
 {
-  debug 'parse_parameters' 'START'
+  debug 'output_help_post' 'START'
+
+  cat << 'EOS'
+bsky timeline help
+
+usage: bsky timeline
+
+parameters:
+  --text '<text>'
+    Specify text for post.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_post' 'END'
+}
+
+parse_parameters_login()
+{
+  debug 'parse_parameters_login' 'START'
 
   while [ $# -gt 0 ]
   do
@@ -203,7 +224,7 @@ parse_parameters()
     shift
   done
 
-  debug 'parse_parameters' 'END'
+  debug 'parse_parameters_login' 'END'
 }
 
 parse_global_option()
@@ -246,7 +267,7 @@ command_login()
 {
   debug 'command_login' 'START'
 
-  parse_parameters "$@"
+  parse_parameters_login "$@"
 
   if [ -n "${PARAM_HELP}" ]
   then
@@ -309,6 +330,23 @@ command_timeline()
   debug 'command_timeline' 'END'
 }
 
+command_post()
+{
+  debug 'command_post' 'START'
+
+  parse_parameters '--text:1' "$@"
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
+  if [ -z "${POST_TEXT}" ]
+  then
+    error "parameter --text '<text>' not specified"
+  fi
+  core_post "${POST_TEXT}"
+
+  debug 'command_post' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -321,7 +359,7 @@ mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
 RESULT=$?
 if [ $RESULT -ne 0 ]
 then
-  error "cannot make work directory '${TOOLS_WORK_DIR}'"
+  error "cannot make work directory '${BSKYSHCLI_TOOLS_WORK_DIR}'"
 fi
 
 parse_global_option "$@"
@@ -343,6 +381,10 @@ case $1 in
   timeline)
     shift
     command_timeline "$@"
+    ;;
+  post)
+    shift
+    command_post "$@"
     ;;
   help)
     output_help_general

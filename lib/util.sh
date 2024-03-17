@@ -50,6 +50,8 @@ SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 ##   this logic is original \n(non escaped newline escape sequence literally) lacks and mix together with line break (0x0A)
 ##   this code assuming there are no line breaks in the original JSON
 ##
+## however, this process is redundantly escaped when execute under VSCode bash debug v0.3.9.
+##
 # (line break) -> \n(literally), \n(literally) at the end of line -> (remove)
 # using GNU sed -z option
 ESCAPE_NEWLINE_PATTERN='s/\n/\\n/g;s/\\n$//g'
@@ -64,6 +66,49 @@ ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
 # shellcheck disable=SC2034
 ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
 
+_p()
+{
+  printf '%s' "$*"
+}
+
+_strlen()
+{
+  STRING=$1
+
+  RESULT=`_p "${STRING}" | wc -c`
+  return "${RESULT}"
+}
+
+_strleft()
+{
+  STRING=$1
+  SEPARATOR=$2
+
+  _p "${STRING}" | sed "s/\(^[^${SEPARATOR}]*\)${SEPARATOR}.*$/\1/"
+}
+
+_strright()
+{
+  STRING=$1
+  SEPARATOR=$2
+
+  SEPARATOR_IN_STRING=`_p "${STRING}" | sed "s/[^${SEPARATOR}]//g"`
+  if [ -z "${SEPARATOR_IN_STRING}" ]
+  then
+    _p ''
+  else
+    _p "${STRING}" | sed "s/^.*${SEPARATOR}\([^${SEPARATOR}]*$\)/\1/"
+  fi
+}
+
+_cut()
+{
+  STRING=$1
+  shift
+
+  _p "`_p "${STRING}" | cut "$@" | tr -d '\n'`"
+}
+
 set_timezone()
 {
   if [ -n "${BSKYSHCLI_TZ}" ]
@@ -75,6 +120,11 @@ set_timezone()
 get_timestamp()
 {
   date '+%Y/%m/%d %H:%M:%S'
+}
+
+get_ISO8601UTCbs()
+{
+  date -u '+%Y-%m-%dT%H:%M:%S.000Z'
 }
 
 debug_mode_suppress()
@@ -132,6 +182,202 @@ error()
   exit 1
 }
 
+get_option_type()
+{
+  OPTION_TYPE_TARGET=$1
+
+  case `_cut "${OPTION_TYPE_TARGET}" -c 1` in
+    -)  # '-...'
+      case `_cut "${OPTION_TYPE_TARGET}" -c 2` in
+        -)
+          _strlen "${OPTION_TYPE_TARGET}"
+          if [ $? -eq 2 ]
+          then  # '--'
+            return 255
+          fi
+          return 2
+          ;;
+        *)  # '-<any>'
+          return 1
+          ;;
+      esac
+      ;;
+    *)  # '<any>'
+      return 0
+      ;;
+  esac
+}
+
+parse_parameter_element()
+{
+  EFFECTIVE_LIST=$1
+  TARGET=$2
+  TARGET_NEXT=$3
+
+  debug 'parse_parameter_element' 'START'
+  debug 'parse_parameter_element' "EFFECTIVE_LIST:${EFFECTIVE_LIST}"
+  debug 'parse_parameter_element' "TARGET:${TARGET}"
+  debug 'parse_parameter_element' "TARGET_NEXT:${TARGET_NEXT}"
+
+  TARGET_LHS=`_strleft "${TARGET}" '='`
+  TARGET_RHS=`_strright "${TARGET}" '='`
+
+  debug 'parse_parameter_element' "TARGET_LHS:${TARGET_LHS}"
+  debug 'parse_parameter_element' "TARGET_RHS:${TARGET_RHS}"
+
+  SKIP_COUNT=''
+  for LISTITEM in $EFFECTIVE_LIST
+  do
+    EFFECTIVE_NAME=`_strleft "${LISTITEM}" ':'`
+    EFFECTIVE_VALUE=`_strright "${LISTITEM}" ':'`
+    if [ "${EFFECTIVE_NAME}" = "${TARGET_LHS}" ]
+    then  # target is effective option
+      if [ "${EFFECTIVE_VALUE}" -eq 0 ]
+      then  # target is no value required
+        if [ -n "${TARGET_RHS}" ]
+        then  # but value specified 'target=...'
+          _p "parameter must not specify a value: ${TARGET}"
+          SKIP_COUNT=255
+        else  # no value specified by 'target=...'
+          # next parameter is not check and delegate to next
+          SKIP_COUNT=0
+        fi
+      else  # target is value required
+        if [ -n "${TARGET_RHS}" ]
+        then  # value specified 'target=...'
+          _p "${TARGET_RHS}"
+          SKIP_COUNT=0
+        else  # value not specified by 'target=...'
+          if [ -n "${TARGET_NEXT}" ]
+          then  # check next parameter
+            get_option_type "${TARGET_NEXT}"
+            NEXT_OPTION_TYPE=$?
+            case $NEXT_OPTION_TYPE in
+              0)  # next parameter is not option ('<any>'), maybe value
+                _p "${TARGET_NEXT}"
+                SKIP_COUNT=1
+                ;;
+              1|2|255)  # next parameter is option ('-...' or '--...')  or '--'
+                _p "parameter must specify value: ${TARGET}"
+                SKIP_COUNT=255
+                ;;
+              *)
+                _p 'internal error: parse_parameter_element'
+                SKIP_COUNT=255
+                ;;
+            esac
+          else  # next parameter is not exist
+            _p "parameter must spcify value: ${TARGET}"
+            SKIP_COUNT=255
+          fi
+        fi
+      fi
+      break
+    fi
+  done
+  if [ -z "${SKIP_COUNT}" ]
+  then
+    _p "invalid parameter: ${TARGET}"
+    SKIP_COUNT=255
+  fi
+  
+  debug 'parse_parameter_element' 'END'
+
+  return $SKIP_COUNT
+}
+
+parse_parameters()
+{
+  EFFECTIVE_LIST=$1
+  shift
+
+  debug 'parse_parameters' 'START'
+  debug 'parse_parameters' "EFFECTIVE_LIST:${EFFECTIVE_LIST}"
+  debug 'parse_parameters' "PARAMETERS:$*"
+
+  COUNT_OPTIONS=0
+  while [ $# -gt 0 ]
+  do
+    debug 'parse_parameters' "TARGET:$1"
+    get_option_type "$1"
+    OPTION_TYPE=$?
+    debug 'parse_parameters' "OPTION_TYPE:${OPTION_TYPE}"
+    case $OPTION_TYPE in
+      0)  # maybe command or non optional value
+        break
+        ;;
+      1|2)  # option '-...' or '--...'
+        VALUE=`parse_parameter_element "${EFFECTIVE_LIST}" "$1" "$2"`
+        SKIP_COUNT=$?
+        debug 'parse_parameters' "SKIP_COUNT:${SKIP_COUNT}"
+        if [ $SKIP_COUNT -eq 255 ]
+        then
+          error "${VALUE}"
+        fi
+        # --opt=value -> --opt
+        CANONICAL_KEY=`_strleft "$1" '='`
+        # -O or --opt -> O or opt
+        CANONICAL_KEY=`_strright "${CANONICAL_KEY}" '-'`
+        # options value requirement is checked at parse_parameter_lement
+        if [ -z "${VALUE}" ]
+        then  # this parameter is single option
+          EVALUATE="PARSED_PARAM_KEYONLY_${CANONICAL_KEY}='defined'"
+        else  # this parameter is value specified option
+          # escape \ -> \\, ' -> '\'', " -> \", (newline) -> \n
+          VALUE=`_p "${VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
+          # quote for space character and others of shell separate
+          VALUE="'${VALUE}'"
+          EVALUATE="PARSED_PARAM_KEYVALUE_${CANONICAL_KEY}=${VALUE}"
+        fi
+        if [ $SKIP_COUNT -eq 1 ]
+        then  # next parameter is current parameters value (non single option)
+          COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+          shift
+        fi
+        eval "${EVALUATE}"
+        debug 'parse_parameters' "EVALUATE:${EVALUATE}"
+        ;;
+      255)  # '--'
+        COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+        shift
+        break
+        ;;
+      *)
+        error 'internal error: parse_parameters'
+        ;;
+    esac
+    COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+    shift
+  done
+  return "${COUNT_OPTIONS}"
+}
+
+create_json_keyvalue()
+{
+  KEY=$1
+  VALUE=$2
+  QUOTE=$3
+
+  debug 'create_json_keyvalue' 'START'
+  debug 'create_json_keyvalue' "KEY:${KEY} VALUE:${VALUE} QUOTE:${QUOTE}"
+
+  if [ -z "${KEY}" ]
+  then
+    error 'key must be specified'
+  fi
+
+  if [ "${QUOTE:=0}" -eq 0 ]
+  then
+    QUOTE='"'
+  else
+    QUOTE=''
+  fi
+
+  _p "\"${KEY}\":${QUOTE}${VALUE}${QUOTE}"
+
+  debug 'create_json_keyvalue' 'END'
+}
+
 api_core()
 {
   API="$1"
@@ -142,24 +388,18 @@ api_core()
 
   shift
   debug_single 'api_core-1'
-  # BSKYSHCLI_API_PARAM use in API script
-  # shellcheck disable=SC2034
-  BSKYSHCLI_API_PARAM="$*"
-  # SC1090 disable for dynamical(variable) path source(.) using
-  # shellcheck source=/dev/null
-  RESULT=`. "${BSKYSHCLI_API_PATH}/${API}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  RESULT=`/bin/sh "${BSKYSHCLI_API_PATH}/${API}" "$@" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
     debug 'api_core' "ERROR:${ERROR}"
     case "${ERROR}" in
       ExpiredToken)
-        # TODO: refresh session
-        #error 'session expired (session auto refresh not yet implemented).'
         return 2
         ;;
       *)
-        error "unknown error: ${ERROR}"
+        MESSAGE=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.message // empty'`
+        error "${ERROR} : ${MESSAGE}"
         ;;
     esac
   fi
@@ -184,17 +424,18 @@ api()
   debug 'api' "API:${API}"
 
   RESULT=`api_core "$@"`
-  STATUS=$?
+  STATUS_API_CORE=$?
   debug_single 'api-1'
   RESULT=`echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  debug 'api' "api_core status: ${STATUS}"
-  case $STATUS in
+  debug 'api' "api_core status: ${STATUS_API_CORE}"
+  case $STATUS_API_CORE in
     0)
       debug_single 'api-2'
       echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      API_STATUS=0
       ;;
     1)
-      error "unknown error: ${ERROR}"
+      error "${ERROR}"
       ;;
     2)
       # session expired
@@ -202,10 +443,13 @@ api()
       api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
       debug_single 'api-3'
       api_core "$@" | $ESCAPE_DOUBLEBACKSLASH | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      API_STATUS=$?
       ;;
   esac
 
   debug 'api' 'END'
+
+  return $API_STATUS
 }
 
 verify_profile_name()
@@ -286,9 +530,20 @@ create_session_file()
 
   debug 'create_session_file' 'START'
   debug 'create_session_file' "HANDLE:${HANDLE}"
-# WARNING: parameters may contain sensitive information (e.g. session token) and will remain in the debug log
-#  debug 'create_session_file' "ACCESS_JWT:${ACCESS_JWT}"
-#  debug 'create_session_file' "REFRESH_JWT:${REFRESH_JWT}"
+  if [ -n "${ACCESS_JWT}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'create_session_info' "ACCESS_JWT: ${MESSAGE}"
+  if [ -n "${REFRESH_JWT}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
 
   SESSION_FILEPATH=`get_session_filepath`
   create_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"

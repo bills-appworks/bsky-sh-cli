@@ -23,29 +23,69 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-if [ -n "${BSKYSHCLI_API_PARAM}" ]
-then
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $BSKYSHCLI_API_PARAM
-fi
-PARAM_REFRESH_JWT=$1
+PARAM_REPO=$1
+PARAM_COLLECTION=$2
+PARAM_RKEY=$3
+PARAM_VALIDATE=$4
+PARAM_RECORD=$5
+PARAM_SWAPCOMMIT=$6
 
 debug "${FILENAME}" 'START'
+debug "${FILENAME}" "REPO:${PARAM_REPO} COLLECTION:${PARAM_COLLECTION} RKEY:${PARAM_RKEY} VALIDATE:${PARAM_VALIDATE} RECORD:${PARAM_RECORD} SWAPCOMMIT:${PARAM_SWAPCOMMIT}"
+
+if [ -n "${PARAM_REPO}" ]
+then
+  REPO=`create_json_keyvalue 'repo' "${PARAM_REPO}" 0`
+  BODY="{${REPO}"
+else
+  error 'parameter repo must be specified'
+fi
+if [ -n "${PARAM_COLLECTION}" ]
+then
+  COLLECTION=`create_json_keyvalue 'collection' "${PARAM_COLLECTION}" 0`
+  BODY="${BODY},${COLLECTION}"
+else
+  error 'parameter collection must be specified'
+fi
+if [ -n "${PARAM_RKEY}" ]
+then
+  RKEY_LEN=`_strlen "${RKEY}"`
+  if [ "${RKEY_LEN}" -gt 15 ]
+  then
+    error "parameter rkey must be specify length <= 15 characters: ${PARAM_RKEY}"
+  fi
+  RKEY=`create_json_keyvalue 'rkey' "${PARAM_RKEY}" 0`
+  BODY="${BODY},${RKEY}"
+fi
+if [ -n "${PARAM_VALIDATE}" ]
+then
+  case $PARAM_VALIDATE in
+    true|false)
+      ;;
+    *)
+      error "parameter validate must be specify true or false: ${PARAM_VALIDATE}"
+      ;;
+  esac
+  VALIDATE=`create_json_keyvalue 'validate' "${PARAM_VALIDATE}" 1`
+  BODY="${BODY},${VALIDATE}"
+fi
+if [ -n "${PARAM_RECORD}" ]
+then
+  RECORD=`create_json_keyvalue 'record' "${PARAM_RECORD}" 1`
+  BODY="${BODY},${RECORD}"
+else
+  error 'parameter record must be specified'
+fi
+if [ -n "${PARAM_SWAPCOMMIT}" ]
+then
+  SWAPCOMMIT=`create_json_keyvalue 'swapCommit' "${PARAM_SWAPCOMMIT}" 0`
+  BODY="${BODY},${SWAPCOMMIT}"
+fi
+BODY="${BODY}}"
+debug "${FILENAME}" "BODY:${BODY}"
 
 debug_single "${FILENAME}"
-RESULT=`api_post 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-
-echo "${RESULT}" | tr -d '\n'
-
-ERROR=`echo "${RESULT}" | jq -r '.error // empty'`
-
-if [ -z "${ERROR}" ]
-then
-  HANDLE=`echo "${RESULT}" | jq -r '.handle | @sh'`
-  ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
-  REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
-  update_session_file "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
-fi
+api_post 'com.atproto.repo.createRecord' "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'
+

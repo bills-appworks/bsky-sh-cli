@@ -1,0 +1,64 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (no-params)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "args": []
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (login)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "args": ["login", "--handle", "${input:handle}", "--password", "${input:password}"]
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (timeline: escape character processing defect on VSCode bash debug)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "args": ["timeline"]
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (post --text <text>)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "args": ["post", "--text", "${input:post_text}"]
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "shellcheck",
+            "program": "${workspaceFolder}/shellcheck.sh",
+            "terminalKind": "integrated",
+            "args": []
+        }
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "handle",
+            "description": "input Bluesky handle"
+        },
+        {
+            "type": "promptString",
+            "id": "password",
+            "description": "input password for Bluesky handle",
+            "password": true
+        },
+        {
+            "type": "promptString",
+            "id": "post_text",
+            "description": "input post text",
+            "default": "post from Bluesky in the shell (bsky-sh-cli)"
+        }
+    ]
+}

@@ -23,12 +23,6 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-if [ -n "${BSKYSHCLI_API_PARAM}" ]
-then
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $BSKYSHCLI_API_PARAM
-fi
 PARAM_REFRESH_JWT=$1
 
 debug "${FILENAME}" 'START'
