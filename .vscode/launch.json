@@ -36,6 +36,38 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
+            "terminalKind": "integrated",
+            "argsString": ""
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "com.atproto.repo.createRecord (<repo> <collection> <[rkey]> <validate> <record> <[swapCommit]>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.createRecord",
+            "terminalKind": "integrated",
+            "argsString": "'${input:repo}' '${input:collection}' '' '${input:validate}' '${input:record}' ''"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "com.atproto.server.createSession (<handle> <password>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.server.createSession",
+            "terminalKind": "integrated",
+            "argsString": "'${input:api_handle}' '${input:password}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "com.atproto.server.refreshSession (<refreshJwt>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.server.refreshSession",
+            "terminalKind": "integrated",
+            "argsString": "'${input:refreshJwt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "shellcheck",
             "program": "${workspaceFolder}/shellcheck.sh",
             "terminalKind": "integrated",
@@ -59,6 +91,72 @@
             "id": "post_text",
             "description": "input post text",
             "default": "post from Bluesky in the shell (bsky-sh-cli)"
+        },
+        {
+            "type": "promptString",
+            "id": "algorithm",
+            "description": "input algorithm for timeline",
+            "default": "''"
+        },
+        {
+            "type": "promptString",
+            "id": "limit",
+            "description": "input limit count",
+            "default": "''"
+        },
+        {
+            "type": "promptString",
+            "id": "cursor",
+            "description": "input cursor",
+            "default": "''"
+        },
+        {
+            "type": "promptString",
+            "id": "repo",
+            "description": "input handle (FQDN) or DID of the repo",
+            "default": ".bsky.social"
+        },
+        {
+            "type": "promptString",
+            "id": "collection",
+            "description": "input NSID of the record collection",
+            "default": "app.bsky.feed.post"
+        },
+        {
+            "type": "promptString",
+            "id": "rkey",
+            "description": "input record key (<= 15 characters)",
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "validate",
+            "description": "select schema validation of record data (false to skip)",
+            "options": ["true", "false"],
+            "default": "true"
+        },
+        {
+            "type": "promptString",
+            "id": "record",
+            "description": "input record",
+            "default": "{\"text\":\"<text>\",\"createdAt\":\"<yyyy>-<mm>-<dd>T<HH>:<MM>:<SS>.000Z\"}",
+        },
+        {
+            "type": "promptString",
+            "id": "swapCommit",
+            "description": "input CID of previous commit for compare and swap",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "api_handle",
+            "description": "input Bluesky handle (FQDN for API)",
+            "default": ".bsky.social"
+        },
+        {
+            "type": "promptString",
+            "id": "refreshJwt",
+            "description": "input refresh JWT token"
         }
     ]
 }
