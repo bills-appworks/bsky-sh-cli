@@ -15,10 +15,10 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
   BSKYSHCLI_API_PATH="${FILE_DIR}"
-  # SC1091
-  # shellcheck source=SCRIPTDIR/common.sh
-  . "${BSKYSHCLI_API_PATH}/common.sh"
 fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
 # SC1091
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"

@@ -9,7 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then
+if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then  # ifndef BSKYSCHCLI_DEFINE_UTIL
 BSKYSHCLI_DEFINE_UTIL='defined'
 
 BSKYSHCLI_DEBUG_ROOT_PATH="${BSKYSHCLI_TOOLS_WORK_DIR}"

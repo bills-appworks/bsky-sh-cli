@@ -68,7 +68,7 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "com.atproto.server.createSession (<handle> <password>)",
+            "name": "com.atproto.server.createSession (<handle> <password>) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/lib/api/com.atproto.server.createSession",
             "terminalKind": "integrated",
             "argsString": "'${input:api_handle}' '${input:password}'"

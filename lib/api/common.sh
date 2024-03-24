@@ -9,7 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-if [ -z "${BSKYSHCLI_DEFINE_API_COMMON}" ]; then
+if [ -z "${BSKYSHCLI_DEFINE_API_COMMON}" ]; then  # ifndef BSKYSHCLI_DEFINE_API_COMMON
 BSKYSHCLI_DEFINE_API_COMMON='defined'
 
 BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
@@ -19,39 +19,49 @@ BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && p
 BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
 
 # read resource config
-if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-then
-  BSKYSHCLI_RESOURCE_CONFIG_PATH="${BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH}"
-elif [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-then
-  :
-else
-  echo "specified resource config path (BSKYSHCLI_RESOURCE_CONFIG_PATH) is not readable: ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
-  exit 1
-fi
-if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-then
-  # SC1090 disable for resource config file generize on runtime
-  # shellcheck source=/dev/null
-  . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PROCESSED}" ]
+then  # API script direct invoked
+  if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+  then
+    BSKYSHCLI_RESOURCE_CONFIG_PATH="${BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH}"
+  elif [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+  then
+    :
+  else
+    echo "specified resource config path (BSKYSHCLI_RESOURCE_CONFIG_PATH) is not readable: ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+    exit 1
+  fi
+  if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+  then
+    # SC1090 disable for resource config file generize on runtime
+    # shellcheck source=/dev/null
+    . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+    # prevent resource config process in other script
+    BSKYSHCLI_RESOURCE_CONFIG_PROCESSED='defined'
+    export BSKYSHCLI_RESOURCE_CONFIG_PROCESSED
+  fi
 fi
 
 if [ -z "${BSKYSHCLI_TOOLS_WORK_DIR}" ]
 then
   BSKYSHCLI_TOOLS_WORK_DIR="${BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR}"
 fi
+export BSKYSHCLI_TOOLS_WORK_DIR
 if [ -z "${BSKYSHCLI_TOOLS_ROOT_DIR}" ]
 then
   BSKYSHCLI_TOOLS_ROOT_DIR="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}"
 fi
+export BSKYSHCLI_TOOLS_ROOT_DIR
 if [ -z "${BSKYSHCLI_LIB_PATH}" ]
 then
   BSKYSHCLI_LIB_PATH="${BSKYSHCLI_DEFAULT_LIB_PATH}"
 fi
+export BSKYSHCLI_LIB_PATH
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
   BSKYSHCLI_API_PATH="${BSKYSHCLI_LIB_PATH}/api"
 fi
+export BSKYSHCLI_API_PATH
 
 UTILITY_PATH="${BSKYSHCLI_LIB_PATH}/util.sh"
 if [ -r "${UTILITY_PATH}" ]
