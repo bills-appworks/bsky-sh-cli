@@ -15,7 +15,15 @@
             "name": "bsky (login) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "login --handle '${input:handle}' --password '${input:password}'"
+            "argsString": "${input:profile} login --handle '${input:handle}' --password '${input:password}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (logout)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} logout"
         },
         {
             "type": "bashdb",
@@ -23,7 +31,7 @@
             "name": "bsky (timeline)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "timeline"
+            "argsString": "${input:profile} timeline"
         },
         {
             "type": "bashdb",
@@ -31,7 +39,7 @@
             "name": "bsky (post --text <text>)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "post --text '${input:post_text}'"
+            "argsString": "${input:profile} post --text '${input:post_text}'"
         },
         {
             "type": "bashdb",
@@ -75,6 +83,12 @@
         }
     ],
     "inputs": [
+        {
+            "type": "promptString",
+            "id": "profile",
+            "description": "input profile (delete if unnecessary)",
+            "default": "--profile "
+        },
         {
             "type": "promptString",
             "id": "handle",
