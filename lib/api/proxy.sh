@@ -17,6 +17,30 @@ HEADER_ACCEPT='Accept: application/json'
 HEADER_AUTHORIZATION_PREFIX='Authorization: Bearer'
 HEADER_CONTENT_TYPE='Content-Type: application/json'
 
+build_query_parameter()
+{
+  STACK="$1"
+  QUERY_KEY="$2"
+  QUERY_VALUE="$3"
+
+  debug 'build_query_parameter' 'START'
+  debug 'build_query_parameter' "STACK:${STACK}"
+  debug 'build_query_parameter' "QUERY_KEY:${QUERY_KEY}"
+  debug 'build_query_parameter' "QUERY_VALUE:${QUERY_VALUE}"
+
+  QUERY_VALUE=`_p "${QUERY_VALUE}" | jq -Rr '@uri'`
+  if [ -z "${STACK}" ]
+  then
+    STACK='?'
+  else
+    STACK="${STACK}&"
+  fi
+  STACK="${STACK}${QUERY_KEY}=${QUERY_VALUE}"
+  _p "${STACK}"
+
+  debug 'build_query_parameter' 'END'
+}
+
 create_authorization_header()
 {
   BEARER="$1"
@@ -32,9 +56,27 @@ api_get()
 {
   ENDPOINT="$1"
   BEARER="$2"
+  shift
+  shift
 
   debug 'api_get' 'START'
   debug 'api_get' "ENDPOINT:${ENDPOINT}"
+  debug 'api_get' "QUERIES:$*"
+
+  QUERY_PARAMETER=''
+  while [ $# -gt 0 ]
+  do
+    if [ $# -lt 2 ]
+    then
+      error "query key $1 must have query value"
+    fi
+    if [ "$2" != '''' ] && [ -n "$2" ]
+    then
+      QUERY_PARAMETER=`build_query_parameter "${QUERY_PARAMETER}" "$1" "$2"`
+    fi
+    shift
+    shift
+  done
 
   if [ -z "${BEARER}" ]
   then
@@ -43,7 +85,7 @@ api_get()
   fi
   HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
   debug_single 'api_get'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}${QUERY_PARAMETER}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_get' 'END'
 }

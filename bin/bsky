@@ -206,13 +206,17 @@ parse_parameters_login()
 {
   debug 'parse_parameters_login' 'START'
 
+  debug_mode_suppress
   parse_parameters '--handle:1 --password:1' "$@"
   OPTIONS=$?
-
-  PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
-  debug_mode_suppress
-  PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
   debug_mode_restore
+
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
 
   debug 'parse_parameters_login' 'END'
 }
