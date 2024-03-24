@@ -15,7 +15,7 @@
             "name": "bsky (login)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "args": ["login", "--handle", "${input:handle}", "--password", "${input:password}"]
+            "argsString": "login --handle '${input:handle}' --password '${input:password}'"
         },
         {
             "type": "bashdb",
@@ -23,7 +23,7 @@
             "name": "bsky (timeline: escape character processing defect on VSCode bash debug)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "args": ["timeline"]
+            "argsString": "timeline"
         },
         {
             "type": "bashdb",
@@ -31,23 +31,23 @@
             "name": "bsky (post --text <text>)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "args": ["post", "--text", "${input:post_text}"]
+            "argsString": "post --text '${input:post_text}'"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit]> <[cursor]>)",
+            "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
             "terminalKind": "integrated",
-            "argsString": ""
+            "argsString": "'${input:algorithm}' '${input:limit}' '${input:cursor}'"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "com.atproto.repo.createRecord (<repo> <collection> <[rkey]> <validate> <record> <[swapCommit]>)",
+            "name": "com.atproto.repo.createRecord (<repo> <collection> <[rkey]> <[validate default:true]> <record> <[swapCommit]>)",
             "program": "${workspaceFolder}/lib/api/com.atproto.repo.createRecord",
             "terminalKind": "integrated",
-            "argsString": "'${input:repo}' '${input:collection}' '' '${input:validate}' '${input:record}' ''"
+            "argsString": "'${input:repo}' '${input:collection}' '${input:rkey}' '${input:validate}' '${input:record}' '${input:swapCommit}'"
         },
         {
             "type": "bashdb",
@@ -96,19 +96,19 @@
             "type": "promptString",
             "id": "algorithm",
             "description": "input algorithm for timeline",
-            "default": "''"
+            "default": ""
         },
         {
             "type": "promptString",
             "id": "limit",
             "description": "input limit count",
-            "default": "''"
+            "default": ""
         },
         {
             "type": "promptString",
             "id": "cursor",
             "description": "input cursor",
-            "default": "''"
+            "default": ""
         },
         {
             "type": "promptString",
@@ -132,8 +132,8 @@
             "type": "pickString",
             "id": "validate",
             "description": "select schema validation of record data (false to skip)",
-            "options": ["true", "false"],
-            "default": "true"
+            "options": ["", "true", "false"],
+            "default": ""
         },
         {
             "type": "promptString",
