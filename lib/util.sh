@@ -27,6 +27,7 @@ SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 
+### following escape process is unnecessary by changing from echo to _p
 ## for restore (keeping) original JSON response 
 ##  in script expanded escape sequence at function/command return value by echo to standard output
 ## strategy:
@@ -50,25 +51,32 @@ SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 ##   this logic is original \n(non escaped newline escape sequence literally) lacks and mix together with line break (0x0A)
 ##   this code assuming there are no line breaks in the original JSON
 ##
-## however, this process is redundantly escaped when execute under VSCode bash debug v0.3.9.
+## however, this process is redundantly escaped when execute under VSCode bash debug.
 ##
 # (line break) -> \n(literally), \n(literally) at the end of line -> (remove)
 # using GNU sed -z option
 ESCAPE_NEWLINE_PATTERN='s/\n/\\n/g;s/\\n$//g'
+# obsolete definition
+# shellcheck disable=SC2034
 ESCAPE_NEWLINE="sed -z ${ESCAPE_NEWLINE_PATTERN}"
 # \\ -> \\\\ (literally in left variable of VAR=`echo "${VAR}" | $ESCAPE_DOUBLEBACKSLASH`)
 ESCAPE_DOUBLEBACKSLASH_PATTERN='s/\\\\/\\\\\\\\/g'
-# variable use at this file include(source) script
+# obsolete definition
 # shellcheck disable=SC2034
 ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
 # using GNU sed -z option
-# variable use at this file include(source) script
+# obsolete definition
 # shellcheck disable=SC2034
 ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
 
 _p()
 {
   printf '%s' "$*"
+}
+
+_pn()
+{
+  printf '%s\n' "$*"
 }
 
 _strlen()
@@ -146,7 +154,7 @@ debug()
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
     TIMESTAMP=`get_timestamp`
-    echo "${TIMESTAMP} ${ID}: ${MESSAGE}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
+    _pn "${TIMESTAMP} ${ID}: ${MESSAGE}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
   fi
 }
 
@@ -169,7 +177,7 @@ debug_json()
 
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
-    MESSAGE=`echo "${JSON}" | jq`
+    MESSAGE=`_p "${JSON}" | jq`
     debug "${ID}" "${MESSAGE}"
   fi
 }
@@ -178,7 +186,7 @@ error()
 {
   MESSAGE="$1"
 
-  echo "ERROR: ${MESSAGE}" 1>&2
+  _pn "ERROR: ${MESSAGE}" 1>&2
   exit 1
 }
 
@@ -324,6 +332,7 @@ parse_parameters()
           EVALUATE="PARSED_PARAM_KEYONLY_${CANONICAL_KEY}='defined'"
         else  # this parameter is value specified option
           # escape \ -> \\, ' -> '\'', " -> \", (newline) -> \n
+          # using GNU sed -z option
           VALUE=`_p "${VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
           # quote for space character and others of shell separate
           VALUE="'${VALUE}'"
@@ -388,8 +397,8 @@ api_core()
 
   shift
   debug_single 'api_core-1'
-  RESULT=`/bin/sh "${BSKYSHCLI_API_PATH}/${API}" "$@" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  ERROR=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.error // empty'`
+  RESULT=`/bin/sh "${BSKYSHCLI_API_PATH}/${API}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  ERROR=`_p "${RESULT}" | jq -r '.error // empty'`
   if [ -n "$ERROR" ]
   then
     debug 'api_core' "ERROR:${ERROR}"
@@ -398,7 +407,7 @@ api_core()
         return 2
         ;;
       *)
-        MESSAGE=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r '.message // empty'`
+        MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
         error "${ERROR} : ${MESSAGE}"
         ;;
     esac
@@ -407,7 +416,7 @@ api_core()
   if [ -n "${RESULT}" ]
   then
     debug_single 'api_core-2'
-    echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+    _p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
   fi
 
   debug 'api_core' 'END'
@@ -426,12 +435,12 @@ api()
   RESULT=`api_core "$@"`
   STATUS_API_CORE=$?
   debug_single 'api-1'
-  RESULT=`echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  RESULT=`_p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   debug 'api' "api_core status: ${STATUS_API_CORE}"
   case $STATUS_API_CORE in
     0)
       debug_single 'api-2'
-      echo "${RESULT}" | $ESCAPE_BSKYSHCLI | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      _p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       API_STATUS=0
       ;;
     1)
@@ -442,7 +451,7 @@ api()
       read_session_file
       api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
       debug_single 'api-3'
-      api_core "$@" | $ESCAPE_DOUBLEBACKSLASH | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       API_STATUS=$?
       ;;
   esac
@@ -459,7 +468,7 @@ verify_profile_name()
   debug 'verify_profile_name' 'START'
   debug 'verify_profile_name' "PROFILE:${PROFILE}"
 
-  VERIFY=`echo "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9._-]*//g'`
+  VERIFY=`_p "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9._-]*//g'`
   if [ -n "${VERIFY}" ]
   then
     error "invalid profile name '${PROFILE}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
@@ -483,7 +492,7 @@ get_session_filepath()
   debug 'get_session_filepath' "SESSION_FILEPATH:${SESSION_FILEPATH}"
   debug 'get_session_filepath' 'END'
 
-  echo "${SESSION_FILEPATH}"
+  _p "${SESSION_FILEPATH}"
 }
 
 create_session_info()
@@ -514,10 +523,10 @@ create_session_info()
   debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
 
   TIMESTAMP=`get_timestamp`
-  echo "# session ${OPS} at ${TIMESTAMP}"
-  echo "${SESSION_KEY_HANDLE}=${HANDLE}"
-  echo "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
-  echo "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
+  _pn "# session ${OPS} at ${TIMESTAMP}"
+  _pn "${SESSION_KEY_HANDLE}=${HANDLE}"
+  _pn "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
+  _pn "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
 
   debug 'create_session_info' 'END'
 }

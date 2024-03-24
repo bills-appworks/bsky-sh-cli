@@ -23,7 +23,7 @@ create_authorization_header()
 
   debug 'create_authorization_header' 'START'
 
-  echo "${HEADER_AUTHORIZATION_PREFIX} ${BEARER}"
+  _p "${HEADER_AUTHORIZATION_PREFIX} ${BEARER}"
 
   debug 'create_authorization_header' 'END'
 }

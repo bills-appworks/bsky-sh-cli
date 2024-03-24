@@ -34,13 +34,11 @@ debug_mode_suppress
 debug_single "${FILENAME}"
 RESULT=`api_post_nobearer 'com.atproto.server.createSession' '{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}' | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-echo "${RESULT}" | tr -d '\n'
-
 # restore debug mode
 debug_mode_restore
 
-ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
-REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
+ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt | @sh'`
+REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt | @sh'`
 create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
 
 debug "${FILENAME}" 'END'

@@ -30,15 +30,13 @@ debug "${FILENAME}" 'START'
 debug_single "${FILENAME}"
 RESULT=`api_post_bearer 'com.atproto.server.refreshSession' "${PARAM_REFRESH_JWT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-echo "${RESULT}" | tr -d '\n'
-
-ERROR=`echo "${RESULT}" | jq -r '.error // empty'`
+ERROR=`_p "${RESULT}" | jq -r '.error // empty'`
 
 if [ -z "${ERROR}" ]
 then
-  HANDLE=`echo "${RESULT}" | jq -r '.handle | @sh'`
-  ACCESS_JWT=`echo "${RESULT}" | jq -r '.accessJwt | @sh'`
-  REFRESH_JWT=`echo "${RESULT}" | jq -r '.refreshJwt | @sh'`
+  HANDLE=`_p "${RESULT}" | jq -r '.handle | @sh'`
+  ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt | @sh'`
+  REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt | @sh'`
   update_session_file "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
 fi
 

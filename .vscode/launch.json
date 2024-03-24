@@ -20,7 +20,7 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (timeline: escape character processing defect on VSCode bash debug)",
+            "name": "bsky (timeline)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "timeline"

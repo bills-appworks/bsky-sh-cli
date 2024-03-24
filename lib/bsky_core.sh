@@ -37,10 +37,9 @@ core_get_timeline()
   debug 'core_get_timeline' 'START'
 
   debug_single 'core_get_timeline'
-  RESULT=`api app.bsky.feed.getTimeline | $ESCAPE_NEWLINE | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+  RESULT=`api app.bsky.feed.getTimeline | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
-#  FEED_COUNT=`echo "${RESULT}" | $ESCAPE_NEWLINE | jq '.feed | length'`
-  echo "${RESULT}" | $ESCAPE_NEWLINE | jq -r 'foreach .feed[] as $feed (0; 0; 
+  _p "${RESULT}" | jq -r 'foreach .feed[] as $feed (0; 0; 
 $feed.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
 strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
 "\($feed.post.author.displayName) @\($feed.post.author.handle) \($postCreatedAt)
@@ -66,9 +65,10 @@ core_post()
 
   debug_single 'core_post'
   RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
-  echo "${RESULT}" | jq -r '"uri:\(.uri)
+  _p "${RESULT}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
-text:'"${TEXT}"'"'
+text:'"${TEXT}"'"
+'
 
   debug 'core_post' 'END'
 }

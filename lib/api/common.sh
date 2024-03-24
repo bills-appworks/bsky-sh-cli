@@ -60,7 +60,7 @@ then
   # shellcheck source=SCRIPTDIR/../util.sh
   . "${UTILITY_PATH}"
 else
-  error "tools internal configured file util.sh is not readable: ${UTILITY_PATH}"
+  echo "tools internal configured file util.sh is not readable: ${UTILITY_PATH}"
   exit 1
 fi
 PROXY_PATH="${BSKYSHCLI_API_PATH}/proxy.sh"
@@ -70,7 +70,7 @@ then
   # shellcheck source=SCRIPTDIR/proxy.sh
   . "${PROXY_PATH}"
 else
-  error "tools internal configured file proxy.sh is not readable: ${PROXY_PATH}"
+  echo "tools internal configured file proxy.sh is not readable: ${PROXY_PATH}"
   exit 1
 fi
 

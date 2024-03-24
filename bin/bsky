@@ -68,7 +68,7 @@ then
   # shellcheck source=SCRIPTDIR/../lib/util.sh
   . "${UTILITY_PATH}"
 else
-  error "tools internal configured file util.sh is not readable: ${UTILITY_PATH}"
+  echo "tools internal configured file util.sh is not readable: ${UTILITY_PATH}"
   exit 1
 fi
 BSKY_CORE_PATH="${BSKYSHCLI_LIB_PATH}/bsky_core.sh"
@@ -78,7 +78,7 @@ then
   # shellcheck source=SCRIPTDIR/../lib/bsky_core.sh
   . "${BSKY_CORE_PATH}"
 else
-  error "tools internal configured file bsky_core.sh is not readable: ${BSKY_CORE_PATH}"
+  echo "tools internal configured file bsky_core.sh is not readable: ${BSKY_CORE_PATH}"
   exit 1
 fi
 
@@ -285,7 +285,7 @@ command_login()
     error 'Password not specified.'
   fi
 
-  HANDLE_CHECK=`echo "${PARAM_HANDLE}" | sed 's/[^.]//g'`
+  HANDLE_CHECK=`_p "${PARAM_HANDLE}" | sed 's/[^.]//g'`
   if [ -z "${HANDLE_CHECK}" ]
   then
     PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
@@ -293,7 +293,7 @@ command_login()
 
   core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
   read_session_file
-  echo "login session of ${SESSION_HANDLE}"
+  _pn "login session of ${SESSION_HANDLE}"
 
   debug 'command_login' 'END'
 
@@ -308,7 +308,7 @@ command_logout()
   clear_session_file
   if [ -n "${SESSION_HANDLE}" ]
   then
-    echo "logout session of ${SESSION_HANDLE}"
+    _pn "logout session of ${SESSION_HANDLE}"
     unset SESSION_HANDLE
     unset SESSION_ACCESS_JWT
     unset SESSION_REFRESH_JWT
