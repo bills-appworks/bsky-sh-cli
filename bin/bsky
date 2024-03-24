@@ -90,7 +90,14 @@ output_help_general()
 
   cat << 'EOS'
 bsky - A Bluesky CLI (Command Line Interface) implementation in shell script
-usage: bsky <command> [parameters]
+usage: bsky [options] <command> [parameters]
+
+global options:
+  -P <profile>, --profile=<profile>
+      specify session profile name. sessions coexist independently for each profile.
+
+  --session-refresh
+      forces a session refresh on command exectuion.
 
 commands:
   login     login to Bluesky for create session.
