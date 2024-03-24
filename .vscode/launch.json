@@ -12,7 +12,7 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (login)",
+            "name": "bsky (login) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "login --handle '${input:handle}' --password '${input:password}'"
