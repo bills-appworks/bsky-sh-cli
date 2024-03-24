@@ -231,8 +231,9 @@ parse_global_option()
 {
   debug 'parse_global_option' 'START'
 
-  parse_parameters '-P:1 --profile:1' "$@"
+  parse_parameters '-P:1 --profile:1 --session-refresh:0' "$@"
   OPTIONS=$?
+  
   if [ -n "${PARSED_PARAM_KEYVALUE_P}" ]
   then
     BSKYSHCLI_GLOBAL_OPTION_PROFILE="${PARSED_PARAM_KEYVALUE_P}"
@@ -240,9 +241,15 @@ parse_global_option()
   then
     BSKYSHCLI_GLOBAL_OPTION_PROFILE="${PARSED_PARAM_KEYVALUE_profile}"
   fi
+
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
   then
     verify_profile_name "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}"
+  fi
+
+  if [ -n "${PARSED_PARAM_KEYONLY_session_refresh}" ]
+  then
+    BSKYSHCLI_GLOBAL_OPTION_SESSION_REFRESH='defined'
   fi
 
   debug 'parse_global_option' 'END'

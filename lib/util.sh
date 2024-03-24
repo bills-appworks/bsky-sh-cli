@@ -322,10 +322,13 @@ parse_parameters()
         then
           error "${VALUE}"
         fi
-        # --opt=value -> --opt
-        CANONICAL_KEY=`_strleft "$1" '='`
         # -O or --opt -> O or opt
-        CANONICAL_KEY=`_strright "${CANONICAL_KEY}" '-'`
+        CUT_START=`expr "${OPTION_TYPE}" + 1`
+        CANONICAL_KEY=`_cut "$1" -c "${CUT_START}"-`
+        # O or opt=value -> O or opt
+        CANONICAL_KEY=`_strleft "${CANONICAL_KEY}" '='`
+        # opt-foo -> opt_foo
+        CANONICAL_KEY=`_p "${CANONICAL_KEY}" | sed 's/-/_/g'`
         # options value requirement is checked at parse_parameter_lement
         if [ -z "${VALUE}" ]
         then  # this parameter is single option
