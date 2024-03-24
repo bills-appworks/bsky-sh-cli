@@ -174,7 +174,7 @@ output_help_post()
   cat << 'EOS'
 bsky timeline help
 
-usage: bsky timeline
+usage: bsky post --text '<text>'
 
 parameters:
   --text '<text>'
@@ -334,15 +334,20 @@ command_post()
 {
   debug 'command_post' 'START'
 
-  parse_parameters '--text:1' "$@"
-  # dynamic assignment in parse_parameters
-  # shellcheck disable=SC2154
-  POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
-  if [ -z "${POST_TEXT}" ]
+  if [ $1 = 'help' ]
   then
-    error "parameter --text '<text>' not specified"
+    output_help_post
+  else
+    parse_parameters '--text:1' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -z "${POST_TEXT}" ]
+    then
+      error "parameter --text '<text>' not specified"
+    fi
+    core_post "${POST_TEXT}"
   fi
-  core_post "${POST_TEXT}"
 
   debug 'command_post' 'END'
 }
