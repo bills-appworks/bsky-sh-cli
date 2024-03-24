@@ -206,38 +206,13 @@ parse_parameters_login()
 {
   debug 'parse_parameters_login' 'START'
 
-  while [ $# -gt 0 ]
-  do
-    case $1 in
-      help)
-        PARAM_HELP='help'
-        ;;
-      --handle)
-        if [ -z "$2" ]
-        then
-          error 'Handle parameter value not specified.'
-        fi
-        PARAM_HANDLE=$2
-        shift
-        ;;
-      --password)
-        if [ -z "$2" ]
-        then
-          error 'Password parameter value not specified.'
-        fi
-        PARAM_PASSWORD=$2
-        shift
-        ;;
-      --)
-        shift
-        break
-        ;;
-      *)
-        break
-        ;;
-    esac
-    shift
-  done
+  parse_parameters '--handle:1 --password:1' "$@"
+  OPTIONS=$?
+
+  PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
+  debug_mode_suppress
+  PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
+  debug_mode_restore
 
   debug 'parse_parameters_login' 'END'
 }
@@ -278,33 +253,31 @@ command_login()
 {
   debug 'command_login' 'START'
 
-  parse_parameters_login "$@"
-
-  if [ -n "${PARAM_HELP}" ]
+  if [ "$1" = 'help' ]
   then
     output_help_login
-    return 0
-  fi
+  else
+    parse_parameters_login "$@"
+    if [ -z "${PARAM_HANDLE}" ]
+    then
+      error 'Handle not specified.'
+    fi
 
-  if [ -z "${PARAM_HANDLE}" ]
-  then
-    error 'Handle not specified.'
-  fi
+    if [ -z "${PARAM_PASSWORD}" ]
+    then
+      error 'Password not specified.'
+    fi
 
-  if [ -z "${PARAM_PASSWORD}" ]
-  then
-    error 'Password not specified.'
-  fi
+    HANDLE_CHECK=`_p "${PARAM_HANDLE}" | sed 's/[^.]//g'`
+    if [ -z "${HANDLE_CHECK}" ]
+    then
+      PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
+    fi
 
-  HANDLE_CHECK=`_p "${PARAM_HANDLE}" | sed 's/[^.]//g'`
-  if [ -z "${HANDLE_CHECK}" ]
-  then
-    PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
+    core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
+    read_session_file
+    _pn "login session of ${SESSION_HANDLE}"
   fi
-
-  core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
-  read_session_file
-  _pn "login session of ${SESSION_HANDLE}"
 
   debug 'command_login' 'END'
 
