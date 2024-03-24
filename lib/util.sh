@@ -435,11 +435,17 @@ api()
   debug 'api' 'START'
   debug 'api' "API:${API}"
 
-  RESULT=`api_core "$@"`
-  STATUS_API_CORE=$?
-  debug_single 'api-1'
-  RESULT=`_p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  debug 'api' "api_core status: ${STATUS_API_CORE}"
+  if [ -n "${BSKYSHCLI_GLOBAL_OPTION_SESSION_REFRESH}" ]
+  then
+    # force session refresh
+    STATUS_API_CORE=2
+  else
+    RESULT=`api_core "$@"`
+    STATUS_API_CORE=$?
+    debug_single 'api-1'
+    RESULT=`_p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+    debug 'api' "api_core status: ${STATUS_API_CORE}"
+  fi
   case $STATUS_API_CORE in
     0)
       debug_single 'api-2'

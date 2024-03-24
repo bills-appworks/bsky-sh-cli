@@ -244,6 +244,8 @@ parse_global_option()
 
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
   then
+    # to pass the value to the API script executing the command at api_core()
+    export BSKYSHCLI_GLOBAL_OPTION_PROFILE
     verify_profile_name "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}"
   fi
 
@@ -328,7 +330,7 @@ command_post()
 {
   debug 'command_post' 'START'
 
-  if [ $1 = 'help' ]
+  if [ "$1" = 'help' ]
   then
     output_help_post
   else
