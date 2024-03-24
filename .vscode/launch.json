@@ -12,6 +12,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "shellcheck",
+            "program": "${workspaceFolder}/shellcheck.sh",
+            "terminalKind": "integrated",
+            "args": []
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (login) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -72,14 +80,6 @@
             "program": "${workspaceFolder}/lib/api/com.atproto.server.refreshSession",
             "terminalKind": "integrated",
             "argsString": "'${input:refreshJwt}'"
-        },
-        {
-            "type": "bashdb",
-            "request": "launch",
-            "name": "shellcheck",
-            "program": "${workspaceFolder}/shellcheck.sh",
-            "terminalKind": "integrated",
-            "args": []
         }
     ],
     "inputs": [
