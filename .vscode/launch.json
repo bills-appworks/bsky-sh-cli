@@ -76,6 +76,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "com.atproto.server.deleteSession (<refreshJwt>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.server.deleteSession",
+            "terminalKind": "integrated",
+            "argsString": "'${input:refreshJwt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.server.refreshSession (<refreshJwt>)",
             "program": "${workspaceFolder}/lib/api/com.atproto.server.refreshSession",
             "terminalKind": "integrated",

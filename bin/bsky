@@ -149,7 +149,7 @@ parameters:
   none
 
 note:
-  Local files containing login session information are deleted.
+  Delete session and local files containing login session information.
 EOS
 
   debug 'output_help_logout' 'END'
@@ -293,13 +293,10 @@ command_logout()
   debug 'command_logout' 'START'
 
   read_session_file
-  clear_session_file
   if [ -n "${SESSION_HANDLE}" ]
   then
+    core_delete_session
     _pn "logout session of ${SESSION_HANDLE}"
-    unset SESSION_HANDLE
-    unset SESSION_ACCESS_JWT
-    unset SESSION_REFRESH_JWT
   else
     error 'session not found'
   fi

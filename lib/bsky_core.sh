@@ -34,6 +34,18 @@ core_create_session()
   return $API_STATUS
 }
 
+core_delete_session()
+{
+  debug 'core_delete_session' 'START'
+
+  api com.atproto.server.deleteSession "${SESSION_REFRESH_JWT}" > /dev/null
+  API_STATUS=$?
+
+  debug 'core_delete_session' 'END'
+
+  return $API_STATUS
+}
+
 core_get_timeline()
 {
   PARAM_ALGORITHM="$1"
