@@ -44,7 +44,7 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (post --text <text>)",
+            "name": "bsky (post --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "${input:profile} post --text '${input:post_text}'"
