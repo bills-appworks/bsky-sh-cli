@@ -27,11 +27,13 @@ SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
+SESSION_KEY_VIEW_INDEX='SESSION_VIEW_INDEX'
 BSKYSHCLI_SESSION_LIST="
 ${SESSION_KEY_HANDLE}
 ${SESSION_KEY_ACCESS_JWT}
 ${SESSION_KEY_REFRESH_JWT}
 ${SESSION_KEY_GETTIMELINE_CURSOR}
+${SESSION_KEY_VIEW_INDEX}
 "
 
 _p()
@@ -185,7 +187,7 @@ decode_keyvalue_list()
   do
     TARGET_LHS=`_strleft "$1" "${PARAM_ENCODED_SEPARATOR}"`
     TARGET_RHS=`_strright "$1" "${PARAM_ENCODED_SEPARATOR}"`
-    eval "${PARAM_DECODED_PREFIX}${TARGET_LHS}=${TARGET_RHS}"
+    eval "${PARAM_DECODED_PREFIX}${TARGET_LHS}='${TARGET_RHS}'"
     shift
   done
 
@@ -341,7 +343,7 @@ parse_parameters()
           VALUE=`_p "${VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
           # quote for space character and others of shell separate
           VALUE="'${VALUE}'"
-          EVALUATE="PARSED_PARAM_KEYVALUE_${CANONICAL_KEY}=${VALUE}"
+          EVALUATE="PARSED_PARAM_KEYVALUE_${CANONICAL_KEY}='${VALUE}'"
         fi
         if [ $SKIP_COUNT -eq 1 ]
         then  # next parameter is current parameters value (non single option)

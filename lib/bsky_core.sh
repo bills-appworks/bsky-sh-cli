@@ -51,11 +51,13 @@ core_get_timeline()
   PARAM_ALGORITHM="$1"
   PARAM_LIMIT="$2"
   PARAM_NEXT="$3"
+  PARAM_OUTPUT_ID="$4"
 
   debug 'core_get_timeline' 'START'
   debug 'core_get_timeline' "PARAM_NEXT:${PARAM_ALGORITHM}"
   debug 'core_get_timeline' "PARAM_NEXT:${PARAM_LIMIT}"
   debug 'core_get_timeline' "PARAM_NEXT:${PARAM_NEXT}"
+  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_OUTPUT_ID}"
 
   read_session_file
   if [ -n "${PARAM_NEXT}" ]
@@ -71,15 +73,29 @@ core_get_timeline()
   debug_single 'core_get_timeline'
   RESULT=`api app.bsky.feed.getTimeline "${PARAM_ALGORITHM}" "${PARAM_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
-  _p "${RESULT}" | jq -r 'foreach .feed[] as $feed (0; 0; 
-$feed.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
+  if [ -n "${PARAM_OUTPUT_ID}" ]
+  then
+    _p "${RESULT}" | jq -r '.feed | to_entries | foreach .[] as $feed_entry (0; 0; 
+$feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
 strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
-"\($feed.post.author.displayName) @\($feed.post.author.handle) \($postCreatedAt)
-\($feed.post.record.text)
-Reply:\($feed.post.replyCount) Repost:\($feed.post.repostCount) Like:\($feed.post.likeCount)
+"[ViewIndex:\($feed_entry.key + 1)] [uri:\($feed_entry.value.post.uri)] [cid:\($feed_entry.value.post.cid)]
+\($feed_entry.value.post.author.displayName) @\($feed_entry.value.post.author.handle) \($postCreatedAt)
+\($feed_entry.value.post.record.text)
+Reply:\($feed_entry.value.post.replyCount) Repost:\($feed_entry.value.post.repostCount) Like:\($feed_entry.value.post.likeCount)
 ")'
+  else
+    _p "${RESULT}" | jq -r '.feed | to_entries | foreach .[] as $feed_entry (0; 0; 
+$feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
+strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
+"[ViewIndex:\($feed_entry.key + 1)]
+\($feed_entry.value.post.author.displayName) @\($feed_entry.value.post.author.handle) \($postCreatedAt)
+\($feed_entry.value.post.record.text)
+Reply:\($feed_entry.value.post.replyCount) Repost:\($feed_entry.value.post.repostCount) Like:\($feed_entry.value.post.likeCount)
+")'
+  fi
   CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
-  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}"
+  VIEW_INDEX=`_p "${RESULT}" | jq -r -j '.feed | to_entries | foreach .[] as $feed_entry (0; 0; "\($feed_entry.key + 1)|\($feed_entry.value.post.uri)|\($feed_entry.value.post.cid)||")'`
+  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_VIEW_INDEX}=${VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'
 }

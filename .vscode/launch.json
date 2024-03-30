@@ -36,10 +36,10 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (timeline [--limit <count>:1<=count<=100 default:50] [--next])",
+            "name": "bsky (timeline [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} timeline ${input:timeline_limit} ${input:next}"
+            "argsString": "${input:profile} timeline ${input:timeline_limit} ${input:next} ${input:output-id}"
         },
         {
             "type": "bashdb",
@@ -119,6 +119,12 @@
             "id": "next",
             "description": "output next page if this parameter specified (delete if unnecessary)",
             "default": "--next"
+        },
+        {
+            "type": "promptString",
+            "id": "output-id",
+            "description": "output IDs (uri, cid...)",
+            "default": "--output-id"
         },
         {
             "type": "promptString",

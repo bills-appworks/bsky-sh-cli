@@ -314,7 +314,7 @@ command_timeline()
   then
     output_help_timeline
   else
-    parse_parameters '--limit:1 --next:0' "$@"
+    parse_parameters '--limit:1 --next:0 --output-id:0' "$@"
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       _isnumeric "${PARSED_PARAM_KEYVALUE_limit}"
@@ -333,7 +333,7 @@ command_timeline()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_timeline '' "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}"
+    core_get_timeline '' "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
   fi
 
   debug 'command_timeline' 'END'
