@@ -68,6 +68,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "com.atproto.repo.getRecord (<repo> <collection> [rkey] <[cid]>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.getRecord",
+            "terminalKind": "integrated",
+            "argsString": "'${input:repo}' '${input:collection}' '${input:rkey}' '${input:cid}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.server.createSession (<handle> <password>) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/lib/api/com.atproto.server.createSession",
             "terminalKind": "integrated",
@@ -157,9 +165,10 @@
             "default": ".bsky.social"
         },
         {
-            "type": "promptString",
+            "type": "pickString",
             "id": "collection",
             "description": "input NSID of the record collection",
+            "options": ["app.bsky.feed.post"],
             "default": "app.bsky.feed.post"
         },
         {
@@ -185,6 +194,12 @@
             "type": "promptString",
             "id": "swapCommit",
             "description": "input CID of previous commit for compare and swap",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "cid",
+            "description": "input CID",
             "default": ""
         },
         {
