@@ -334,6 +334,8 @@ command_timeline()
     else
       LIMIT=''
     fi
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
     core_get_timeline '' "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}"
   fi
 
