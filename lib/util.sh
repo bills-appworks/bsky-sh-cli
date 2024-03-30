@@ -34,48 +34,6 @@ ${SESSION_KEY_REFRESH_JWT}
 ${SESSION_KEY_GETTIMELINE_CURSOR}
 "
 
-### following escape process is unnecessary by changing from echo to _p
-## for restore (keeping) original JSON response 
-##  in script expanded escape sequence at function/command return value by echo to standard output
-## strategy:
-##   no calibration
-##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR2}"} and return to caller()
-##       caller receive in $VAR1  <-  callee return in $VAR2
-##         \"                     <-    \"
-##         \a                     <-    \\a
-##         \n                     <-    \\n
-##         (line break)           <-    \n
-##         (line break)           <-    (line break)
-##   do calibration
-##     caller(){VAR1=`callee`} calls callee(){...;echo "${VAR2}" | $ESCAPE_BSKYSHCLI and return to caller()
-##       caller receive in $VAR1  <-  callee return in $VAR2 (after process ESCAPE_BSKYSHCLI) <- callee original $VAR (before process ESCAPE_BSKYSHCLI)
-##         \"                     <-    \"                                                    <-   \"
-##         \\a                    <-    \\\\a                                                 <-   \\a
-##         \\n                    <-    \\\\n                                                 <-   \\n
-##         (line break)           <-    \n                                                    <-   \n
-##         (line break)           <-    \n                                                    <-   (line break)
-##   doing calibration each function layers
-##   this logic is original \n(non escaped newline escape sequence literally) lacks and mix together with line break (0x0A)
-##   this code assuming there are no line breaks in the original JSON
-##
-## however, this process is redundantly escaped when execute under VSCode bash debug.
-##
-# (line break) -> \n(literally), \n(literally) at the end of line -> (remove)
-# using GNU sed -z option
-ESCAPE_NEWLINE_PATTERN='s/\n/\\n/g;s/\\n$//g'
-# obsolete definition
-# shellcheck disable=SC2034
-ESCAPE_NEWLINE="sed -z ${ESCAPE_NEWLINE_PATTERN}"
-# \\ -> \\\\ (literally in left variable of VAR=`echo "${VAR}" | $ESCAPE_DOUBLEBACKSLASH`)
-ESCAPE_DOUBLEBACKSLASH_PATTERN='s/\\\\/\\\\\\\\/g'
-# obsolete definition
-# shellcheck disable=SC2034
-ESCAPE_DOUBLEBACKSLASH="sed ${ESCAPE_DOUBLEBACKSLASH_PATTERN}"
-# using GNU sed -z option
-# obsolete definition
-# shellcheck disable=SC2034
-ESCAPE_BSKYSHCLI="sed -z ${ESCAPE_DOUBLEBACKSLASH_PATTERN};${ESCAPE_NEWLINE_PATTERN}"
-
 _p()
 {
   printf '%s' "$*"
