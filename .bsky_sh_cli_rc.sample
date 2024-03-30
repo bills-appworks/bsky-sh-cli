@@ -16,4 +16,4 @@
 # timezone (value format same to TZ environment variable)
 #BSKYSHCLI_TZ=
 # profile
-#BSKYSHCLI_GLOBAL_OPTION_PROFILE=
+#BSKYSHCLI_PROFILE=

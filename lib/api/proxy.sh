@@ -114,7 +114,7 @@ api_post_bearer()
   debug 'api_post_bearer' "ENDPOINT:${ENDPOINT}"
 
   HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
-  debug_single 'api_post'
+  debug_single 'api_post_bearer'
   curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post_bearer' 'END'

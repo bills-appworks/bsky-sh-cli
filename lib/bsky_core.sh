@@ -9,6 +9,8 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
+
 core_create_session()
 {
   HANDLE="$1"
@@ -34,10 +36,28 @@ core_create_session()
 
 core_get_timeline()
 {
-  debug 'core_get_timeline' 'START'
+  PARAM_ALGORITHM="$1"
+  PARAM_LIMIT="$2"
+  PARAM_NEXT="$3"
 
+  debug 'core_get_timeline' 'START'
+  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_ALGORITHM}"
+  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_LIMIT}"
+  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_NEXT}"
+
+  read_session_file
+  if [ -n "${PARAM_NEXT}" ]
+  then
+    CURSOR="${SESSION_GETTIMELINE_CURSOR}"
+    if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+    then
+      error 'next feeds not found'
+    fi
+  else
+    CURSOR=''
+  fi
   debug_single 'core_get_timeline'
-  RESULT=`api app.bsky.feed.getTimeline | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+  RESULT=`api app.bsky.feed.getTimeline "${PARAM_ALGORITHM}" "${PARAM_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
   _p "${RESULT}" | jq -r 'foreach .feed[] as $feed (0; 0; 
 $feed.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
@@ -46,6 +66,8 @@ strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
 \($feed.post.record.text)
 Reply:\($feed.post.replyCount) Repost:\($feed.post.repostCount) Like:\($feed.post.likeCount)
 ")'
+  CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
+  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}"
 
   debug 'core_get_timeline' 'END'
 }

@@ -26,6 +26,13 @@ SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
 SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
+SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
+BSKYSHCLI_SESSION_LIST="
+${SESSION_KEY_HANDLE}
+${SESSION_KEY_ACCESS_JWT}
+${SESSION_KEY_REFRESH_JWT}
+${SESSION_KEY_GETTIMELINE_CURSOR}
+"
 
 ### following escape process is unnecessary by changing from echo to _p
 ## for restore (keeping) original JSON response 
@@ -109,6 +116,21 @@ _strright()
   fi
 }
 
+_isnumeric()
+{
+  STRING=$1
+
+  NOT_NUMERIC=`_p "${STRING}" | sed 's/[0-9]//g'`
+  if [ -z "${NOT_NUMERIC}" ]
+  then
+    RESULT=0
+  else
+    RESULT=1
+  fi
+
+  return "${RESULT}"
+}
+
 _cut()
 {
   STRING=$1
@@ -190,6 +212,28 @@ error()
   exit 1
 }
 
+decode_keyvalue_list()
+{
+  PARAM_KEYVALUE_LIST="$1"
+  PARAM_DECODED_PREFIX="$2"
+  PARAM_ENCODED_SEPARATOR="$3"
+
+  debug 'decode_keyvalue_list' 'START'
+
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $PARAM_KEYVALUE_LIST
+  while [ $# -gt 0 ]
+  do
+    TARGET_LHS=`_strleft "$1" "${PARAM_ENCODED_SEPARATOR}"`
+    TARGET_RHS=`_strright "$1" "${PARAM_ENCODED_SEPARATOR}"`
+    eval "${PARAM_DECODED_PREFIX}${TARGET_LHS}=${TARGET_RHS}"
+    shift
+  done
+
+  debug 'decode_keyvalue_list' 'END'
+}
+
 get_option_type()
 {
   OPTION_TYPE_TARGET=$1
@@ -218,11 +262,13 @@ get_option_type()
 
 parse_parameter_element()
 {
-  EFFECTIVE_LIST=$1
-  TARGET=$2
-  TARGET_NEXT=$3
+  VALUE_VARNAME=$1
+  EFFECTIVE_LIST=$2
+  TARGET=$3
+  TARGET_NEXT=$4
 
   debug 'parse_parameter_element' 'START'
+  debug 'parse_parameter_element' "VALUE_VARNAME:${VALUE_VARNAME}"
   debug 'parse_parameter_element' "EFFECTIVE_LIST:${EFFECTIVE_LIST}"
   debug 'parse_parameter_element' "TARGET:${TARGET}"
   debug 'parse_parameter_element' "TARGET_NEXT:${TARGET_NEXT}"
@@ -233,6 +279,7 @@ parse_parameter_element()
   debug 'parse_parameter_element' "TARGET_LHS:${TARGET_LHS}"
   debug 'parse_parameter_element' "TARGET_RHS:${TARGET_RHS}"
 
+  VALUE=''
   SKIP_COUNT=''
   for LISTITEM in $EFFECTIVE_LIST
   do
@@ -244,8 +291,7 @@ parse_parameter_element()
       then  # target is no value required
         if [ -n "${TARGET_RHS}" ]
         then  # but value specified 'target=...'
-          _p "parameter must not specify a value: ${TARGET}"
-          SKIP_COUNT=255
+          error "parameter must not specify a value: ${TARGET}"
         else  # no value specified by 'target=...'
           # next parameter is not check and delegate to next
           SKIP_COUNT=0
@@ -253,7 +299,7 @@ parse_parameter_element()
       else  # target is value required
         if [ -n "${TARGET_RHS}" ]
         then  # value specified 'target=...'
-          _p "${TARGET_RHS}"
+          VALUE="${TARGET_RHS}"
           SKIP_COUNT=0
         else  # value not specified by 'target=...'
           if [ -n "${TARGET_NEXT}" ]
@@ -262,21 +308,18 @@ parse_parameter_element()
             NEXT_OPTION_TYPE=$?
             case $NEXT_OPTION_TYPE in
               0)  # next parameter is not option ('<any>'), maybe value
-                _p "${TARGET_NEXT}"
+                VALUE="${TARGET_NEXT}"
                 SKIP_COUNT=1
                 ;;
               1|2|255)  # next parameter is option ('-...' or '--...')  or '--'
-                _p "parameter must specify value: ${TARGET}"
-                SKIP_COUNT=255
+                error "parameter must specify value: ${TARGET}"
                 ;;
               *)
-                _p 'internal error: parse_parameter_element'
-                SKIP_COUNT=255
+                error 'internal error: parse_parameter_element'
                 ;;
             esac
           else  # next parameter is not exist
-            _p "parameter must spcify value: ${TARGET}"
-            SKIP_COUNT=255
+            error "parameter must spcify value: ${TARGET}"
           fi
         fi
       fi
@@ -285,10 +328,11 @@ parse_parameter_element()
   done
   if [ -z "${SKIP_COUNT}" ]
   then
-    _p "invalid parameter: ${TARGET}"
-    SKIP_COUNT=255
+    error "invalid parameter: ${TARGET}"
   fi
-  
+
+  eval "${VALUE_VARNAME}=\${VALUE}"
+
   debug 'parse_parameter_element' 'END'
 
   return $SKIP_COUNT
@@ -315,7 +359,7 @@ parse_parameters()
         break
         ;;
       1|2)  # option '-...' or '--...'
-        VALUE=`parse_parameter_element "${EFFECTIVE_LIST}" "$1" "$2"`
+        parse_parameter_element VALUE "${EFFECTIVE_LIST}" "$1" "$2"
         SKIP_COUNT=$?
         debug 'parse_parameters' "SKIP_COUNT:${SKIP_COUNT}"
         if [ $SKIP_COUNT -eq 255 ]
@@ -459,6 +503,8 @@ api()
       # session expired
       read_session_file
       api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
+      # refresh runtime information
+      read_session_file
       debug_single 'api-3'
       api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       API_STATUS=$?
@@ -489,11 +535,16 @@ verify_profile_name()
 get_session_filepath()
 {
   debug 'get_session_filepath' 'START'
+  if [ -n "${BSKYSHCLI_PROFILE}" ]
+  then
+    SESSION_FILENAME="${BSKYSHCLI_PROFILE}${SESSION_FILENAME_SUFFIX}"
+  else
+    SESSION_FILENAME="${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}"
+  fi
+  # overwrite with global profile option
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
   then
     SESSION_FILENAME="${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${SESSION_FILENAME_SUFFIX}"
-  else
-    SESSION_FILENAME="${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}"
   fi
 
   SESSION_FILEPATH="${SESSION_DIR}/${SESSION_FILENAME}"
@@ -504,32 +555,32 @@ get_session_filepath()
   _p "${SESSION_FILEPATH}"
 }
 
-create_session_info()
+init_session_info()
 {
   OPS="$1"
   HANDLE="$2"
   ACCESS_JWT="$3"
   REFRESH_JWT="$4"
 
-  debug 'create_session_info' 'START'
+  debug 'init_session_info' 'START'
 
-  debug 'create_session_info' "PROFILE: ${PROFILE}"
-  debug 'create_session_info' "UPDATE_MODE: ${UPDATE_MODE}"
-  debug 'create_session_info' "HANDLE: ${HANDLE}"
+  debug 'init_session_info' "PROFILE: ${PROFILE}"
+  debug 'init_session_info' "UPDATE_MODE: ${UPDATE_MODE}"
+  debug 'init_session_info' "HANDLE: ${HANDLE}"
   if [ -n "${ACCESS_JWT}" ]
   then
     MESSAGE='(specified)'
   else
     MESSAGE='(empty)'
   fi
-  debug 'create_session_info' "ACCESS_JWT: ${MESSAGE}"
+  debug 'init_session_info' "ACCESS_JWT: ${MESSAGE}"
   if [ -n "${REFRESH_JWT}" ]
   then
     MESSAGE='(specified)'
   else
     MESSAGE='(empty)'
   fi
-  debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
+  debug 'init_session_info' "REFRESH_JWT: ${MESSAGE}"
 
   TIMESTAMP=`get_timestamp`
   _pn "# session ${OPS} at ${TIMESTAMP}"
@@ -537,7 +588,7 @@ create_session_info()
   _pn "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
   _pn "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
 
-  debug 'create_session_info' 'END'
+  debug 'init_session_info' 'END'
 }
 
 create_session_file()
@@ -564,7 +615,7 @@ create_session_file()
   debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
 
   SESSION_FILEPATH=`get_session_filepath`
-  create_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
+  init_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
 
   debug 'create_session_file' 'END'
 }
@@ -586,21 +637,51 @@ read_session_file()
   debug 'read_session_file' 'END'
 }
 
+create_session_info()
+{
+  PARAM_OPS="$1"
+  PARAM_SESSION_KEYVALUE_LIST="$2"
+
+  debug 'create_session_info' 'START'
+
+  read_session_file
+  TIMESTAMP=`get_timestamp`
+  _pn "# session ${PARAM_OPS} at ${TIMESTAMP}"
+  DECODED_PREFIX='DECODED_'
+  decode_keyvalue_list "${PARAM_SESSION_KEYVALUE_LIST}" "${DECODED_PREFIX}" '='
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $BSKYSHCLI_SESSION_LIST
+  while [ $# -gt 0 ]
+  do
+    SESSION_KEY="$1"
+    CURRENT_SESSION_VALUE=`eval _p \"\\$"${SESSION_KEY}"\"`
+    SPECIFIED_SESSION_VALUE=`eval _p \"\\$"${DECODED_PREFIX}${SESSION_KEY}"\"`
+    if [ -n "${SPECIFIED_SESSION_VALUE}" ]
+    then
+      _pn "${SESSION_KEY}='${SPECIFIED_SESSION_VALUE}'"
+    else
+      _pn "${SESSION_KEY}='${CURRENT_SESSION_VALUE}'"
+    fi
+    shift
+  done
+
+  debug 'create_session_info' 'END'
+}
+
 update_session_file()
 {
-  HANDLE="$1"
-  ACCESS_JWT="$2"
-  REFRESH_JWT="$3"
+  PARAM_SESSION_KEYVALUE_LIST="$1"
 
   debug 'update_session_file' 'START'
 
   SESSION_FILEPATH=`get_session_filepath`
   case $BSKYSHCLI_SESSION_FILE_UPDATE in
     append)
-      create_session_info 'update' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" >> "${SESSION_FILEPATH}"
+      create_session_info 'update' "${PARAM_SESSION_KEYVALUE_LIST}" >> "${SESSION_FILEPATH}"
       ;;
     overwrite|*)
-      create_session_info 'update' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
+      create_session_info 'update' "${PARAM_SESSION_KEYVALUE_LIST}" > "${SESSION_FILEPATH}"
       ;;
   esac
 

@@ -9,11 +9,6 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-# debug mode
-# log output to $HOME/.bsky_sh_cli/bsky_sh_cli_debug.log
-# activate following line or execute 'BSKYSHCLI_DEBUG=1 bsky ...' on command line or define at resource config.
-#BSKYSHCLI_DEBUG=1
-
 # following definitions are same to lib/api/common.sh
 # for indipendence of this bsky command
 
@@ -43,9 +38,6 @@ then
   # SC1090 disable for resource config file generize on runtime
   # shellcheck source=/dev/null
   . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
-  # prevent resource config process in API script
-  BSKYSHCLI_RESOURCE_CONFIG_PROCESSED='defined'
-  export BSKYSHCLI_RESOURCE_CONFIG_PROCESSED
 fi
 
 if [ -z "${BSKYSHCLI_TOOLS_WORK_DIR}" ]
@@ -170,7 +162,11 @@ output_help_timeline()
   cat << 'EOS'
 bsky timeline help
 
-usage: bsky timeline
+usage: bsky timeline [--limit <number>] [--next]
+  --limit <number>
+    Specify limit number (default 50) of output feeds (from 1 to 100).
+  --next
+    Output next feeds from previous timeline command.
 
 parameters:
   <under construction>
@@ -206,6 +202,7 @@ parse_parameters_login()
 {
   debug 'parse_parameters_login' 'START'
 
+  # parameter may include a password
   debug_mode_suppress
   parse_parameters '--handle:1 --password:1' "$@"
   OPTIONS=$?
@@ -225,8 +222,11 @@ parse_global_option()
 {
   debug 'parse_global_option' 'START'
 
+  # if the subsequent command is 'login', parameter may include a password
+  debug_mode_suppress
   parse_parameters '-P:1 --profile:1 --session-refresh:0' "$@"
   OPTIONS=$?
+  debug_mode_restore
   
   if [ -n "${PARSED_PARAM_KEYVALUE_P}" ]
   then
@@ -313,9 +313,33 @@ command_timeline()
 {
   debug 'command_timeline' 'START'
 
-  core_get_timeline
+  if [ "$1" = 'help' ]
+  then
+    output_help_timeline
+  else
+    parse_parameters '--limit:1 --next:0' "$@"
+    if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+    then
+      _isnumeric "${PARSED_PARAM_KEYVALUE_limit}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "limit parameter must be numeric value: ${PARSED_PARAM_KEYVALUE_limit}"
+      fi
+      LIMIT="${PARSED_PARAM_KEYVALUE_limit}"
+      if [ "${LIMIT}" -lt 1 ] || [ "${LIMIT}" -gt 100 ]
+      then
+        error "limit parameter must be specify from 1 to 100: ${PARSED_PARAM_KEYVALUE_limit}"
+      fi
+    else
+      LIMIT=''
+    fi
+    core_get_timeline '' "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}"
+  fi
 
   debug 'command_timeline' 'END'
+
+  return 0
 }
 
 command_post()

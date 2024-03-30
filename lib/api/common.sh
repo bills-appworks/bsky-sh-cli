@@ -19,27 +19,21 @@ BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && p
 BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
 
 # read resource config
-if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PROCESSED}" ]
-then  # API script direct invoked
-  if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-  then
-    BSKYSHCLI_RESOURCE_CONFIG_PATH="${BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH}"
-  elif [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-  then
-    :
-  else
-    echo "specified resource config path (BSKYSHCLI_RESOURCE_CONFIG_PATH) is not readable: ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
-    exit 1
-  fi
-  if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
-  then
-    # SC1090 disable for resource config file generize on runtime
-    # shellcheck source=/dev/null
-    . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
-    # prevent resource config process in other script
-    BSKYSHCLI_RESOURCE_CONFIG_PROCESSED='defined'
-    export BSKYSHCLI_RESOURCE_CONFIG_PROCESSED
-  fi
+if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  BSKYSHCLI_RESOURCE_CONFIG_PATH="${BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH}"
+elif [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  :
+else
+  echo "specified resource config path (BSKYSHCLI_RESOURCE_CONFIG_PATH) is not readable: ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+  exit 1
+fi
+if [ -r "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
+then
+  # SC1090 disable for resource config file generize on runtime
+  # shellcheck source=/dev/null
+  . "${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
 fi
 
 if [ -z "${BSKYSHCLI_TOOLS_WORK_DIR}" ]
