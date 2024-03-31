@@ -317,3 +317,28 @@ text:'"${PARAM_QUOTE_TEXT}"'"
   debug 'core_quote' 'END'
 }
 
+core_like()
+{
+  PARAM_LIKE_TARGET_URI="$1"
+  PARAM_LIKE_TARGET_CID="$2"
+
+  debug 'core_like' 'START'
+  debug 'core_like' "PARAM_LIKE_TARGET_URI:${PARAM_LIKE_TARGET_URI}"
+  debug 'core_like' "PARAM_LIKE_TARGET_CID:${PARAM_LIKE_TARGET_CID}"
+
+  SUBJECT_FRAGMENT=`core_build_subject_fragment "${PARAM_LIKE_TARGET_URI}" "${PARAM_LIKE_TARGET_CID}"`
+
+  read_session_file
+  REPO="${SESSION_HANDLE}"
+  COLLECTION='app.bsky.feed.like'
+  CREATEDAT=`get_ISO8601UTCbs`
+  RECORD="{\"createdAt\":\"${CREATEDAT}\",${SUBJECT_FRAGMENT}}"
+
+  debug_single 'core_like'
+  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${RESULT}" | jq -r '"uri:\(.uri)
+cid:\(.cid)"'
+
+  debug 'core_like' 'END'
+}
+

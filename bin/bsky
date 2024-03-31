@@ -291,6 +291,34 @@ EOS
   debug 'output_help_quote' 'END'
 }
 
+output_help_like()
+{
+  debug 'output_help_like' 'START'
+
+  cat << 'EOS'
+bsky like help
+
+usage: bsky like --view-index <view index>
+       or
+       bsky like --uri <uri> --cid <cid>
+
+parameters:
+  --view-index <view index>
+    Specify the index number pointing to the feed to be liked to.
+    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+
+  --uri <uri>
+  --cid <cid>
+    Specify the AT URI and CID pointing to the feed to be liked to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_like' 'END'
+}
+
 parse_parameters_login()
 {
   debug 'parse_parameters_login' 'START'
@@ -601,6 +629,51 @@ command_quote()
   debug 'command_quote' 'END'
 }
 
+command_like()
+{
+  debug 'command_like' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_repost
+  else
+    parse_parameters '--view-index:1 --uri:1 --cid:1' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    CID="${PARSED_PARAM_KEYVALUE_cid}"
+    if [ -n "${VIEW_INDEX}" ]
+    then
+      _isnumeric "${VIEW_INDEX}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--index parameter must be numeric value: ${VIEW_INDEX}"
+      fi
+      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      then
+        error "--index and --uri/--cid are exclusive"
+      fi
+      core_get_feed_view_index "${VIEW_INDEX}"
+      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+    else
+      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      then
+        error "parameter must be specify --index or --uri/--cid"
+      fi
+    fi
+    core_like "${URI}" "${CID}"
+  fi
+
+  debug 'command_like' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -652,6 +725,10 @@ case $1 in
   quote)
     shift
     command_quote "$@"
+    ;;
+  like)
+    shift
+    command_like "$@"
     ;;
   help)
     output_help_general
