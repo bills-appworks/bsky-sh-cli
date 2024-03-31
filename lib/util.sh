@@ -423,6 +423,7 @@ api_core()
   debug 'api_core' "API:${API}"
 
   shift
+  API_CORE_STATUS=0
   debug_single 'api_core-1'
   RESULT=`/bin/sh "${BSKYSHCLI_API_PATH}/${API}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   ERROR=`_p "${RESULT}" | jq -r '.error // empty'`
@@ -431,11 +432,14 @@ api_core()
     debug 'api_core' "ERROR:${ERROR}"
     case "${ERROR}" in
       ExpiredToken)
-        return 2
+        API_CORE_STATUS=2
         ;;
       *)
-        MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
-        error "${ERROR} : ${MESSAGE}"
+        API_ERROR="${ERROR}"
+        API_ERROR_MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
+        debug 'api_core' "${API_ERROR} ${API_ERROR_MESSAGE}"
+        error "${API_ERROR} ${API_ERROR_MESSAGE}"
+        API_CORE_STATUS=1
         ;;
     esac
   fi
@@ -447,7 +451,8 @@ api_core()
   fi
 
   debug 'api_core' 'END'
-  return 0
+
+  return $API_CORE_STATUS
 }
 
 api()
@@ -462,22 +467,22 @@ api()
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_SESSION_REFRESH}" ]
   then
     # force session refresh
-    STATUS_API_CORE=2
+    API_CORE_STATUS=2
   else
     RESULT=`api_core "$@"`
-    STATUS_API_CORE=$?
+    API_CORE_STATUS=$?
     debug_single 'api-1'
     RESULT=`_p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-    debug 'api' "api_core status: ${STATUS_API_CORE}"
+    debug 'api' "api_core status: ${API_CORE_STATUS}"
   fi
-  case $STATUS_API_CORE in
+  case $API_CORE_STATUS in
     0)
       debug_single 'api-2'
       _p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       API_STATUS=0
       ;;
     1)
-      error "${ERROR}"
+      API_STATUS=1
       ;;
     2)
       # session expired
