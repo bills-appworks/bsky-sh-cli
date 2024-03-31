@@ -106,7 +106,8 @@ commands:
   post      post text.
   reply     reply to existing post.
   repost    reopst of existing post.
-  quote     post by quoting an existing post. 
+  quote     post by quoting an existing post.
+  like      like on existing post.
   help      show this help.
 
 To see command help:
@@ -635,7 +636,7 @@ command_like()
 
   if [ "$1" = 'help' ]
   then
-    output_help_repost
+    output_help_like
   else
     parse_parameters '--view-index:1 --uri:1 --cid:1' "$@"
     # dynamic assignment in parse_parameters
