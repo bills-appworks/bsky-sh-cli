@@ -109,6 +109,19 @@ core_build_subject_fragment()
   debug 'core_build_subject_fragment' 'END'
 }
 
+core_build_embed_fragment()
+{
+  PARAM_EMBED_URI=$1
+  PARAM_EMBED_CID=$2
+
+  debug 'core_build_embed_fragment' 'START'
+  debug 'core_build_embed_fragment' "PARAM_EMBED_URI:${PARAM_EMBED_URI}"
+  debug 'core_build_embed_fragment' "PARAM_EMBED_CID:${PARAM_EMBED_CID}"
+  _p "\"embed\":{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${PARAM_EMBED_URI}\",\"cid\":\"${PARAM_EMBED_CID}\"}}"
+
+  debug 'core_build_embed_fragment' 'END'
+}
+
 core_create_session()
 {
   HANDLE="$1"
@@ -273,5 +286,34 @@ core_repost()
 cid:\(.cid)"'
 
   debug 'core_repost' 'END'
+}
+
+core_quote()
+{
+  PARAM_QUOTE_TARGET_URI="$1"
+  PARAM_QUOTE_TARGET_CID="$2"
+  PARAM_QUOTE_TEXT="$3"
+
+  debug 'core_quote' 'START'
+  debug 'core_quote' "PARAM_QUOTE_TARGET_URI:${PARAM_QUOTE_TARGET_URI}"
+  debug 'core_quote' "PARAM_QUOTE_TARGET_CID:${PARAM_QUOTE_TARGET_CID}"
+  debug 'core_quote' "PARAM_QUOTE_TEXT:${PARAM_QUOTE_TEXT}"
+
+  EMBED_FRAGMENT=`core_build_embed_fragment "${PARAM_QUOTE_TARGET_URI}" "${PARAM_QUOTE_TARGET_CID}"`
+
+  read_session_file
+  REPO="${SESSION_HANDLE}"
+  COLLECTION='app.bsky.feed.post'
+  CREATEDAT=`get_ISO8601UTCbs`
+  RECORD="{\"text\":\"${PARAM_QUOTE_TEXT}\",\"createdAt\":\"${CREATEDAT}\",${EMBED_FRAGMENT}}"
+
+  debug_single 'core_quote'
+  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${RESULT}" | jq -r '"uri:\(.uri)
+cid:\(.cid)
+text:'"${PARAM_QUOTE_TEXT}"'"
+'
+
+  debug 'core_quote' 'END'
 }
 

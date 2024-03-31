@@ -84,6 +84,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (quote --view-index <view index> --text '<text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} quote --view-index ${input:view-index} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (quote --uri <uri> --cid <cid> --text '<text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} quote --uri ${input:uri} --cid ${input:cid} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
             "terminalKind": "integrated",

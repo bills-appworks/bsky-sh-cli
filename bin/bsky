@@ -106,6 +106,7 @@ commands:
   post      post text.
   reply     reply to existing post.
   repost    reopst of existing post.
+  quote     post by quoting an existing post. 
   help      show this help.
 
 To see command help:
@@ -244,12 +245,12 @@ usage: bsky repost --view-index <view index>
 
 parameters:
   --view-index <view index>
-    Specify the index number pointing to the feed to be replied to.
+    Specify the index number pointing to the feed to be reposted to.
     The index number is output as "[ViewIndex:<number>]" using the feed output command.
 
   --uri <uri>
   --cid <cid>
-    Specify the AT URI and CID pointing to the feed to be replied to.
+    Specify the AT URI and CID pointing to the feed to be reposted to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
 
 note:
@@ -257,6 +258,37 @@ note:
 EOS
 
   debug 'output_help_repost' 'END'
+}
+
+output_help_quote()
+{
+  debug 'output_help_quote' 'START'
+
+  cat << 'EOS'
+bsky quote help
+
+usage: bsky quote --view-index <view index> --text '<text>'
+       or
+       bsky quote --uri <uri> --cid <cid> --text '<text>'
+
+parameters:
+  --view-index <view index>
+    Specify the index number pointing to the feed to be quoted to.
+    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+
+  --uri <uri>
+  --cid <cid>
+    Specify the AT URI and CID pointing to the feed to be quoted to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --text '<text>'
+    Specify text for post.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_quote' 'END'
 }
 
 parse_parameters_login()
@@ -519,6 +551,56 @@ command_repost()
   debug 'command_repost' 'END'
 }
 
+command_quote()
+{
+  debug 'command_quote' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_quote
+  else
+    parse_parameters '--view-index:1 --uri:1 --cid:1 --text:1' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    CID="${PARSED_PARAM_KEYVALUE_cid}"
+    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -n "${VIEW_INDEX}" ]
+    then
+      _isnumeric "${VIEW_INDEX}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--index parameter must be numeric value: ${VIEW_INDEX}"
+      fi
+      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      then
+        error "--index and --uri/--cid are exclusive"
+      fi
+      core_get_feed_view_index "${VIEW_INDEX}"
+      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+    else
+      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      then
+        error "parameter must be specify --index or --uri/--cid"
+      fi
+    fi
+    if [ -z "${POST_TEXT}" ]
+    then
+      error "parameter --text '<text>' not specified"
+    fi
+    core_quote "${URI}" "${CID}" "${POST_TEXT}"
+  fi
+
+  debug 'command_quote' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -566,6 +648,10 @@ case $1 in
   repost)
     shift
     command_repost "$@"
+    ;;
+  quote)
+    shift
+    command_quote "$@"
     ;;
   help)
     output_help_general
