@@ -425,9 +425,9 @@ command_reply()
       then
         error "--index and --uri/--cid are exclusive"
       fi
-      core_get_view_index "${VIEW_INDEX}"
-      URI="${VIEW_INDEX_ELEMENT_URI}"
-      CID="${VIEW_INDEX_ELEMENT_CID}"
+      core_get_feed_view_index "${VIEW_INDEX}"
+      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
     else
       if [ -z "${URI}" ] || [ -z "${CID}" ]
       then

@@ -11,49 +11,49 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 
-core_get_view_index()
+core_get_feed_view_index()
 {
-  PARAM_VIEW_INDEX=$1
+  PARAM_FEED_VIEW_INDEX=$1
 
-  debug 'core_get_view_index' 'START'
-  debug 'core_get_view_index' "PARAM_VIEW_INDEX:${PARAM_VIEW_INDEX}"
+  debug 'core_get_feed_view_index' 'START'
+  debug 'core_get_feed_view_index' "PARAM_FEED_VIEW_INDEX:${PARAM_VIEW_INDEX}"
 
   read_session_file
-  _slice "${SESSION_VIEW_INDEX}" '"'
-  VIEW_INDEX_COUNT=$?
-  if [ "${PARAM_VIEW_INDEX}" -gt "${VIEW_INDEX_COUNT}" ]
+  _slice "${SESSION_FEED_VIEW_INDEX}" '"'
+  FEED_VIEW_INDEX_COUNT=$?
+  if [ "${PARAM_FEED_VIEW_INDEX}" -gt "${FEED_VIEW_INDEX_COUNT}" ]
   then
-    error "specified index (${PARAM_VIEW_INDEX}) greater than maximum index (${VIEW_INDEX_COUNT})"
+    error "specified index (${PARAM_FEED_VIEW_INDEX}) greater than maximum index (${FEED_VIEW_INDEX_COUNT})"
   fi
-  VIEW_INDEX_ELEMENT=`eval _p \"\\$"RESULT_slice_${PARAM_VIEW_INDEX}"\"`
-  _slice "${VIEW_INDEX_ELEMENT}" '|'
+  FEED_VIEW_INDEX_ELEMENT=`eval _p \"\\$"RESULT_slice_${PARAM_FEED_VIEW_INDEX}"\"`
+  _slice "${FEED_VIEW_INDEX_ELEMENT}" '|'
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
-  VIEW_INDEX_ELEMENT_INDEX="${RESULT_slice_1}"
-  # dynamic assignment in parse_parameters
-  # shellcheck disable=SC2154
-  # variable use at this file include(source) script
-  # shellcheck disable=SC2034
-  VIEW_INDEX_ELEMENT_URI="${RESULT_slice_2}"
+  FEED_VIEW_INDEX_ELEMENT_INDEX="${RESULT_slice_1}"
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   # variable use at this file include(source) script
   # shellcheck disable=SC2034
-  VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
-  if [ "${VIEW_INDEX_ELEMENT_INDEX}" -ne "${PARAM_VIEW_INDEX}" ]
+  FEED_VIEW_INDEX_ELEMENT_URI="${RESULT_slice_2}"
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  # variable use at this file include(source) script
+  # shellcheck disable=SC2034
+  FEED_VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
+  if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" -ne "${PARAM_FEED_VIEW_INDEX}" ]
   then
-    error "internal error: specified index:${PARAM_VIEW_INDEX} session index:${VIEW_INDEX_ELEMENT_INDEX}" 
+    error "internal error: specified index:${PARAM_FEED_VIEW_INDEX} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
   fi
 
-  debug 'core_get_view_index' 'END'
+  debug 'core_get_feed_view_index' 'END'
 }
 
 core_parse_at_uri()
 {
   PARAM_PARSE_AT_URI=$1
 
-  debug 'core_parse_uri' 'START'
-  debug 'core_parse_uri' "PARAM_PARSE_AT_URI:${PARAM_PARSE_AT_URI}"
+  debug 'core_parse_at_uri' 'START'
+  debug 'core_parse_at_uri' "PARAM_PARSE_AT_URI:${PARAM_PARSE_AT_URI}"
 
   _slice "${PARAM_PARSE_AT_URI}" '/'
   AT_URI_ELEMENT_COUNT=$?
@@ -70,7 +70,7 @@ core_parse_at_uri()
   # shellcheck disable=SC2154
   AT_URI_ELEMENT_RKEY="${RESULT_slice_5}"
 
-  debug 'core_parse_uri' 'END'
+  debug 'core_parse_at_uri' 'END'
 
   return "${AT_URI_ELEMENT_COUNT}"
 }
@@ -179,8 +179,8 @@ Reply:\($feed_entry.value.post.replyCount) Repost:\($feed_entry.value.post.repos
 ")'
   fi
   CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
-  VIEW_INDEX=`_p "${RESULT}" | jq -r -j '.feed | to_entries | foreach .[] as $feed_entry (0; 0; "\($feed_entry.key + 1)|\($feed_entry.value.post.uri)|\($feed_entry.value.post.cid)\"")' | sed 's/.$//'`
-  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_VIEW_INDEX}=${VIEW_INDEX}"
+  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j '.feed | to_entries | foreach .[] as $feed_entry (0; 0; "\($feed_entry.key + 1)|\($feed_entry.value.post.uri)|\($feed_entry.value.post.cid)\"")' | sed 's/.$//'`
+  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'
 }
