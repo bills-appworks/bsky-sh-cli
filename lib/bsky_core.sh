@@ -96,6 +96,19 @@ core_build_reply_fragment()
   debug 'core_build_reply_fragment' 'END'
 }
 
+core_build_subject_fragment()
+{
+  PARAM_SUBJECT_URI=$1
+  PARAM_SUBJECT_CID=$2
+
+  debug 'core_build_subject_fragment' 'START'
+  debug 'core_build_subject_fragment' "PARAM_SUBJECT_URI:${PARAM_SUBJECT_URI}"
+  debug 'core_build_subject_fragment' "PARAM_SUBJECT_CID:${PARAM_SUBJECT_CID}"
+  _p "\"subject\":{\"uri\":\"${PARAM_SUBJECT_URI}\",\"cid\":\"${PARAM_SUBJECT_CID}\"}"
+
+  debug 'core_build_subject_fragment' 'END'
+}
+
 core_create_session()
 {
   HANDLE="$1"
@@ -235,5 +248,30 @@ text:'"${PARAM_REPLY_TEXT}"'"
 '
 
   debug 'core_reply' 'END'
+}
+
+core_repost()
+{
+  PARAM_REPOST_TARGET_URI="$1"
+  PARAM_REPOST_TARGET_CID="$2"
+
+  debug 'core_repost' 'START'
+  debug 'core_repost' "PARAM_REPOST_TARGET_URI:${PARAM_REPOST_TARGET_URI}"
+  debug 'core_repost' "PARAM_REPOST_TARGET_CID:${PARAM_REPOST_TARGET_CID}"
+
+  SUBJECT_FRAGMENT=`core_build_subject_fragment "${PARAM_REPOST_TARGET_URI}" "${PARAM_REPOST_TARGET_CID}"`
+
+  read_session_file
+  REPO="${SESSION_HANDLE}"
+  COLLECTION='app.bsky.feed.repost'
+  CREATEDAT=`get_ISO8601UTCbs`
+  RECORD="{\"createdAt\":\"${CREATEDAT}\",${SUBJECT_FRAGMENT}}"
+
+  debug_single 'core_repost'
+  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${RESULT}" | jq -r '"uri:\(.uri)
+cid:\(.cid)"'
+
+  debug 'core_repost' 'END'
 }
 

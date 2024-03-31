@@ -102,8 +102,10 @@ global options:
 commands:
   login     login to Bluesky for create session.
   logout    logout from Bluesky for clear session.
-  timeline  show timeline.
+  timeline  show timeline (now incomplete).
   post      post text.
+  reply     reply to existing post.
+  repost    reopst of existing post.
   help      show this help.
 
 To see command help:
@@ -227,6 +229,34 @@ note:
 EOS
 
   debug 'output_help_reply' 'END'
+}
+
+output_help_repost()
+{
+  debug 'output_help_repost' 'START'
+
+  cat << 'EOS'
+bsky repost help
+
+usage: bsky repost --view-index <view index>
+       or
+       bsky repost --uri <uri> --cid <cid>
+
+parameters:
+  --view-index <view index>
+    Specify the index number pointing to the feed to be replied to.
+    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+
+  --uri <uri>
+  --cid <cid>
+    Specify the AT URI and CID pointing to the feed to be replied to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_repost' 'END'
 }
 
 parse_parameters_login()
@@ -396,7 +426,7 @@ command_post()
 
 command_reply()
 {
-  debug 'command_post' 'START'
+  debug 'command_reply' 'START'
 
   if [ "$1" = 'help' ]
   then
@@ -444,6 +474,51 @@ command_reply()
   debug 'command_reply' 'END'
 }
 
+command_repost()
+{
+  debug 'command_repost' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_repost
+  else
+    parse_parameters '--view-index:1 --uri:1 --cid:1' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    CID="${PARSED_PARAM_KEYVALUE_cid}"
+    if [ -n "${VIEW_INDEX}" ]
+    then
+      _isnumeric "${VIEW_INDEX}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--index parameter must be numeric value: ${VIEW_INDEX}"
+      fi
+      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      then
+        error "--index and --uri/--cid are exclusive"
+      fi
+      core_get_feed_view_index "${VIEW_INDEX}"
+      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+    else
+      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      then
+        error "parameter must be specify --index or --uri/--cid"
+      fi
+    fi
+    core_repost "${URI}" "${CID}"
+  fi
+
+  debug 'command_repost' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -487,6 +562,10 @@ case $1 in
   reply)
     shift
     command_reply "$@"
+    ;;
+  repost)
+    shift
+    command_repost "$@"
     ;;
   help)
     output_help_general

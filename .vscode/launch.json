@@ -68,6 +68,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (repost --view-index <view index>)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} repost --view-index ${input:view-index}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (repost --uri <uri> --cid <cid>)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} repost --uri ${input:uri} --cid ${input:cid}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
             "terminalKind": "integrated",
