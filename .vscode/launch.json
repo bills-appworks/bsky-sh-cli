@@ -52,6 +52,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (reply --view-index <view index> --text '<text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} reply --view-index ${input:view-index} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (reply --uri <uri> --cid <cid> --text '<text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} reply --uri ${input:uri} --cid ${input:cid} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
             "terminalKind": "integrated",
@@ -198,6 +214,12 @@
         },
         {
             "type": "promptString",
+            "id": "uri",
+            "description": "input AT URI",
+            "default": ""
+        },
+        {
+            "type": "promptString",
             "id": "cid",
             "description": "input CID",
             "default": ""
@@ -212,6 +234,11 @@
             "type": "promptString",
             "id": "refreshJwt",
             "description": "input refresh JWT token"
+        },
+        {
+            "type": "promptString",
+            "id": "view-index",
+            "description": "input view index number ([ViewIndex:<number>] in feed output)"
         }
     ]
 }

@@ -183,7 +183,7 @@ output_help_post()
   debug 'output_help_post' 'START'
 
   cat << 'EOS'
-bsky timeline help
+bsky post help
 
 usage: bsky post --text '<text>'
 
@@ -196,6 +196,37 @@ note:
 EOS
 
   debug 'output_help_post' 'END'
+}
+
+output_help_reply()
+{
+  debug 'output_help_reply' 'START'
+
+  cat << 'EOS'
+bsky reply help
+
+usage: bsky reply --view-index <view index> --text '<text>'
+       or
+       bsky reply --uri <uri> --cid <cid> --text '<text>'
+
+parameters:
+  --view-index <view index>
+    Specify the index number pointing to the feed to be replied to.
+    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+
+  --uri <uri>
+  --cid <cid>
+    Specify the AT URI and CID pointing to the feed to be replied to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --text '<text>'
+    Specify text for post.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_reply' 'END'
 }
 
 parse_parameters_login()
@@ -363,6 +394,56 @@ command_post()
   debug 'command_post' 'END'
 }
 
+command_reply()
+{
+  debug 'command_post' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_reply
+  else
+    parse_parameters '--view-index:1 --uri:1 --cid:1 --text:1' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    CID="${PARSED_PARAM_KEYVALUE_cid}"
+    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -n "${VIEW_INDEX}" ]
+    then
+      _isnumeric "${VIEW_INDEX}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--index parameter must be numeric value: ${VIEW_INDEX}"
+      fi
+      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      then
+        error "--index and --uri/--cid are exclusive"
+      fi
+      core_get_view_index "${VIEW_INDEX}"
+      URI="${VIEW_INDEX_ELEMENT_URI}"
+      CID="${VIEW_INDEX_ELEMENT_CID}"
+    else
+      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      then
+        error "parameter must be specify --index or --uri/--cid"
+      fi
+    fi
+    if [ -z "${POST_TEXT}" ]
+    then
+      error "parameter --text '<text>' not specified"
+    fi
+    core_reply "${URI}" "${CID}" "${POST_TEXT}"
+  fi
+
+  debug 'command_reply' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -402,6 +483,10 @@ case $1 in
   post)
     shift
     command_post "$@"
+    ;;
+  reply)
+    shift
+    command_reply "$@"
     ;;
   help)
     output_help_general

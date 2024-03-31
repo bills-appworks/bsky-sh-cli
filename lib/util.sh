@@ -99,6 +99,26 @@ _cut()
   _p "`_p "${STRING}" | cut "$@" | tr -d '\n'`"
 }
 
+_slice()
+{
+  SLICE_STRING=$1
+  SLICE_SEPARATOR=$2
+
+  SLICE_SEPARATOR_IN_STRING=`_p "${SLICE_STRING}" | sed "s/[^${SLICE_SEPARATOR}]//g"`
+  _strlen "${SLICE_SEPARATOR_IN_STRING}"
+  SLICE_SEPARATOR_COUNT=$?
+  SLICE_ELEMENT_COUNT=`expr "${SLICE_SEPARATOR_COUNT}" + 1`
+  SLICE_ELEMENT_INDEX=1
+  while [ "${SLICE_ELEMENT_INDEX}" -le "${SLICE_ELEMENT_COUNT}" ]
+  do
+    SLICE_STRING_ELEMENT=`_cut "${SLICE_STRING}" -d "${SLICE_SEPARATOR}" -f "${SLICE_ELEMENT_INDEX}"`
+    eval "RESULT_slice_${SLICE_ELEMENT_INDEX}='${SLICE_STRING_ELEMENT}'"
+    SLICE_ELEMENT_INDEX=`expr "${SLICE_ELEMENT_INDEX}" + 1`
+  done
+
+  return "${SLICE_ELEMENT_COUNT}"
+}
+
 set_timezone()
 {
   if [ -n "${BSKYSHCLI_TZ}" ]
