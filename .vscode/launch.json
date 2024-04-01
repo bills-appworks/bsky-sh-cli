@@ -52,10 +52,10 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (reply --view-index <view index> --text '<text>')",
+            "name": "bsky (reply --index <index> --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} reply --view-index ${input:view-index} --text '${input:post_text}'"
+            "argsString": "${input:profile} reply --index ${input:feed-index} --text '${input:post_text}'"
         },
         {
             "type": "bashdb",
@@ -68,10 +68,10 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (repost --view-index <view index>)",
+            "name": "bsky (repost --index <index>)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} repost --view-index ${input:view-index}"
+            "argsString": "${input:profile} repost --index ${input:feed-index}"
         },
         {
             "type": "bashdb",
@@ -84,10 +84,10 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (quote --view-index <view index> --text '<text>')",
+            "name": "bsky (quote --index <index> --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} quote --view-index ${input:view-index} --text '${input:post_text}'"
+            "argsString": "${input:profile} quote --index ${input:feed-index} --text '${input:post_text}'"
         },
         {
             "type": "bashdb",
@@ -100,10 +100,10 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (like --view-index <view index>)",
+            "name": "bsky (like --index <index>)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} like --view-index ${input:view-index}"
+            "argsString": "${input:profile} like --index ${input:feed-index}"
         },
         {
             "type": "bashdb",
@@ -285,8 +285,8 @@
         },
         {
             "type": "promptString",
-            "id": "view-index",
-            "description": "input view index number ([ViewIndex:<number>] in feed output)"
+            "id": "feed-index",
+            "description": "input feed index number ([ViewIndex:<number>] in feed output)"
         }
     ]
 }

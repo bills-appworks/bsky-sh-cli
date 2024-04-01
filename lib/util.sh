@@ -361,8 +361,6 @@ parse_parameters()
           # escape \ -> \\, ' -> '\'', " -> \", (newline) -> \n
           # using GNU sed -z option
           VALUE=`_p "${VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
-          # quote for space character and others of shell separate
-          VALUE="'${VALUE}'"
           EVALUATE="PARSED_PARAM_KEYVALUE_${CANONICAL_KEY}='${VALUE}'"
         fi
         if [ $SKIP_COUNT -eq 1 ]

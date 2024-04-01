@@ -209,12 +209,12 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --view-index <view index> --text '<text>'
+usage: bsky reply --index <view index> --text '<text>'
        or
        bsky reply --uri <uri> --cid <cid> --text '<text>'
 
 parameters:
-  --view-index <view index>
+  --index <index>
     Specify the index number pointing to the feed to be replied to.
     The index number is output as "[ViewIndex:<number>]" using the feed output command.
 
@@ -240,12 +240,12 @@ output_help_repost()
   cat << 'EOS'
 bsky repost help
 
-usage: bsky repost --view-index <view index>
+usage: bsky repost --index <view index>
        or
        bsky repost --uri <uri> --cid <cid>
 
 parameters:
-  --view-index <view index>
+  --index <view index>
     Specify the index number pointing to the feed to be reposted to.
     The index number is output as "[ViewIndex:<number>]" using the feed output command.
 
@@ -268,12 +268,12 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --view-index <view index> --text '<text>'
+usage: bsky quote --index <view index> --text '<text>'
        or
        bsky quote --uri <uri> --cid <cid> --text '<text>'
 
 parameters:
-  --view-index <view index>
+  --index <view index>
     Specify the index number pointing to the feed to be quoted to.
     The index number is output as "[ViewIndex:<number>]" using the feed output command.
 
@@ -299,12 +299,12 @@ output_help_like()
   cat << 'EOS'
 bsky like help
 
-usage: bsky like --view-index <view index>
+usage: bsky like --index <view index>
        or
        bsky like --uri <uri> --cid <cid>
 
 parameters:
-  --view-index <view index>
+  --index <view index>
     Specify the index number pointing to the feed to be liked to.
     The index number is output as "[ViewIndex:<number>]" using the feed output command.
 
@@ -493,10 +493,10 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--view-index:1 --uri:1 --cid:1 --text:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
@@ -543,10 +543,10 @@ command_repost()
   then
     output_help_repost
   else
-    parse_parameters '--view-index:1 --uri:1 --cid:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
@@ -588,10 +588,10 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--view-index:1 --uri:1 --cid:1 --text:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
@@ -638,10 +638,10 @@ command_like()
   then
     output_help_like
   else
-    parse_parameters '--view-index:1 --uri:1 --cid:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_view_index}"
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
