@@ -116,6 +116,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.getPostThread (<uri> <[depth depth<=1000 default:6]> <[parentHeight parentHeight<=1000 default:80]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPostThread",
+            "terminalKind": "integrated",
+            "argsString": "'${input:uri}' '${input:depth}' '${input:parentHeight}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getTimeline (<[algorithm]> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getTimeline",
             "terminalKind": "integrated",
@@ -287,6 +295,16 @@
             "type": "promptString",
             "id": "feed-index",
             "description": "input feed index number ([ViewIndex:<number>] in feed output)"
+        },
+        {
+            "type": "promptString",
+            "id": "depth",
+            "description": "input levels of reply depth number"
+        },
+        {
+            "type": "promptString",
+            "id": "parentHeight",
+            "description": "input levels of parent post to include"
         }
     ]
 }
