@@ -12,18 +12,24 @@
 # debug mode
 #BSKYSHCLI_DEBUG=1
 # library path
-#BSKYSHCLI_LIB_PATH='path/to/bsky-sh-cli/lib'
+#BSKYSHCLI_LIB_PATH='/path/to/bsky-sh-cli/lib'
 # timezone (value format same to TZ environment variable)
 #BSKYSHCLI_TZ=
 # profile
 #BSKYSHCLI_PROFILE=
-# template for head field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='[ViewIndex:\($view_index)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER\n'
-# template for body field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($post_fragment.author.displayName) @\($post_fragment.author.handle)\n\($post_fragment.record.text)\nReply:\($post_fragment.replyCount) Repost:\($post_fragment.repostCount) Like:\($post_fragment.likeCount)\n'
-# template for tail field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL=''
 # template for output id field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($post_fragment.uri)] [cid:\($post_fragment.cid)]'
-# template for output id placeholder to post templates (head/body/tail)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)]'
+# template for meta field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+# template for head field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME) @\($AUTHOR_HANDLE) \($CREATED_AT)'
+# template for body field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
+# template for tail field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Like:\($LIKE_COUNT)'
+# template for separator field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
+# template for output id placeholder to post templates (meta/head/body/tail/separator)
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+# template for quoted field prefix in post
+#BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '

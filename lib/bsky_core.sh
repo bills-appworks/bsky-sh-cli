@@ -9,10 +9,20 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
-VIEW_SESSION_PLACEHOLDER='\($view_index)|\($post_fragment.uri)|\($post_fragment.cid)\"'
+VIEW_TEMPLATE_CREATED_AT='
+  . as $raw |
+  if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z")
+  then
+    [split(".")[0],"Z"] | join("")
+  else
+    .
+  end |
+  try fromdate catch $raw |
+  try strflocaltime("%F %X(%Z)") catch $raw
+'
+CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 
 core_get_feed_view_index()
 {
@@ -145,12 +155,86 @@ core_create_post_chunk()
   else
     VIEW_POST_OUTPUT_ID=''
   fi
-  export VIEW_POST_OUTPUT_ID
-  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
-  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
-  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
+  VIEW_TEMPLATE_POST_META=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_POST_TAIL=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_POST_SEPARATOR=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_QUOTED_POST_META=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  VIEW_TEMPLATE_QUOTED_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  VIEW_TEMPLATE_QUOTED_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  # $<variables> want to pass through for jq
+  # shellcheck disable=SC2016
+  _p 'def output_post(view_index; post_fragment):
+        view_index as $VIEW_INDEX |
+        post_fragment.uri as $URI |
+        post_fragment.cid as $CID |
+        post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
+        post_fragment.author.handle as $AUTHOR_HANDLE |
+        post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+        post_fragment.record.text as $TEXT |
+        post_fragment.replyCount as $REPLY_COUNT |
+        post_fragment.repostCount as $REPOST_COUNT |
+        post_fragment.likeCount as $LIKE_COUNT |
+        "'"${VIEW_TEMPLATE_POST_META}"'",
+        "'"${VIEW_TEMPLATE_POST_HEAD}"'",
+        "'"${VIEW_TEMPLATE_POST_BODY}"'",
+        (
+          post_fragment |
+          if has("embed")
+          then
+            ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+            post_fragment.embed.record.uri as $URI |
+            post_fragment.embed.record.cid as $CID |
+            post_fragment.embed.record.author.displayName as $AUTHOR_DISPLAYNAME |
+            post_fragment.embed.record.author.handle as $AUTHOR_HANDLE |
+            post_fragment.embed.record.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+            (post_fragment.embed.record.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
+            "'"${VIEW_TEMPLATE_QUOTED_POST_META}"'",
+            "'"${VIEW_TEMPLATE_QUOTED_POST_HEAD}"'",
+            "'"${VIEW_TEMPLATE_QUOTED_POST_BODY}"'"
+          else
+            empty
+          end
+        ),
+        "'"${VIEW_TEMPLATE_POST_TAIL}"'",
+        "'"${VIEW_TEMPLATE_POST_SEPARATOR}"'"
+      ;
+     '
 
   debug 'core_create_post_chunk' 'END'
+}
+
+core_create_session_chunk()
+{
+
+  debug 'core_create_session_chunk' 'START'
+
+  # $<variables> want to pass through for jq
+  # shellcheck disable=SC2016
+  VIEW_SESSION_PLACEHOLDER='\($VIEW_INDEX)|\($URI)|\($CID)\"'
+  # shellcheck disable=SC2016
+  _p 'def output_post(view_index; post_fragment):
+        view_index as $VIEW_INDEX |
+        post_fragment.uri as $URI |
+        post_fragment.cid as $CID |
+        "'"${VIEW_SESSION_PLACEHOLDER}"'",
+        (
+          post_fragment |
+          if has("embed")
+          then
+            ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+            post_fragment.embed.record.uri as $URI |
+            post_fragment.embed.record.cid as $CID |
+            "'"${VIEW_SESSION_PLACEHOLDER}"'"
+          else
+            empty
+          end
+        )
+      ;
+     '
+
+  debug 'core_create_session_chunk' 'END'
 }
 
 core_create_session()
@@ -215,18 +299,23 @@ core_get_timeline()
   debug_single 'core_get_timeline'
   RESULT=`api app.bsky.feed.getTimeline "${PARAM_TIMELINE_ALGORITHM}" "${PARAM_TIMELINE_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
-  VIEW_POST_PLACEHOLDER=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
-
+  VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  TIMELINE_PARSE_PROCEDURE_01='.feed | to_entries | foreach .[] as $feed_entry (0; 0; $feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt | $feed_entry.value.post as $post_fragment | ($feed_entry.key + 1) as $view_index | "'
-  # shellcheck disable=SC2016
-  TIMELINE_PARSE_PROCEDURE_02='")'
-
-  _p "${RESULT}" | jq -r "${TIMELINE_PARSE_PROCEDURE_01}${VIEW_POST_PLACEHOLDER}${TIMELINE_PARSE_PROCEDURE_02}"
+  TIMELINE_PARSE_PROCEDURE='
+    .feed |
+    to_entries |
+    foreach .[] as $feed_entry (0; 0;
+      $feed_entry.value.post as $post_fragment |
+      ($feed_entry.key + 1) as $view_index |
+      output_post($view_index; $post_fragment)
+    )
+  '
+  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}"
 
   CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
-  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${TIMELINE_PARSE_PROCEDURE_01}${VIEW_SESSION_PLACEHOLDER}${TIMELINE_PARSE_PROCEDURE_02}" | sed 's/.$//'`
+  VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
+  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}" | sed 's/.$//'`
   update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'
@@ -378,29 +467,64 @@ core_thread()
   debug_single 'core_thread'
   RESULT=`api app.bsky.feed.getPostThread "${PARAM_THREAD_TARGET_URI}" "${PARAM_THREAD_DEPTH}" "${PARAM_THREAD_PARENT_HEIGHT}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-  VIEW_POST_PLACEHOLDER=`core_create_post_chunk "${PARAM_THREAD_OUTPUT_ID}"`
-
+  VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_THREAD_OUTPUT_ID}"`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_PARENTS_01='def output_parents: .parent | [recurse(.parent; . != null)] | to_entries | reverse | foreach .[] as $feed_entry (0; 0; $feed_entry.value.post as $post_fragment | ($feed_entry.key * -1 - 1) as $view_index | "'
+  THREAD_PARSE_PROCEDURE_PARENTS='
+    def output_parents:
+      .parent |
+      [recurse(.parent; . != null)] |
+      to_entries |
+      reverse |
+      foreach .[] as $feed_entry (0; 0;
+        ($feed_entry.key * -1 - 1) as $view_index |
+        $feed_entry.value.post as $post_fragment |
+        output_post($view_index; $post_fragment)
+      );
+    .thread |
+    if has("parent")
+    then
+      output_parents
+    else
+      empty
+    end
+  '
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_PARENTS_02='"); .thread | if has("parent") then output_parents else empty end'
+  THREAD_PARSE_PROCEDURE_TARGET='
+    0 as $view_index |
+    .thread.post as $post_fragment |
+    output_post($view_index; $post_fragment)
+  '
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_TARGET_01='0 as $view_index | .thread.post as $post_fragment | "'
-  # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_TARGET_02='"'
-  # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_REPLIES_01='def output_replies(node; sibling_index; index_str): node as $node | sibling_index as $sibling_index | index_str as $index_str | $node.post as $post_fragment | $index_str[1:] as $view_index | $node.replies | reverse | if $sibling_index == 0 then empty else "'
-  # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_REPLIES_02='" end, foreach .[] as $reply (0; . + 1; output_replies($reply; .; "\($index_str)-\(.)")); output_replies(.thread; 0; "")'
+  THREAD_PARSE_PROCEDURE_REPLIES='
+    def output_replies(node; sibling_index; index_str):
+      node as $node |
+      sibling_index as $sibling_index |
+      index_str as $index_str |
+      $node.post as $post_fragment |
+      $index_str[1:] as $view_index |
+      $node.replies |
+      reverse |
+      if $sibling_index == 0
+      then
+        empty
+      else
+        output_post($view_index; $post_fragment)
+      end,
+      foreach .[] as $reply (0; . + 1;
+        output_replies($reply; .; "\($index_str)-\(.)")
+      )
+    ;
+    output_replies(.thread; 0; "")
+  '
+  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_PARENTS}"
+  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_TARGET}"
+  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_REPLIES}"
 
-  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_PARENTS_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_PARENTS_02}"
-  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_TARGET_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_TARGET_02}"
-  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_REPLIES_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_REPLIES_02}"
-
-  FEED_VIEW_INDEX_PARENTS=`_p "${RESULT}" | jq -r -j "${THREAD_PARSE_PROCEDURE_PARENTS_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_PARENTS_02}"`
-  FEED_VIEW_INDEX_TARGET=`_p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_TARGET_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_TARGET_02}"`
-  FEED_VIEW_INDEX_REPLIES=`_p "${RESULT}" | jq -r -j "${THREAD_PARSE_PROCEDURE_REPLIES_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_REPLIES_02}" | sed 's/.$//'`
+  VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
+  FEED_VIEW_INDEX_PARENTS=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_PARENTS}"`
+  FEED_VIEW_INDEX_TARGET=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_TARGET}"`
+  FEED_VIEW_INDEX_REPLIES=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_REPLIES}" | sed 's/.$//'`
   FEED_VIEW_INDEX="${FEED_VIEW_INDEX_PARENTS}${FEED_VIEW_INDEX_TARGET}${FEED_VIEW_INDEX_REPLIES}"
   update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
