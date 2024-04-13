@@ -10,6 +10,9 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
+# $<variables> want to pass through for jq
+# shellcheck disable=SC2016
+VIEW_SESSION_PLACEHOLDER='\($view_index)|\($post_fragment.uri)|\($post_fragment.cid)\"'
 
 core_get_feed_view_index()
 {
@@ -187,19 +190,19 @@ core_delete_session()
 
 core_get_timeline()
 {
-  PARAM_ALGORITHM="$1"
-  PARAM_LIMIT="$2"
-  PARAM_NEXT="$3"
-  PARAM_OUTPUT_ID="$4"
+  PARAM_TIMELINE_ALGORITHM="$1"
+  PARAM_TIMELINE_LIMIT="$2"
+  PARAM_TIMELINE_NEXT="$3"
+  PARAM_TIMELINE_OUTPUT_ID="$4"
 
   debug 'core_get_timeline' 'START'
-  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_ALGORITHM}"
-  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_LIMIT}"
-  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_NEXT}"
-  debug 'core_get_timeline' "PARAM_NEXT:${PARAM_OUTPUT_ID}"
+  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_ALGORITHM}"
+  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_LIMIT}"
+  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_NEXT}"
+  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_OUTPUT_ID}"
 
   read_session_file
-  if [ -n "${PARAM_NEXT}" ]
+  if [ -n "${PARAM_TIMELINE_NEXT}" ]
   then
     CURSOR="${SESSION_GETTIMELINE_CURSOR}"
     if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
@@ -210,30 +213,20 @@ core_get_timeline()
     CURSOR=''
   fi
   debug_single 'core_get_timeline'
-  RESULT=`api app.bsky.feed.getTimeline "${PARAM_ALGORITHM}" "${PARAM_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+  RESULT=`api app.bsky.feed.getTimeline "${PARAM_TIMELINE_ALGORITHM}" "${PARAM_TIMELINE_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
 
-  if [ -n "${PARAM_OUTPUT_ID}" ]
-  then
-    _p "${RESULT}" | jq -r '.feed | to_entries | foreach .[] as $feed_entry (0; 0; 
-$feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
-strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
-"[ViewIndex:\($feed_entry.key + 1)] [uri:\($feed_entry.value.post.uri)] [cid:\($feed_entry.value.post.cid)]
-\($feed_entry.value.post.author.displayName) @\($feed_entry.value.post.author.handle) \($postCreatedAt)
-\($feed_entry.value.post.record.text)
-Reply:\($feed_entry.value.post.replyCount) Repost:\($feed_entry.value.post.repostCount) Like:\($feed_entry.value.post.likeCount)
-")'
-  else
-    _p "${RESULT}" | jq -r '.feed | to_entries | foreach .[] as $feed_entry (0; 0; 
-$feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try
-strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt |
-"[ViewIndex:\($feed_entry.key + 1)]
-\($feed_entry.value.post.author.displayName) @\($feed_entry.value.post.author.handle) \($postCreatedAt)
-\($feed_entry.value.post.record.text)
-Reply:\($feed_entry.value.post.replyCount) Repost:\($feed_entry.value.post.repostCount) Like:\($feed_entry.value.post.likeCount)
-")'
-  fi
+  VIEW_POST_PLACEHOLDER=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
+
+  # $<variables> want to pass through for jq
+  # shellcheck disable=SC2016
+  TIMELINE_PARSE_PROCEDURE_01='.feed | to_entries | foreach .[] as $feed_entry (0; 0; $feed_entry.value.post.record.createdAt | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z") then [split(".")[0],"Z"] | join("") else . end | try fromdate catch $raw | try strflocaltime("%F %X(%Z)") catch $raw | . as $postCreatedAt | $feed_entry.value.post as $post_fragment | ($feed_entry.key + 1) as $view_index | "'
+  # shellcheck disable=SC2016
+  TIMELINE_PARSE_PROCEDURE_02='")'
+
+  _p "${RESULT}" | jq -r "${TIMELINE_PARSE_PROCEDURE_01}${VIEW_POST_PLACEHOLDER}${TIMELINE_PARSE_PROCEDURE_02}"
+
   CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
-  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j '.feed | to_entries | foreach .[] as $feed_entry (0; 0; "\($feed_entry.key + 1)|\($feed_entry.value.post.uri)|\($feed_entry.value.post.cid)\"")' | sed 's/.$//'`
+  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${TIMELINE_PARSE_PROCEDURE_01}${VIEW_SESSION_PLACEHOLDER}${TIMELINE_PARSE_PROCEDURE_02}" | sed 's/.$//'`
   update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'

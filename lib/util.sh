@@ -36,10 +36,6 @@ ${SESSION_KEY_GETTIMELINE_CURSOR}
 ${SESSION_KEY_FEED_VIEW_INDEX}
 "
 
-# variable use at this file include(source) script, $<variables> want to pass through for jq
-# shellcheck disable=SC2034,SC2016
-VIEW_SESSION_PLACEHOLDER='\($view_index)|\($post_fragment.uri)|\($post_fragment.cid)\"'
-
 _p()
 {
   printf '%s' "$*"
