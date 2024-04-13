@@ -17,3 +17,13 @@
 #BSKYSHCLI_TZ=
 # profile
 #BSKYSHCLI_PROFILE=
+# template for head field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='[ViewIndex:\($view_index)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER\n'
+# template for body field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($post_fragment.author.displayName) @\($post_fragment.author.handle)\n\($post_fragment.record.text)\nReply:\($post_fragment.replyCount) Repost:\($post_fragment.repostCount) Like:\($post_fragment.likeCount)\n'
+# template for tail field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL=''
+# template for output id field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($post_fragment.uri)] [cid:\($post_fragment.cid)]'
+# template for output id placeholder to post templates (head/body/tail)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'

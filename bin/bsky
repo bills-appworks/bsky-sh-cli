@@ -15,6 +15,17 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 # global option (default value)
 BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
 
+# $<variables> want to pass through for jq
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($post_fragment.uri)] [cid:\($post_fragment.cid)]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='[ViewIndex:\($view_index)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER\n'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($post_fragment.author.displayName) @\($post_fragment.author.handle)\n\($post_fragment.record.text)\nReply:\($post_fragment.replyCount) Repost:\($post_fragment.repostCount) Like:\($post_fragment.likeCount)\n'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL=''
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+
 BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/.."
@@ -108,6 +119,7 @@ commands:
   repost    reopst of existing post.
   quote     post by quoting an existing post.
   like      like on existing post.
+  thread    show thread of specified post.
   help      show this help.
 
 To see command help:
@@ -318,6 +330,33 @@ note:
 EOS
 
   debug 'output_help_like' 'END'
+}
+
+output_help_thread()
+{
+  debug 'output_help_thread' 'START'
+
+  cat << 'EOS'
+bsky thread help
+
+usage: bsky thread --index <view index>
+       or
+       bsky thread --uri <uri>
+
+parameters:
+  --index <view index>
+    Specify the index string pointing to the feed to be show thread to.
+    The index string is output as "[ViewIndex:<index string>]" using the feed output command.
+
+  --uri <uri>
+    Specify the AT URI pointing to the feed to be show thread to.
+    The AT URI will be output by specifying the "--output-id" option with te feed output command.
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_thread' 'END'
 }
 
 parse_parameters_login()
@@ -675,6 +714,65 @@ command_like()
   debug 'command_like' 'END'
 }
 
+command_thread()
+{
+  debug 'command_thread' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_thread
+  else
+    parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0' "$@"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    DEPTH="${PARSED_PARAM_KEYVALUE_depth}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    PARENT_HEIGHT="${PARSED_PARAM_KEYVALUE_parent_height}"
+    if [ -n "${VIEW_INDEX}" ]
+    then
+      if [ -n "${URI}" ]
+      then
+        error "--index and --uri are exclusive"
+      fi
+      core_get_feed_view_index "${VIEW_INDEX}"
+      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+    else
+      if [ -z "${URI}" ]
+      then
+        error "parameter must be specify --index or --uri"
+      fi
+    fi
+    if [ -n "${DEPTH}" ]
+    then
+      _isnumeric "${DEPTH}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--depth parameter must be numeric value: ${DEPTH}"
+      fi
+    fi
+    if [ -n "${PARENT_HEIGHT}" ]
+    then
+      _isnumeric "${PARENT_HEIGHT}"
+      IS_NUMERIC=$?
+      if [ $IS_NUMERIC -ne 0 ]
+      then
+        error "--parent-height parameter must be numeric value: ${PARENT_HEIGHT}"
+      fi
+    fi
+    core_thread "${URI}" "${DEPTH}" "${PARENT_HEIGHT}" "${PARSED_PARAM_KEYONLY_output_id}"
+  fi
+
+  debug 'command_thread' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -730,6 +828,10 @@ case $1 in
   like)
     shift
     command_like "$@"
+    ;;
+  thread)
+    shift
+    command_thread "$@"
     ;;
   help)
     output_help_general

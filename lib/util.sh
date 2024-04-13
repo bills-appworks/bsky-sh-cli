@@ -36,6 +36,10 @@ ${SESSION_KEY_GETTIMELINE_CURSOR}
 ${SESSION_KEY_FEED_VIEW_INDEX}
 "
 
+# variable use at this file include(source) script, $<variables> want to pass through for jq
+# shellcheck disable=SC2034,SC2016
+VIEW_SESSION_PLACEHOLDER='\($view_index)|\($post_fragment.uri)|\($post_fragment.cid)\"'
+
 _p()
 {
   printf '%s' "$*"
@@ -230,6 +234,18 @@ get_option_type()
           return 2
           ;;
         *)  # '-<any>'
+          OPTION_REMAIN=`_strright "${OPTION_TYPE_TARGET}" '-'`
+          _strlen "${OPTION_REMAIN}"
+          # redundant $? for compatible with Solaris sh
+          # shellcheck disable=SC2181
+          if [ $? -gt 0 ]
+          then
+            OPTION_REMAIN=`_p "${OPTION_REMAIN}" | sed 's/[0-9]*//g'`
+            if [ -z "${OPTION_REMAIN}" ]
+            then  # '-[0-9]+' negative number
+              return 0
+            fi
+          fi
           return 1
           ;;
       esac

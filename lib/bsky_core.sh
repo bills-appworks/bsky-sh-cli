@@ -21,26 +21,32 @@ core_get_feed_view_index()
   read_session_file
   _slice "${SESSION_FEED_VIEW_INDEX}" '"'
   FEED_VIEW_INDEX_COUNT=$?
-  if [ "${PARAM_FEED_VIEW_INDEX}" -gt "${FEED_VIEW_INDEX_COUNT}" ]
+  CHUNK_INDEX=1
+  while [ "${CHUNK_INDEX}" -le $FEED_VIEW_INDEX_COUNT ]
+  do
+    SESSION_CHUNK=`eval _p \"\\$"RESULT_slice_${CHUNK_INDEX}"\"`
+    SESSION_CHUNK_INDEX=`_p "${SESSION_CHUNK}" | sed 's/^\([^|]*\)|.*/\1/g'`
+    if [ "${SESSION_CHUNK_INDEX}" = "${PARAM_FEED_VIEW_INDEX}" ]
+    then
+      break
+    fi
+    CHUNK_INDEX=`expr "${CHUNK_INDEX}" + 1`
+  done
+  if [ "${CHUNK_INDEX}" -gt $FEED_VIEW_INDEX_COUNT ]
   then
-    error "specified index (${PARAM_FEED_VIEW_INDEX}) greater than maximum index (${FEED_VIEW_INDEX_COUNT})"
+    error "specified index is not found in session: ${PARAM_FEED_VIEW_INDEX}"
   fi
-  FEED_VIEW_INDEX_ELEMENT=`eval _p \"\\$"RESULT_slice_${PARAM_FEED_VIEW_INDEX}"\"`
-  _slice "${FEED_VIEW_INDEX_ELEMENT}" '|'
+  _slice "${SESSION_CHUNK}" '|'
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   FEED_VIEW_INDEX_ELEMENT_INDEX="${RESULT_slice_1}"
-  # dynamic assignment in parse_parameters
-  # shellcheck disable=SC2154
-  # variable use at this file include(source) script
-  # shellcheck disable=SC2034
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
   FEED_VIEW_INDEX_ELEMENT_URI="${RESULT_slice_2}"
-  # dynamic assignment in parse_parameters
-  # shellcheck disable=SC2154
-  # variable use at this file include(source) script
-  # shellcheck disable=SC2034
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
   FEED_VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
-  if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" -ne "${PARAM_FEED_VIEW_INDEX}" ]
+  if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" != "${PARAM_FEED_VIEW_INDEX}" ]
   then
     error "internal error: specified index:${PARAM_FEED_VIEW_INDEX} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
   fi
@@ -120,6 +126,28 @@ core_build_embed_fragment()
   _p "\"embed\":{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${PARAM_EMBED_URI}\",\"cid\":\"${PARAM_EMBED_CID}\"}}"
 
   debug 'core_build_embed_fragment' 'END'
+}
+
+core_create_post_chunk()
+{
+  PARAM_OUTPUT_ID="$1"
+
+  debug 'core_create_post_chunk' 'START'
+  debug 'core_create_post_chunk' "PARAM_OUTPUT_ID:${PARAM_OUTPUT_ID}"
+
+  if [ -n "${PARAM_OUTPUT_ID}" ]
+  then
+    # escape for substitution at placeholder replacement 
+    VIEW_POST_OUTPUT_ID=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+  else
+    VIEW_POST_OUTPUT_ID=''
+  fi
+  export VIEW_POST_OUTPUT_ID
+  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
+  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
+  _p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'
+
+  debug 'core_create_post_chunk' 'END'
 }
 
 core_create_session()
@@ -342,3 +370,46 @@ cid:\(.cid)"'
   debug 'core_like' 'END'
 }
 
+core_thread()
+{
+  PARAM_THREAD_TARGET_URI="$1"
+  PARAM_THREAD_DEPTH="$2"
+  PARAM_THREAD_PARENT_HEIGHT="$3"
+  PARAM_THREAD_OUTPUT_ID="$4"
+
+  debug 'core_thread' 'START'
+  debug 'core_thread' "PARAM_THREAD_TARGET_URI:${PARAM_THREAD_TARGET_URI}"
+  debug 'core_thread' "PARAM_THREAD_DEPTH:${PARAM_THREAD_DEPTH}"
+  debug 'core_thread' "PARAM_THREAD_PARENT_HEIGHT:${PARAM_THREAD_PARENT_HEIGHT}"
+
+  debug_single 'core_thread'
+  RESULT=`api app.bsky.feed.getPostThread "${PARAM_THREAD_TARGET_URI}" "${PARAM_THREAD_DEPTH}" "${PARAM_THREAD_PARENT_HEIGHT}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+
+  VIEW_POST_PLACEHOLDER=`core_create_post_chunk "${PARAM_THREAD_OUTPUT_ID}"`
+
+  # $<variables> want to pass through for jq
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_PARENTS_01='def output_parents: .parent | [recurse(.parent; . != null)] | to_entries | reverse | foreach .[] as $feed_entry (0; 0; $feed_entry.value.post as $post_fragment | ($feed_entry.key * -1 - 1) as $view_index | "'
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_PARENTS_02='"); .thread | if has("parent") then output_parents else empty end'
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_TARGET_01='0 as $view_index | .thread.post as $post_fragment | "'
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_TARGET_02='"'
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_REPLIES_01='def output_replies(node; sibling_index; index_str): node as $node | sibling_index as $sibling_index | index_str as $index_str | $node.post as $post_fragment | $index_str[1:] as $view_index | $node.replies | reverse | if $sibling_index == 0 then empty else "'
+  # shellcheck disable=SC2016
+  THREAD_PARSE_PROCEDURE_REPLIES_02='" end, foreach .[] as $reply (0; . + 1; output_replies($reply; .; "\($index_str)-\(.)")); output_replies(.thread; 0; "")'
+
+  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_PARENTS_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_PARENTS_02}"
+  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_TARGET_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_TARGET_02}"
+  _p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_REPLIES_01}${VIEW_POST_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_REPLIES_02}"
+
+  FEED_VIEW_INDEX_PARENTS=`_p "${RESULT}" | jq -r -j "${THREAD_PARSE_PROCEDURE_PARENTS_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_PARENTS_02}"`
+  FEED_VIEW_INDEX_TARGET=`_p "${RESULT}" | jq -r "${THREAD_PARSE_PROCEDURE_TARGET_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_TARGET_02}"`
+  FEED_VIEW_INDEX_REPLIES=`_p "${RESULT}" | jq -r -j "${THREAD_PARSE_PROCEDURE_REPLIES_01}${VIEW_SESSION_PLACEHOLDER}${THREAD_PARSE_PROCEDURE_REPLIES_02}" | sed 's/.$//'`
+  FEED_VIEW_INDEX="${FEED_VIEW_INDEX_PARENTS}${FEED_VIEW_INDEX_TARGET}${FEED_VIEW_INDEX_REPLIES}"
+  update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+
+  debug 'core_thread' 'END'
+}

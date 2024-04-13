@@ -116,6 +116,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (thread --index <index> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} thread --index ${input:feed-index} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (thread --uri <uri> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} thread --uri ${input:uri} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getPostThread (<uri> <[depth depth<=1000 default:6]> <[parentHeight parentHeight<=1000 default:80]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPostThread",
             "terminalKind": "integrated",
@@ -305,6 +321,18 @@
             "type": "promptString",
             "id": "parentHeight",
             "description": "input levels of parent post to include"
+        },
+        {
+            "type": "promptString",
+            "id": "thread-depth",
+            "description": "input levels of reply depth number (delete if unnecessary)",
+            "default": "--depth "
+        },
+        {
+            "type": "promptString",
+            "id": "thread-parent-height",
+            "description": "input levels of parent post to include (delete if unnecessary)",
+            "default": "--parent-height "
         }
     ]
 }
