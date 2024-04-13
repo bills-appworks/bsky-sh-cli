@@ -228,7 +228,7 @@ usage: bsky reply --index <view index> --text '<text>'
 parameters:
   --index <index>
     Specify the index number pointing to the feed to be replied to.
-    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+    The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
   --uri <uri>
   --cid <cid>
@@ -259,7 +259,7 @@ usage: bsky repost --index <view index>
 parameters:
   --index <view index>
     Specify the index number pointing to the feed to be reposted to.
-    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+    The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
   --uri <uri>
   --cid <cid>
@@ -287,7 +287,7 @@ usage: bsky quote --index <view index> --text '<text>'
 parameters:
   --index <view index>
     Specify the index number pointing to the feed to be quoted to.
-    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+    The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
   --uri <uri>
   --cid <cid>
@@ -318,7 +318,7 @@ usage: bsky like --index <view index>
 parameters:
   --index <view index>
     Specify the index number pointing to the feed to be liked to.
-    The index number is output as "[ViewIndex:<number>]" using the feed output command.
+    The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
   --uri <uri>
   --cid <cid>
@@ -536,21 +536,13 @@ command_reply()
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     CID="${PARSED_PARAM_KEYVALUE_cid}"
     POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
     if [ -n "${VIEW_INDEX}" ]
     then
-      _isnumeric "${VIEW_INDEX}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
-      then
-        error "--index parameter must be numeric value: ${VIEW_INDEX}"
-      fi
       if [ -n "${URI}" ] || [ -n "${CID}" ]
       then
         error "--index and --uri/--cid are exclusive"
@@ -586,20 +578,12 @@ command_repost()
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     CID="${PARSED_PARAM_KEYVALUE_cid}"
     if [ -n "${VIEW_INDEX}" ]
     then
-      _isnumeric "${VIEW_INDEX}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
-      then
-        error "--index parameter must be numeric value: ${VIEW_INDEX}"
-      fi
       if [ -n "${URI}" ] || [ -n "${CID}" ]
       then
         error "--index and --uri/--cid are exclusive"
@@ -631,21 +615,13 @@ command_quote()
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     CID="${PARSED_PARAM_KEYVALUE_cid}"
     POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
     if [ -n "${VIEW_INDEX}" ]
     then
-      _isnumeric "${VIEW_INDEX}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
-      then
-        error "--index parameter must be numeric value: ${VIEW_INDEX}"
-      fi
       if [ -n "${URI}" ] || [ -n "${CID}" ]
       then
         error "--index and --uri/--cid are exclusive"
@@ -681,20 +657,12 @@ command_like()
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     CID="${PARSED_PARAM_KEYVALUE_cid}"
     if [ -n "${VIEW_INDEX}" ]
     then
-      _isnumeric "${VIEW_INDEX}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
-      then
-        error "--index parameter must be numeric value: ${VIEW_INDEX}"
-      fi
       if [ -n "${URI}" ] || [ -n "${CID}" ]
       then
         error "--index and --uri/--cid are exclusive"
@@ -726,13 +694,10 @@ command_thread()
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     URI="${PARSED_PARAM_KEYVALUE_uri}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     DEPTH="${PARSED_PARAM_KEYVALUE_depth}"
-    # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     PARENT_HEIGHT="${PARSED_PARAM_KEYVALUE_parent_height}"
     if [ -n "${VIEW_INDEX}" ]

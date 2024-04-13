@@ -310,7 +310,7 @@
         {
             "type": "promptString",
             "id": "feed-index",
-            "description": "input feed index number ([ViewIndex:<number>] in feed output)"
+            "description": "input feed index string ([ViewIndex:<index string>] in feed output)"
         },
         {
             "type": "promptString",
