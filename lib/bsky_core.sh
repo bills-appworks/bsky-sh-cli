@@ -183,6 +183,7 @@ core_create_post_chunk()
           post_fragment |
           if has("embed")
           then
+            select(.embed."$type" == "app.bsky.embed.record#view") |
             ([view_index, "1"] | join("-")) as $VIEW_INDEX |
             post_fragment.embed.record.uri as $URI |
             post_fragment.embed.record.cid as $CID |
