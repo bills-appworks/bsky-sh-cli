@@ -39,7 +39,8 @@ debug_mode_restore
 
 ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt'`
 REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt'`
-create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}"
+DID=`_p "${RESULT}" | jq -r '.did'`
+create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" "${DID}"
 
 _p "${RESULT}"
 

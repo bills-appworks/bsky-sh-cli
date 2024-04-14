@@ -26,6 +26,7 @@ SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
 SESSION_KEY_LOGIN_TIMESTAMP='SESSION_LOGIN_TIMESTAMP'
 SESSION_KEY_REFRESH_TIMESTAMP='SESSION_REFRESH_TIMESTAMP'
 SESSION_KEY_HANDLE='SESSION_HANDLE'
+SESSION_KEY_DID='SESSION_DID'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
@@ -34,6 +35,7 @@ BSKYSHCLI_SESSION_LIST="
 ${SESSION_KEY_LOGIN_TIMESTAMP}
 ${SESSION_KEY_REFRESH_TIMESTAMP}
 ${SESSION_KEY_HANDLE}
+${SESSION_KEY_DID}
 ${SESSION_KEY_ACCESS_JWT}
 ${SESSION_KEY_REFRESH_JWT}
 ${SESSION_KEY_GETTIMELINE_CURSOR}
@@ -568,6 +570,7 @@ init_session_info()
   HANDLE="$2"
   ACCESS_JWT="$3"
   REFRESH_JWT="$4"
+  DID="$5"
 
   debug 'init_session_info' 'START'
 
@@ -588,11 +591,19 @@ init_session_info()
     MESSAGE='(empty)'
   fi
   debug 'init_session_info' "REFRESH_JWT: ${MESSAGE}"
+  if [ -n "${DID}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'init_session_info' "DID: ${MESSAGE}"
 
   TIMESTAMP=`get_timestamp_timezone`
   _pn "# session ${OPS} at ${TIMESTAMP}"
   _pn "${SESSION_KEY_LOGIN_TIMESTAMP}='${TIMESTAMP}'"
   _pn "${SESSION_KEY_HANDLE}='${HANDLE}'"
+  _pn "${SESSION_KEY_DID}='${DID}'"
   _pn "${SESSION_KEY_ACCESS_JWT}='${ACCESS_JWT}'"
   _pn "${SESSION_KEY_REFRESH_JWT}='${REFRESH_JWT}'"
 
@@ -604,6 +615,7 @@ create_session_file()
   HANDLE="$1"
   ACCESS_JWT="$2"
   REFRESH_JWT="$3"
+  DID="$4"
 
   debug 'create_session_file' 'START'
   debug 'create_session_file' "HANDLE:${HANDLE}"
@@ -621,9 +633,16 @@ create_session_file()
     MESSAGE='(empty)'
   fi
   debug 'create_session_file' "REFRESH_JWT: ${MESSAGE}"
+  if [ -n "${DID}" ]
+  then
+    MESSAGE='(specified)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'create_session_file' "DID: ${MESSAGE}"
 
   SESSION_FILEPATH=`get_session_filepath`
-  init_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
+  init_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" "${DID}" > "${SESSION_FILEPATH}"
 
   debug 'create_session_file' 'END'
 }

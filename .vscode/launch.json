@@ -132,6 +132,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (info session [target] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} info session ${input:info-session-target} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (info meta [target] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} info meta ${input:info-meta-target}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getPostThread (<uri> <[depth depth<=1000 default:6]> <[parentHeight parentHeight<=1000 default:80]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPostThread",
             "terminalKind": "integrated",
@@ -333,6 +349,20 @@
             "id": "thread-parent-height",
             "description": "input levels of parent post to include (delete if unnecessary)",
             "default": "--parent-height "
+        },
+        {
+            "type": "pickString",
+            "id": "info-session-target",
+            "description": "select session information target",
+            "options": ["", "--all", "--which", "--status", "--login", "--refresh", "--handle", "--did", "--index", "--cursor"],
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "info-meta-target",
+            "description": "select meta information target",
+            "options": ["", "--all", "--path", "--config", "--profile"],
+            "default": ""
         }
     ]
 }

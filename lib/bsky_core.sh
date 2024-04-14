@@ -532,3 +532,175 @@ core_thread()
 
   debug 'core_thread' 'END'
 }
+
+core_info_session_which()
+{
+  debug 'core_info_session_which' 'START'
+
+  _p "session file path: "
+  _pn "`get_session_filepath`"
+
+  debug 'core_info_session_which' 'END'
+}
+
+core_info_session_status()
+{
+  debug 'core_info_session_status' 'START'
+
+  _p "login status: "
+  SESSION_FILEPATH=`get_session_filepath`
+  if [ -e "${SESSION_FILEPATH}" ]
+  then
+    _pn "login"
+  else
+    _pn "not login"
+  fi
+
+  debug 'core_info_session_status' 'END'
+}
+
+core_info_session_login()
+{
+  debug 'core_info_session_login' 'START'
+
+  _pn "login timestamp: ${SESSION_LOGIN_TIMESTAMP}"
+
+  debug 'core_info_session_login' 'END'
+}
+
+core_info_session_refresh()
+{
+  debug 'core_info_session_refresh' 'START'
+
+  _pn "session refresh timestamp: ${SESSION_REFRESH_TIMESTAMP}"
+
+  debug 'core_info_session_refresh' 'END'
+}
+
+core_info_session_handle()
+{
+  debug 'core_info_session_handle' 'START'
+
+  _pn "handle: ${SESSION_HANDLE}"
+
+  debug 'core_info_session_handle' 'END'
+}
+
+core_info_session_did()
+{
+  debug 'core_info_session_did' 'START'
+
+  _pn "did: ${SESSION_DID}"
+
+  debug 'core_info_session_did' 'END'
+}
+
+core_info_session_index()
+{
+  PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID="$1"
+
+  debug 'core_info_session_index' 'START'
+  debug 'core_info_session_index' "PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID:${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}"
+
+  _pn '[index]'
+  if [ -n "${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}" ]
+  then
+    _pn '[[view indexes: <index> <uri> <cid>]]'
+  else
+    _pn '[[view indexes: <index>]]'
+  fi
+
+  if [ -n "${SESSION_FEED_VIEW_INDEX}" ]
+  then
+    _slice "${SESSION_FEED_VIEW_INDEX}" '"'
+    FEED_VIEW_INDEX_COUNT=$?
+    CHUNK_INDEX=1
+    while [ "${CHUNK_INDEX}" -le $FEED_VIEW_INDEX_COUNT ]
+    do
+      SESSION_CHUNK=`eval _p \"\\$"RESULT_slice_${CHUNK_INDEX}"\"`
+      (
+        _slice "${SESSION_CHUNK}" '|'
+        # dynamic assignment in parse_parameters
+        # shellcheck disable=SC2154
+        CORE_INFO_SESSION_INDEX_INDEX="${RESULT_slice_1}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        CORE_INFO_SESSION_INDEX_URI="${RESULT_slice_2}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        CORE_INFO_SESSION_INDEX_CID="${RESULT_slice_3}"
+        
+        if [ -n "${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}" ]
+        then
+          printf "%s\t%s\t%s\n" "${CORE_INFO_SESSION_INDEX_INDEX}" "${CORE_INFO_SESSION_INDEX_URI}" "${CORE_INFO_SESSION_INDEX_CID}"
+        else
+          _pn "${CORE_INFO_SESSION_INDEX_INDEX}"
+        fi
+      )
+      CHUNK_INDEX=`expr "${CHUNK_INDEX}" + 1`
+    done
+  fi
+
+  debug 'core_info_session_index' 'END'
+}
+
+core_info_session_cursor()
+{
+  debug 'core_info_session_cursor' 'START'
+
+  _pn '[cursor]'
+  _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
+
+  debug 'core_info_session_cursor' 'END'
+}
+
+core_info_meta_path()
+{
+  debug 'core_info_meta_path' 'START'
+
+  _pn "resource config (BSKYSHCLI_RESORUCE_CONFIG_PATH): ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+  _pn "work for session, debug log, etc. (BSKYSHCLI_TOOLS_WORK_DIR): ${BSKYSHCLI_TOOLS_WORK_DIR}"
+  _pn "library (BSKYSHCLI_LIB_PATH): ${BSKYSHCLI_LIB_PATH}"
+  _pn "api (BSKYSHCLI_API_PATH): ${BSKYSHCLI_API_PATH}"
+
+  debug 'core_info_meta_path' 'END'
+}
+
+core_info_meta_config()
+{
+  debug 'core_info_meta_config' 'START'
+
+  _pn "BSKYSHCLI_DEBUG=${BSKYSHCLI_DEBUG}"
+  _pn "BSKYSHCLI_LIB_PATH=${BSKYSHCLI_LIB_PATH}"
+  _pn "BSKYSHCLI_TZ=${BSKYSHCLI_TZ}"
+  _pn "BSKYSHCLI_PROFILE=${BSKYSHCLI_PROFILE}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_META=${BSKYSHCLI_VIEW_TEMPLATE_POST_META}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD=${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_BODY=${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL=${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER=${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"
+  _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE=${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"
+
+  debug 'core_info_meta_config' 'END'
+}
+
+core_info_meta_profile()
+{
+  debug 'core_info_meta_profile' 'START'
+
+  _pn '[profile (active session)]'
+  SESSION_FILES=`(cd "${SESSION_DIR}" && ls -- *"${SESSION_FILENAME_SUFFIX}" 2>/dev/null)`
+  for SESSION_FILE in $SESSION_FILES
+  do
+    if [ "${SESSION_FILE}" = "${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}" ]
+    then
+      _pn '(default)'
+    else
+      _pn "${SESSION_FILE}" | sed "s/${SESSION_FILENAME_SUFFIX}$//g"
+    fi
+  done
+
+  debug 'core_info_meta_profile' 'END'
+}

@@ -125,6 +125,7 @@ commands:
   quote     post by quoting an existing post.
   like      like on existing post.
   thread    show thread of specified post.
+  info      show informations.
   help      show this help.
 
 To see command help:
@@ -362,6 +363,106 @@ note:
 EOS
 
   debug 'output_help_thread' 'END'
+}
+
+output_help_info()
+{
+  debug 'output_help_info' 'START'
+
+  cat << 'EOS'
+bsky info help
+
+usage: bsky info <subcommand>
+
+subcommand:
+  session
+    show session informations.
+
+  meta
+    show meta informations.
+
+To see command help:
+  bsky info <subcommand> help
+EOS
+
+  debug 'output_help_info' 'END'
+}
+
+output_help_info_session()
+{
+  debug 'output_help_info_session' 'START'
+
+  cat << 'EOS'
+bsky info help
+
+usage: bsky info session [parameters]
+
+parameters:
+  --all
+    show all session informations.
+
+  --which
+    show session information stored file path.
+
+  --status
+    show session status (login or not login).
+
+  --login
+    show login timestamp.
+
+  --refresh
+    show session latest refresh timestamp.
+
+  --handle
+    show login handle.
+
+  --did
+    show login did.
+
+  --index
+    show current index for some commands.
+    show with IDs if '--output-id' option specified.
+  
+  --cursor
+    show current cursor for paginate.
+  
+  --output-id
+    output IDs for some paramaters.
+
+note:
+  show all session informations if parameters not specified.
+EOS
+
+  debug 'output_help_info_session' 'END'
+}
+
+output_help_info_meta()
+{
+  debug 'output_help_info_meta' 'START'
+
+  cat << 'EOS'
+bsky info help
+
+usage: bsky info meta [parameters]
+
+parameters:
+  --all
+    show all meta informations.
+
+  --path
+    show path informations.
+
+  --config
+    show configurations.
+
+  --profile
+    show session active profiles.
+
+note:
+  show all session informations if parameters not specified.
+EOS
+
+  debug 'output_help_info_meta' 'END'
 }
 
 parse_parameters_login()
@@ -743,6 +844,119 @@ command_thread()
   debug 'command_thread' 'END'
 }
 
+command_info_session()
+{
+  debug 'command_info_session' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_info_session
+  else
+    parse_parameters '--all:0 --which:0 --status:0 --login:0 --refresh:0 --handle:0 --did:0 --index:0 --cursor:0 --output-id:0' "$@"
+    COUNT_OPTIONS=$?
+    if [ $COUNT_OPTIONS -eq 0 ]
+    then
+      PARSED_PARAM_KEYONLY_all='(defined)'
+    elif [ $COUNT_OPTIONS -eq 1 ] && [ -n "${PARSED_PARAM_KEYONLY_output_id}" ]
+    then
+      PARSED_PARAM_KEYONLY_all='(defined)'
+    fi
+
+    read_session_file
+    if [ -n "${PARSED_PARAM_KEYONLY_which}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_which
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_status}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_status
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_login}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_login
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_refresh}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_refresh
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_handle}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_handle
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_did}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_did
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_index}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_index "${PARSED_PARAM_KEYONLY_output_id}"
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_cursor}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_session_cursor
+    fi
+  fi
+
+  debug 'command_info_session' 'END'
+}
+
+command_info_meta()
+{
+  debug 'command_info_meta' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_info_meta
+  else
+    parse_parameters '--all:0 --path:0 --config:0 --profile:0' "$@"
+    COUNT_OPTIONS=$?
+    if [ $COUNT_OPTIONS -eq 0 ]
+    then
+      PARSED_PARAM_KEYONLY_all='(defined)'
+    fi
+    
+    read_session_file
+    if [ -n "${PARSED_PARAM_KEYONLY_path}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_meta_path
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_config}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_meta_config
+    fi
+    if [ -n "${PARSED_PARAM_KEYONLY_profile}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    then
+      core_info_meta_profile
+    fi
+  fi
+
+  debug 'command_info_meta' 'END'
+}
+
+command_info()
+{
+  debug 'command_info' 'START'
+
+  case $1 in
+    session)
+      shift
+      command_info_session "$@"
+      ;;
+    meta)
+      shift
+      command_info_meta "$@"
+      ;;
+    help)
+      output_help_info
+      ;;
+    *)
+      output_help_info
+      ;;
+  esac
+
+  debug 'command_info' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -802,6 +1016,10 @@ case $1 in
   thread)
     shift
     command_thread "$@"
+    ;;
+  info)
+    shift
+    command_info "$@"
     ;;
   help)
     output_help_general
