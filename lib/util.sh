@@ -23,12 +23,16 @@ BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 SESSION_FILENAME_DEFAULT_PREFIX='_bsky_sh_cli'
 SESSION_FILENAME_SUFFIX='_session'
 SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
+SESSION_KEY_LOGIN_TIMESTAMP='SESSION_LOGIN_TIMESTAMP'
+SESSION_KEY_REFRESH_TIMESTAMP='SESSION_REFRESH_TIMESTAMP'
 SESSION_KEY_HANDLE='SESSION_HANDLE'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
 SESSION_KEY_FEED_VIEW_INDEX='SESSION_FEED_VIEW_INDEX'
 BSKYSHCLI_SESSION_LIST="
+${SESSION_KEY_LOGIN_TIMESTAMP}
+${SESSION_KEY_REFRESH_TIMESTAMP}
 ${SESSION_KEY_HANDLE}
 ${SESSION_KEY_ACCESS_JWT}
 ${SESSION_KEY_REFRESH_JWT}
@@ -132,6 +136,11 @@ get_timestamp()
   date '+%Y/%m/%d %H:%M:%S'
 }
 
+get_timestamp_timezone()
+{
+  date '+%Y/%m/%d %H:%M:%S(%Z)'
+}
+
 get_ISO8601UTCbs()
 {
   date -u '+%Y-%m-%dT%H:%M:%S.000Z'
@@ -200,9 +209,12 @@ decode_keyvalue_list()
 
   debug 'decode_keyvalue_list' 'START'
 
+  EVACUATED_IFS=$IFS
+  IFS=`printf '\t\n'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $PARAM_KEYVALUE_LIST
+  IFS=$EVACUATED_IFS
   while [ $# -gt 0 ]
   do
     TARGET_LHS=`_strleft "$1" "${PARAM_ENCODED_SEPARATOR}"`
@@ -577,11 +589,12 @@ init_session_info()
   fi
   debug 'init_session_info' "REFRESH_JWT: ${MESSAGE}"
 
-  TIMESTAMP=`get_timestamp`
+  TIMESTAMP=`get_timestamp_timezone`
   _pn "# session ${OPS} at ${TIMESTAMP}"
-  _pn "${SESSION_KEY_HANDLE}=${HANDLE}"
-  _pn "${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}"
-  _pn "${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
+  _pn "${SESSION_KEY_LOGIN_TIMESTAMP}='${TIMESTAMP}'"
+  _pn "${SESSION_KEY_HANDLE}='${HANDLE}'"
+  _pn "${SESSION_KEY_ACCESS_JWT}='${ACCESS_JWT}'"
+  _pn "${SESSION_KEY_REFRESH_JWT}='${REFRESH_JWT}'"
 
   debug 'init_session_info' 'END'
 }
@@ -600,14 +613,14 @@ create_session_file()
   else
     MESSAGE='(empty)'
   fi
-  debug 'create_session_info' "ACCESS_JWT: ${MESSAGE}"
+  debug 'create_session_file' "ACCESS_JWT: ${MESSAGE}"
   if [ -n "${REFRESH_JWT}" ]
   then
     MESSAGE='(specified)'
   else
     MESSAGE='(empty)'
   fi
-  debug 'create_session_info' "REFRESH_JWT: ${MESSAGE}"
+  debug 'create_session_file' "REFRESH_JWT: ${MESSAGE}"
 
   SESSION_FILEPATH=`get_session_filepath`
   init_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" > "${SESSION_FILEPATH}"
@@ -635,12 +648,13 @@ read_session_file()
 create_session_info()
 {
   PARAM_OPS="$1"
+  # CAUTION: key=value pairs are separated by tab characters
   PARAM_SESSION_KEYVALUE_LIST="$2"
 
   debug 'create_session_info' 'START'
 
   read_session_file
-  TIMESTAMP=`get_timestamp`
+  TIMESTAMP=`get_timestamp_timezone`
   _pn "# session ${PARAM_OPS} at ${TIMESTAMP}"
   DECODED_PREFIX='DECODED_'
   decode_keyvalue_list "${PARAM_SESSION_KEYVALUE_LIST}" "${DECODED_PREFIX}" '='
@@ -666,6 +680,7 @@ create_session_info()
 
 update_session_file()
 {
+  # CAUTION: key=value pairs are separated by tab characters
   PARAM_SESSION_KEYVALUE_LIST="$1"
 
   debug 'update_session_file' 'START'

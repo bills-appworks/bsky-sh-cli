@@ -34,10 +34,12 @@ ERROR=`_p "${RESULT}" | jq -r '.error // empty'`
 
 if [ -z "${ERROR}" ]
 then
-  HANDLE=`_p "${RESULT}" | jq -r '.handle | @sh'`
-  ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt | @sh'`
-  REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt | @sh'`
-  update_session_file "${SESSION_KEY_HANDLE}=${HANDLE} ${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT} ${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
+  HANDLE=`_p "${RESULT}" | jq -r '.handle'`
+  ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt'`
+  REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt'`
+  TIMESTAMP=`get_timestamp_timezone`
+  # CAUTION: key=value pairs are separated by tab characters
+  update_session_file "${SESSION_KEY_REFRESH_TIMESTAMP}=${TIMESTAMP}	${SESSION_KEY_HANDLE}=${HANDLE}	${SESSION_KEY_ACCESS_JWT}=${ACCESS_JWT}	${SESSION_KEY_REFRESH_JWT}=${REFRESH_JWT}"
 fi
 
 _p "${RESULT}"

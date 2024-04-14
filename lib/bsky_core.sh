@@ -313,10 +313,11 @@ core_get_timeline()
   '
   _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}"
 
-  CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'" | @sh'`
+  CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
   VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
   FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}" | sed 's/.$//'`
-  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR} ${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+  # CAUTION: key=value pairs are separated by tab characters
+  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'
 }
@@ -526,6 +527,7 @@ core_thread()
   FEED_VIEW_INDEX_TARGET=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_TARGET}"`
   FEED_VIEW_INDEX_REPLIES=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_REPLIES}" | sed 's/.$//'`
   FEED_VIEW_INDEX="${FEED_VIEW_INDEX_PARENTS}${FEED_VIEW_INDEX_TARGET}${FEED_VIEW_INDEX_REPLIES}"
+  # CAUTION: key=value pairs are separated by tab characters
   update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_thread' 'END'
