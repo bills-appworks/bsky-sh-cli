@@ -159,13 +159,24 @@ core_create_post_chunk()
   VIEW_TEMPLATE_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
   VIEW_TEMPLATE_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
   VIEW_TEMPLATE_POST_TAIL=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
+  VIEW_TEMPLATE_IMAGE=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
   VIEW_TEMPLATE_POST_SEPARATOR=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
   VIEW_TEMPLATE_QUOTED_POST_META=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   VIEW_TEMPLATE_QUOTED_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   VIEW_TEMPLATE_QUOTED_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  VIEW_TEMPLATE_QUOTED_IMAGE=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_IMAGE}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  _p 'def output_post(view_index; post_fragment):
+  _p 'def output_image(image; sibling_index; index_str):
+        ([index_str, sibling_index] | join("-")) as $IMAGE_INDEX |
+        image.alt as $ALT |
+        image.thumb as $THUMB |
+        image.fullsize as $FULLSIZE |
+        image.aspectRatio.height as $ASPECTRATIO_HEIGHT |
+        image.aspectRatio.width as $ASPECTRATIO_WIDTH |
+        "'"${VIEW_TEMPLATE_IMAGE}"'"
+      ;
+      def output_post(view_index; post_fragment):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
@@ -183,17 +194,66 @@ core_create_post_chunk()
           post_fragment |
           if has("embed")
           then
-            select(.embed."$type" == "app.bsky.embed.record#view") |
-            ([view_index, "1"] | join("-")) as $VIEW_INDEX |
-            post_fragment.embed.record.uri as $URI |
-            post_fragment.embed.record.cid as $CID |
-            post_fragment.embed.record.author.displayName as $AUTHOR_DISPLAYNAME |
-            post_fragment.embed.record.author.handle as $AUTHOR_HANDLE |
-            post_fragment.embed.record.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
-            (post_fragment.embed.record.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
-            "'"${VIEW_TEMPLATE_QUOTED_POST_META}"'",
-            "'"${VIEW_TEMPLATE_QUOTED_POST_HEAD}"'",
-            "'"${VIEW_TEMPLATE_QUOTED_POST_BODY}"'"
+            (
+              select(.embed."$type" == "app.bsky.embed.images#view") |
+              post_fragment.embed.images |
+              foreach .[] as $image (0; . + 1;
+                output_image($image; .; "image")
+              )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.recordWithMedia#view") |
+              (
+                select(.embed.media."$type" == "app.bsky.embed.images#view") |
+                post_fragment.embed.media.images |
+                foreach .[] as $image (0; . + 1;
+                  output_image($image; .; "image")
+                )
+              ),
+              (
+                select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
+                ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+                post_fragment.embed.record.record.uri as $URI |
+                post_fragment.embed.record.record.cid as $CID |
+                post_fragment.embed.record.record.author.displayName as $AUTHOR_DISPLAYNAME |
+                post_fragment.embed.record.record.author.handle as $AUTHOR_HANDLE |
+                post_fragment.embed.record.record.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+                (post_fragment.embed.record.record.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
+                "'"${VIEW_TEMPLATE_QUOTED_POST_META}"'",
+                "'"${VIEW_TEMPLATE_QUOTED_POST_HEAD}"'",
+                "'"${VIEW_TEMPLATE_QUOTED_POST_BODY}"'"
+              ),
+              (
+                select(.embed.record.record.embeds) |
+                .embed.record.record.embeds |
+                foreach .[] as $embed (0; . + 1;
+                  select($embed."$type" == "app.bsky.embed.images#view") |
+                  $embed.images |
+                  foreach .[] as $image (0; . + 1;
+                    (["image", .] | join("-")) as $IMAGE_INDEX |
+                    $image.alt as $ALT |
+                    $image.thumb as $THUMB |
+                    $image.fullsize as $FULLSIZE |
+                    $image.aspectRatio.height as $ASPECTRATIO_HEIGHT |
+                    $image.aspectRatio.width as $ASPECTRATIO_WIDTH |
+                    "'"${VIEW_TEMPLATE_QUOTED_IMAGE}"'"
+                  )
+                )
+              )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.record#view") |
+              ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+              post_fragment.embed.record.uri as $URI |
+              post_fragment.embed.record.cid as $CID |
+              post_fragment.embed.record.author.displayName as $AUTHOR_DISPLAYNAME |
+              post_fragment.embed.record.author.handle as $AUTHOR_HANDLE |
+              post_fragment.embed.record.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+              (post_fragment.embed.record.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
+              "'"${VIEW_TEMPLATE_QUOTED_POST_META}"'",
+              "'"${VIEW_TEMPLATE_QUOTED_POST_HEAD}"'",
+              "'"${VIEW_TEMPLATE_QUOTED_POST_BODY}"'"
+            )
           else
             empty
           end
