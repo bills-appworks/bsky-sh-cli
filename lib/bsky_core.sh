@@ -181,8 +181,8 @@ core_create_post_chunk()
           "'"${VIEW_TEMPLATE_IMAGE}"'"
         end
       ;
-      def output_images($images; is_quoted):
-        foreach $images[] as $image (0; . + 1;
+      def output_images(images; is_quoted):
+        foreach images[] as $image (0; . + 1;
           output_image($image; .; "image"; is_quoted)
         )
       ;
