@@ -148,6 +148,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.getFeed (<feed> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getFeed",
+            "terminalKind": "integrated",
+            "argsString": "'${input:feed}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getPostThread (<uri> <[depth depth<=1000 default:6]> <[parentHeight parentHeight<=1000 default:80]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPostThread",
             "terminalKind": "integrated",
@@ -363,6 +371,12 @@
             "description": "select meta information target",
             "options": ["", "--all", "--path", "--config", "--profile"],
             "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "feed",
+            "description": "input feed at-uri",
+            "default": "at://<did>/app.bsky.feed.generator/<record_key>"
         }
     ]
 }
