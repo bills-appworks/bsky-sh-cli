@@ -9,6 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
 VIEW_TEMPLATE_CREATED_AT='
@@ -23,6 +24,23 @@ VIEW_TEMPLATE_CREATED_AT='
   try strflocaltime("%F %X(%Z)") catch $raw
 '
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
+
+core_canonicalize_handle()
+{
+  PARAM_CANONICALIZE_HANDLE=$1
+
+  debug 'core_canonicalize_handle' 'START'
+  debug 'core_canonicalize_handle' "PARAM_CANONICALIZE_HANDLE:${PARAM_CANONICALIZE_HANDLE}"
+
+  HANDLE_CHECK=`_p "${PARAM_CANONICALIZE_HANDLE}" | sed 's/[^.]//g'`
+  if [ -z "${HANDLE_CHECK}" ]
+  then
+    PARAM_CANONICALIZE_HANDLE="${PARAM_CANONICALIZE_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
+  fi
+  _p "${PARAM_CANONICALIZE_HANDLE}"
+
+  debug 'core_canonicalize_handle' 'END'
+}
 
 core_get_feed_view_index()
 {
@@ -313,6 +331,7 @@ core_create_session()
   fi
   debug 'core_create_session' "PASSWORD:${MESSAGE}"
 
+  HANDLE=`core_canonicalize_handle "${HANDLE}"`
   api com.atproto.server.createSession "${HANDLE}" "${PASSWORD}" > /dev/null
   API_STATUS=$?
 

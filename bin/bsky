@@ -541,12 +541,6 @@ command_login()
       error 'Password not specified.'
     fi
 
-    HANDLE_CHECK=`_p "${PARAM_HANDLE}" | sed 's/[^.]//g'`
-    if [ -z "${HANDLE_CHECK}" ]
-    then
-      PARAM_HANDLE="${PARAM_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
-    fi
-
     core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
     read_session_file
     _pn "login session of ${SESSION_HANDLE}"
