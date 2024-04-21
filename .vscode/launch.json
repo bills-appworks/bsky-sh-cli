@@ -44,6 +44,38 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (feed --actor <handle or did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} feed --actor '${input:actor}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (feed --handle <handle> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} feed --handle '${input:handle}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (feed --did <did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} feed --did '${input:did}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (feed [--url] <bsky.app feed URL> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} feed ${input:bsky-app-feed-url} ${input:limit-1-100} ${input:next} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (post --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -244,6 +276,12 @@
         },
         {
             "type": "promptString",
+            "id": "limit-1-100",
+            "description": "input timeline outpput limit count (delete if unnecessary): from 1 to 100",
+            "default": "--limit "
+        },
+        {
+            "type": "promptString",
             "id": "next",
             "description": "output next page if this parameter specified (delete if unnecessary)",
             "default": "--next"
@@ -391,6 +429,24 @@
             "id": "actor",
             "description": "input Bluesky handle or DID",
             "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "did",
+            "description": "input DID",
+            "default": "did:"
+        },
+        {
+            "type": "promptString",
+            "id": "record-key",
+            "description": "input record key",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "bsky-app-feed-url",
+            "description": "input bsky.app feed URL (delete '--url' if unnecessary)",
+            "default": "--url "
         }
     ]
 }

@@ -35,3 +35,5 @@
 #BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
 # template for embedded image in post
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT) \($FULLSIZE)'
+# sleep interval for following support commands (timeline, feed, etc.)
+#BSKYSHCLI_SLEEP_INTERVAL='5s'

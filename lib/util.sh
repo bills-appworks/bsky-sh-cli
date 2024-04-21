@@ -26,6 +26,7 @@ SESSION_KEY_DID='SESSION_DID'
 SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
+SESSION_KEY_GETFEED_CURSOR='SESSION_GETFEED_CURSOR'
 SESSION_KEY_FEED_VIEW_INDEX='SESSION_FEED_VIEW_INDEX'
 BSKYSHCLI_SESSION_LIST="
 ${SESSION_KEY_LOGIN_TIMESTAMP}
@@ -35,6 +36,7 @@ ${SESSION_KEY_DID}
 ${SESSION_KEY_ACCESS_JWT}
 ${SESSION_KEY_REFRESH_JWT}
 ${SESSION_KEY_GETTIMELINE_CURSOR}
+${SESSION_KEY_GETFEED_CURSOR}
 ${SESSION_KEY_FEED_VIEW_INDEX}
 "
 
@@ -119,6 +121,24 @@ _slice()
   done
 
   return "${SLICE_ELEMENT_COUNT}"
+}
+
+_startswith()
+{
+  PARAM_STARTS_WITH_STRING=$1
+  PARAM_STARTS_WITH_SUBSTRING=$2
+
+  _strlen "${PARAM_STARTS_WITH_SUBSTRING}"
+  SUBSTRING_LEN=$?
+  COMPARE_STRING=`_cut "${PARAM_STARTS_WITH_STRING}" -c "1-${SUBSTRING_LEN}"`
+  if [ "${COMPARE_STRING}" = "${PARAM_STARTS_WITH_SUBSTRING}" ]
+  then
+    STARTS_WITH_RESULT=0
+  else
+    STARTS_WITH_RESULT=1
+  fi
+
+  return $STARTS_WITH_RESULT
 }
 
 set_timezone()
@@ -222,6 +242,69 @@ decode_keyvalue_list()
   done
 
   debug 'decode_keyvalue_list' 'END'
+}
+
+verify_numeric_range()
+{
+  PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME="$1"
+  PARAM_VERIFY_NUMERIC_RANGE_NUMBER="$2"
+  PARAM_VERIFY_NUMERIC_RANGE_MIN="$3"
+  PARAM_VERIFY_NUMERIC_RANGE_MAX="$4"
+
+  debug 'verify_numeric_range' 'START'
+
+  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_MIN}"
+  IS_NUMERIC_MIN=$?
+  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_MIN}"
+  IS_NUMERIC_MAX=$?
+  if [ $IS_NUMERIC_MIN -ne 0 ] || [ $IS_NUMERIC_MAX -ne 0 ]
+  then
+    error "internal error: specified min(${PARAM_VERIFY_NUMERIC_RANGE_MIN}) and/or max(${PARAM_VERIFY_NUMERIC_RANGE_MAX}) is not numeric"
+  fi
+
+  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+  IS_NUMERIC=$?
+  if [ $IS_NUMERIC -ne 0 ]
+  then
+    error "${PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME} parameter must be numeric value: ${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+  fi
+  VERIFY_NUMBER="${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+  if [ "${VERIFY_NUMBER}" -lt "${PARAM_VERIFY_NUMERIC_RANGE_MIN}" ] || [ "${VERIFY_NUMBER}" -gt "${PARAM_VERIFY_NUMERIC_RANGE_MAX}" ]
+  then
+    error "${PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME} parameter must be specify from 1 to 100: ${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+  fi
+
+  debug 'verify_numeric_range' 'END'
+
+  return "${VERIFY_NUMBER}"
+}
+
+verify_exclusive()
+{
+  PARAM_VERIFY_EXCLUSIVE_STRING="$1"
+  shift
+  # for shells that do not support arrays
+  # shellcheck disable=SC2124
+  PARAM_VERIFY_EXCLUSIVE_TARGETS="$@"
+
+  debug 'verify_exclusive' 'START'
+  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_STRING:${PARAM_VERIFY_EXCLUSIVE_STRING}"
+  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_TARGETS:${PARAM_VERIFY_EXCLUSIVE_TARGETS}"
+
+  SPECIFIED=1
+  for TARGET in $PARAM_VERIFY_EXCLUSIVE_TARGETS
+  do
+    if [ -n "${TARGET}" ]
+    then
+      if [ "${SPECIFIED}" -eq 0 ]
+      then
+        error "these are exclusive: ${PARAM_VERIFY_EXCLUSIVE_STRING}"
+      fi
+      SPECIFIED=0
+    fi
+  done
+
+  debug 'verify_exclusive' 'end'
 }
 
 get_option_type()

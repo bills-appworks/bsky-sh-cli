@@ -121,6 +121,7 @@ commands:
   login     login to Bluesky for create session.
   logout    logout from Bluesky for clear session.
   timeline  show timeline (now incomplete).
+  feed      show custom feed(feed generator)
   post      post text.
   reply     reply to existing post.
   repost    reopst of existing post.
@@ -187,19 +188,60 @@ output_help_timeline()
 bsky timeline help
 
 usage: bsky timeline [--limit <number>] [--next]
+
+parameters:
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
   --next
     Output next feeds from previous timeline command.
-
-parameters:
-  <under construction>
+  --output-id
+    Output identifier of AT protocol (uri, cid)
 
 note:
   you must have started a Bluesky session with the login command.
 EOS
 
   debug 'output_help_timeline' 'END'
+}
+
+output_help_feed()
+{
+  debug 'output_help_feed' 'START'
+
+  cat << 'EOS'
+bsky feed help
+
+usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <number>] [--next] [--output-id]
+       or
+       bsky feed --handle <handle> --record-key <record key> [--limit <number>] [--next] [--output-id]
+       or
+       bsky feed --did <did> --record-key <record key> [--limit <number>] [--next] [--output-id]
+       or
+       bsky feed [--url] <bsky.app feed URL> [--limit <number>] [--next] [--output-id]
+
+parameters:
+  --actor <handle or did>
+    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --record-key <record key>
+    Specify record key for part of custom feed (feed generator) 
+  --handle <handle>
+    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --did
+    Specify DID of account for custom feed (feed generator) creator.
+  --url
+    Specify URL of custom feed (feed generator) handled by bsky.app (https://bsky.app/profile/<handle or did>/feed/<record key>).
+  --limit <number>
+    Specify limit number (default 50) of output feeds (from 1 to 100).
+  --next
+    Output next feeds from previous feed command.
+  --output-id
+    Output identifier of AT protocol (uri, cid)
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_feed' 'END'
 }
 
 output_help_post()
@@ -604,6 +646,85 @@ command_timeline()
   return 0
 }
 
+command_feed()
+{
+  debug 'command_feed' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_feed
+  else
+    core_is_feed_generator "$1"
+    if [ $? -eq 0 ]
+    then
+      NAKED_FEED_GENERATOR="$1"
+      shift
+    fi
+
+    parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0' "$@"
+
+    if [ -n "${NAKED_FEED_GENERATOR}" ]
+    then
+      if [ -n "${PARSED_PARAM_KEYVALUE_url}" ]
+      then
+        error 'url parameter is specify only one'
+      fi
+      PARSED_PARAM_KEYVALUE_url="${NAKED_FEED_GENERATOR}"
+    fi
+
+    verify_exclusive '--actor --handle --did --url', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}" "${PARSED_PARAM_KEYVALUE_url}"
+
+    if [ -n "${PARSED_PARAM_KEYVALUE_actor}" ]
+    then
+      DID=`core_actor_to_did "${PARSED_PARAM_KEYVALUE_actor}"`
+      RESULT=$?
+    elif [ -n "${PARSED_PARAM_KEYVALUE_handle}" ]
+    then
+      DID=`core_handle_to_did "${PARSED_PARAM_KEYVALUE_handle}"`
+      RESULT=$?
+    elif [ -n "${PARSED_PARAM_KEYVALUE_did}" ]
+    then
+      core_verify_did "${PARSED_PARAM_KEYVALUE_did}"
+      DID="${PARSED_PARAM_KEYVALUE_did}"
+      RESULT=0
+    else
+      DID=''
+      RESULT=0
+    fi
+
+    if [ $RESULT -ne 0 ]
+    then
+      error 'feed command error occured'
+    fi
+
+    if [ -n "${DID}" ] && [ -z "${PARSED_PARAM_KEYVALUE_record_key}" ]
+    then
+      error 'parameter --actor/--handle/--did must be specified --record-key'
+    fi
+
+    if [ -n "${DID}" ] && [ -n "${PARSED_PARAM_KEYVALUE_url}" ]
+    then
+      error 'parameter --actor/--handle/--did and --url are exclusive'
+    fi
+    if [ -z "${DID}" ] && [ -z "${PARSED_PARAM_KEYVALUE_url}" ]
+    then
+      error 'parameter --actor/--handle/--did or --url is required'
+    fi
+
+    if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+    then
+      verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+      LIMIT=$?
+    else
+      LIMIT=''
+    fi
+
+    core_get_feed "${DID}" "${PARSED_PARAM_KEYVALUE_record_key}" "${PARSED_PARAM_KEYVALUE_url}" "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
+  fi
+
+  debug 'command_feed' 'END'
+}
+
 command_post()
 {
   debug 'command_post' 'START'
@@ -988,6 +1109,10 @@ case $1 in
   timeline)
     shift
     command_timeline "$@"
+    ;;
+  feed)
+    shift
+    command_feed "$@"
     ;;
   post)
     shift

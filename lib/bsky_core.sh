@@ -24,6 +24,7 @@ VIEW_TEMPLATE_CREATED_AT='
   try strflocaltime("%F %X(%Z)") catch $raw
 '
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
+FEED_GENERATOR_PATTERN='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 
 core_canonicalize_handle()
 {
@@ -40,6 +41,123 @@ core_canonicalize_handle()
   _p "${PARAM_CANONICALIZE_HANDLE}"
 
   debug 'core_canonicalize_handle' 'END'
+}
+
+core_verify_did()
+{
+  PARAM_VERIFY_DID=$1
+
+  debug 'core_verify_did' 'START'
+  debug 'core_verify_did' "PARAM_VERIFY_DID:${PARAM_VERIFY_DID}"
+
+  _startswith "${PARAM_VERIFY_DID}" 'did:'
+  # redundant $? for compatible with Solaris sh
+  # shellcheck disable=SC2181
+  if [ $? -ne 0 ]
+  then
+    error "specified did is invalid: ${PARAM_VERIFY_DID}"
+  fi
+
+  debug 'core_verify_did' 'END'
+}
+
+core_handle_to_did()
+{
+  PARAM_TO_DID_HANDLE=$1
+
+  debug 'core_handle_to_did' 'START'
+  debug 'core_handle_to_did' "PARAM_TO_DID_HANDLE:${PARAM_TO_DID_HANDLE}"
+
+  PARAM_TO_DID_HANDLE=`core_canonicalize_handle "${PARAM_TO_DID_HANDLE}"`
+  RESULT=`api app.bsky.actor.getProfile "${PARAM_TO_DID_HANDLE}"`
+  STATUS=$?
+  if [ $STATUS -eq 0 ]
+  then
+   _p "${RESULT}" | jq -r '.did'
+  fi
+
+  debug 'core_handle_to_did' 'END'
+
+  return $STATUS
+}
+
+core_actor_to_did()
+{
+  PARAM_TO_DID_ACTOR=$1
+
+  debug 'core_actor_to_did' 'START'
+  debug 'core_actor_to_did' "PARAM_TO_DID_ACTOR:${PARAM_TO_DID_ACTOR}"
+
+  _startswith "${PARAM_TO_DID_ACTOR}" 'did:'
+  # redundant $? for compatible with Solaris sh
+  # shellcheck disable=SC2181
+  if [ $? -eq 0 ]
+  then
+    _p "${PARAM_TO_DID_ACTOR}"
+    RESULT=0
+  else
+    core_handle_to_did "${PARAM_TO_DID_ACTOR}"
+    RESULT=$?
+  fi
+
+  debug 'core_actor_to_did' 'END'
+
+  return $RESULT
+}
+
+core_is_feed_generator()
+{
+  PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET=$1
+
+  debug 'core_is_feed_generator' 'START'
+  debug 'core_is_feed_generator' "PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET:${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}"
+
+  VERIFY_RESULT=`_p "${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}" | sed "s_${FEED_GENERATOR_PATTERN}__g"`
+  if [ -z "${VERIFY_RESULT}" ]
+  then
+    IS_FEED_GENERATOR=0
+  else
+    IS_FEED_GENERATOR=1
+  fi
+
+  debug 'core_is_feed_generator' 'END'
+
+  return "${IS_FEED_GENERATOR}"
+}
+
+core_create_feed_at_uri_did_record_key()
+{
+  PARAM_CORE_CREATE_FEED_AT_URI_DID="$1"
+  PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY="$2"
+
+  debug 'core_create_feed_at_uri_did_record_key' 'START'
+  debug 'core_create_feed_at_uri_did_record_key' "PARAM_CORE_CREATE_FEED_AT_URI_DID:${PARAM_CORE_CREATE_FEED_AT_URI_DID}"
+  debug 'core_create_feed_at_uri_did_record_key' "PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY:${PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY}"
+
+  _p "at://${PARAM_CORE_CREATE_FEED_AT_URI_DID}/app.bsky.feed.generator/${PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY}"
+
+  debug 'core_create_feed_at_uri_did_record_key' 'END'
+}
+
+core_create_feed_at_uri_bsky_app_url()
+{
+  PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL="$1"
+
+  debug 'core_create_feed_at_uri_bsky_app_url' 'START'
+  debug 'core_create_feed_at_uri_bsky_app_url' "PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL:${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}"
+
+  ACTOR=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN}_\1_g"`
+  RECORD_KEY=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN}_\2_g"`
+  DID=`core_actor_to_did "${ACTOR}"`
+  STATUS=$?
+  if [ $STATUS -eq 0 ]
+  then
+    core_create_feed_at_uri_did_record_key "${DID}" "${RECORD_KEY}"
+  fi
+
+  debug 'core_create_feed_at_uri_bsky_app_url' 'END'
+
+  return $STATUS
 }
 
 core_get_feed_view_index()
@@ -302,10 +420,35 @@ core_create_session_chunk()
           post_fragment |
           if has("embed")
           then
-            ([view_index, "1"] | join("-")) as $VIEW_INDEX |
-            post_fragment.embed.record.uri as $URI |
-            post_fragment.embed.record.cid as $CID |
-            "'"${VIEW_SESSION_PLACEHOLDER}"'"
+            (
+              select(.embed."$type" == "app.bsky.embed.recordWithMedia#view") |
+              (
+                select(.embed.media."$type" == "app.bsky.embed.images#view") |
+                empty
+              ),
+              (
+                select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
+                ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+                post_fragment.embed.record.record.uri as $URI |
+                post_fragment.embed.record.record.cid as $CID |
+                "'"${VIEW_SESSION_PLACEHOLDER}"'"
+              ),
+              (
+                select(.embed.record.record.embeds) |
+                .embed.record.record.embeds |
+                foreach .[] as $embed (0; . + 1;
+                  select($embed."$type" == "app.bsky.embed.images#view") |
+                  empty
+                )
+              )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.record#view") |
+              ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+              post_fragment.embed.record.uri as $URI |
+              post_fragment.embed.record.cid as $CID |
+              "'"${VIEW_SESSION_PLACEHOLDER}"'"
+            )
           else
             empty
           end
@@ -400,6 +543,84 @@ core_get_timeline()
   update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_get_timeline' 'END'
+}
+
+core_get_feed()
+{
+  PARAM_CORE_GET_FEED_DID="$1"
+  PARAM_CORE_GET_FEED_RECORD_KEY="$2"
+  PARAM_CORE_GET_FEED_URL="$3"
+  PARAM_CORE_GET_FEED_LIMIT="$4"
+  PARAM_CORE_GET_FEED_NEXT="$5"
+  PARAM_CORE_GET_FEED_OUTPUT_ID="$6"
+
+  debug 'core_get_feed' 'START'
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_DID:${PARAM_CORE_GET_FEED_DID}"
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_RECORD_KEY:${PARAM_CORE_GET_FEED_RECORD_KEY}"
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_URL:${PARAM_CORE_GET_FEED_URL}"
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_LIMIT:${PARAM_CORE_GET_FEED_LIMIT}"
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_NEXT:${PARAM_CORE_GET_FEED_NEXT}"
+  debug 'core_get_feed' "PARAM_CORE_GET_FEED_OUTPUT_ID:${PARAM_CORE_GET_FEED_OUTPUT_ID}"
+
+  if [ -n "${PARAM_CORE_GET_FEED_DID}" ]
+  then
+    FEED=`core_create_feed_at_uri_did_record_key "${PARAM_CORE_GET_FEED_DID}" "${PARAM_CORE_GET_FEED_RECORD_KEY}"`
+    STATUS=$?
+  elif [ -n "${PARAM_CORE_GET_FEED_URL}" ]
+  then
+    FEED=`core_create_feed_at_uri_bsky_app_url "${PARAM_CORE_GET_FEED_URL}"`
+    STATUS=$?
+  else
+    error 'internal error: did and url are not specified'
+  fi
+
+  if [ $STATUS -eq 0 ]
+  then
+    read_session_file
+    if [ -n "${PARAM_CORE_GET_FEED_NEXT}" ]
+    then
+      CURSOR="${SESSION_GETFEED_CURSOR}"
+      if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+      then
+        _p '[next feeds not found]'
+        exit 0
+      fi
+    else
+      CURSOR=''
+    fi
+
+    RESULT=`api app.bsky.feed.getFeed "${FEED}" "${PARAM_CORE_GET_FEED_LIMIT}" "${CURSOR}"`
+    STATUS=$?
+    debug_single 'core_get_feed'
+    _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+
+    if [ $STATUS -eq 0 ]
+    then
+      VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_CORE_GET_FEED_OUTPUT_ID}"`
+      # $<variables> want to pass through for jq
+      # shellcheck disable=SC2016
+      FEED_PARSE_PROCEDURE='
+        .feed |
+        to_entries |
+        foreach .[] as $feed_entry (0; 0;
+          $feed_entry.value.post as $post_fragment |
+          ($feed_entry.key + 1) as $view_index |
+          output_post($view_index; $post_fragment)
+        )
+      '
+      _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
+
+      CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+      VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
+      FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+      # CAUTION: key=value pairs are separated by tab characters
+      update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+    fi
+  fi
+
+  debug 'core_get_feed' 'END'
+
+  return $STATUS
 }
 
 core_post()
