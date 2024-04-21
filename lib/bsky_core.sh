@@ -23,6 +23,16 @@ VIEW_TEMPLATE_CREATED_AT='
   try fromdate catch $raw |
   try strflocaltime("%F %X(%Z)") catch $raw
 '
+# shellcheck disable=SC2016
+FEED_PARSE_PROCEDURE='
+  .feed |
+  to_entries |
+  foreach .[] as $feed_entry (0; 0;
+    $feed_entry.value.post as $post_fragment |
+    ($feed_entry.key + 1) as $view_index |
+    output_post($view_index; $post_fragment)
+  )
+'
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 
@@ -519,30 +529,28 @@ core_get_timeline()
   else
     CURSOR=''
   fi
+
+  RESULT=`api app.bsky.feed.getTimeline "${PARAM_TIMELINE_ALGORITHM}" "${PARAM_TIMELINE_LIMIT}" "${CURSOR}"`
+  STATUS=$?
   debug_single 'core_get_timeline'
-  RESULT=`api app.bsky.feed.getTimeline "${PARAM_TIMELINE_ALGORITHM}" "${PARAM_TIMELINE_LIMIT}" "${CURSOR}" | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-  VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
-  # $<variables> want to pass through for jq
-  # shellcheck disable=SC2016
-  TIMELINE_PARSE_PROCEDURE='
-    .feed |
-    to_entries |
-    foreach .[] as $feed_entry (0; 0;
-      $feed_entry.value.post as $post_fragment |
-      ($feed_entry.key + 1) as $view_index |
-      output_post($view_index; $post_fragment)
-    )
-  '
-  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}"
+  if [ $STATUS -eq 0 ]
+  then
+    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
+    TIMELINE_PARSE_PROCEDURE="${FEED_PARSE_PROCEDURE}"
+    _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
 
-  CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
-  VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
-  FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${TIMELINE_PARSE_PROCEDURE}" | sed 's/.$//'`
-  # CAUTION: key=value pairs are separated by tab characters
-  update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+    CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+    VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
+    FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+    # CAUTION: key=value pairs are separated by tab characters
+    update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+  fi
 
   debug 'core_get_timeline' 'END'
+
+  return $STATUS
 }
 
 core_get_feed()
@@ -597,17 +605,6 @@ core_get_feed()
     if [ $STATUS -eq 0 ]
     then
       VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_CORE_GET_FEED_OUTPUT_ID}"`
-      # $<variables> want to pass through for jq
-      # shellcheck disable=SC2016
-      FEED_PARSE_PROCEDURE='
-        .feed |
-        to_entries |
-        foreach .[] as $feed_entry (0; 0;
-          $feed_entry.value.post as $post_fragment |
-          ($feed_entry.key + 1) as $view_index |
-          output_post($view_index; $post_fragment)
-        )
-      '
       _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
 
       CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
