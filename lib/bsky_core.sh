@@ -538,7 +538,6 @@ core_get_timeline()
   if [ $STATUS -eq 0 ]
   then
     VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
-    TIMELINE_PARSE_PROCEDURE="${FEED_PARSE_PROCEDURE}"
     _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
 
     CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`

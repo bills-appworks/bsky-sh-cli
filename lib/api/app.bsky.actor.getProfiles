@@ -23,11 +23,15 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
+# for shells that do not support arrays
+# shellcheck disable=SC2124
 PARAM_ACTORS="$@"
 
 debug "${FILENAME}" 'START'
 
-PARAMETERS=`build_array_parameters '' 'actors' "$@"`
+# no double quote for use word splitting
+# shellcheck disable=SC2086
+PARAMETERS=`build_array_parameters '' 'actors' ${PARAM_ACTORS}`
 debug_single "${FILENAME}"
 api_get_raw_queries 'app.bsky.actor.getProfiles' '' "${PARAMETERS}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
