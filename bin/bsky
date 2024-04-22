@@ -118,18 +118,19 @@ global options:
       forces a session refresh on command exectuion.
 
 commands:
-  login     login to Bluesky for create session.
-  logout    logout from Bluesky for clear session.
-  timeline  show timeline (now incomplete).
-  feed      show custom feed(feed generator)
-  post      post text.
-  reply     reply to existing post.
-  repost    reopst of existing post.
-  quote     post by quoting an existing post.
-  like      like on existing post.
-  thread    show thread of specified post.
-  info      show informations.
-  help      show this help.
+  login        login to Bluesky for create session.
+  logout       logout from Bluesky for clear session.
+  timeline     show timeline (now incomplete).
+  feed         show custom feed (feed generator).
+  author-feed  show author feed.
+  post         post text.
+  reply        reply to existing post.
+  repost       reopst of existing post.
+  quote        post by quoting an existing post.
+  like         like on existing post.
+  thread       show thread of specified post.
+  info         show informations.
+  help         show this help.
 
 To see command help:
   bsky <command> help
@@ -242,6 +243,36 @@ note:
 EOS
 
   debug 'output_help_feed' 'END'
+}
+
+output_help_author_feed()
+{
+  debug 'output_help_author_feed' 'START'
+
+  cat << 'EOS'
+bsky author-feed help
+
+usage: bsky author-feed [--limit <number>] [--next] [--filter <filter>]
+
+parameters:
+  --limit <number>
+    Specify limit number (default 50) of output feeds (from 1 to 100).
+  --next
+    Output next feeds from previous author-feed command.
+  --output-id
+    Output identifier of AT protocol (uri, cid)
+  --filter <filter>
+    Specify type of filter for output posts.
+    posts-with-replies (default)
+    posts-no-replies
+    posts-with-media
+    posts-and-author-threads
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_author_feed' 'END'
 }
 
 output_help_post()
@@ -724,6 +755,54 @@ command_feed()
   debug 'command_feed' 'END'
 }
 
+command_author_feed()
+{
+  debug 'command_author_feed' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_author_feed
+  else
+    parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0' "$@"
+
+    verify_exclusive '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
+
+    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    STATUS=$?
+    if [ $STATUS -ne 0 ]
+    then
+      error 'author-feed command error occured'
+    fi
+
+    if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+    then
+      verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+      LIMIT=$?
+    else
+      LIMIT=''
+    fi
+
+    if [ -n "${PARSED_PARAM_KEYVALUE_filter}" ]
+    then
+      case $PARSED_PARAM_KEYVALUE_filter in
+        posts-with-replies|posts-no-replies|posts-with-media|posts-and-author-threads)
+          PARSED_PARAM_KEYVALUE_filter=`_p "${PARSED_PARAM_KEYVALUE_filter}" | sed 's/-/_/g'`
+          ;;
+        *)
+          error "--filter value ${PARSED_PARAM_KEYVALUE_filter} is not found. see 'bsky author-feed help'"
+          ;;
+      esac
+    fi
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_get_author_feed "${DID}" "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYVALUE_filter}" "${PARSED_PARAM_KEYONLY_output_id}"
+  fi
+
+  debug 'command_author_feed' 'END'
+
+  return 0
+}
+
 command_post()
 {
   debug 'command_post' 'START'
@@ -1112,6 +1191,10 @@ case $1 in
   feed)
     shift
     command_feed "$@"
+    ;;
+  author-feed)
+    shift
+    command_author_feed "$@"
     ;;
   post)
     shift

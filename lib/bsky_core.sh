@@ -111,6 +111,38 @@ core_actor_to_did()
   return $RESULT
 }
 
+core_resolve_actor()
+{
+  PARAM_CORE_RESOLVE_ACTOR_ACTOR="$1"
+  PARAM_CORE_RESOLVE_ACTOR_HANDLE="$2"
+  PARAM_CORE_RESOLVE_ACTOR_DID="$3"
+
+  debug 'core_resolve_actor' 'START'
+
+  if [ -n "${PARAM_CORE_RESOLVE_ACTOR_ACTOR}" ]
+  then
+    DID=`core_actor_to_did "${PARAM_CORE_RESOLVE_ACTOR_ACTOR}"`
+    STATUS=$?
+  elif [ -n "${PARAM_CORE_RESOLVE_ACTOR_HANDLE}" ]
+  then
+    DID=`core_handle_to_did "${PARAM_CORE_RESOLVE_ACTOR_HANDLE}"`
+    STATUS=$?
+  elif [ -n "${PARAM_CORE_RESOLVE_ACTOR_DID}" ]
+  then
+    core_verify_did "${PARAM_CORE_RESOLVE_ACTOR_DID}"
+    DID="${PARAM_CORE_RESOLVE_ACTOR_DID}"
+    STATUS=0
+  else
+    DID=''
+    STATUS=0
+  fi
+  _p "${DID}"
+
+  debug 'core_resolve_actor' 'END'
+
+  return $STATUS
+}
+
 core_is_feed_generator()
 {
   PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET=$1
@@ -611,6 +643,56 @@ core_get_feed()
   fi
 
   debug 'core_get_feed' 'END'
+
+  return $STATUS
+}
+
+core_get_author_feed()
+{
+  PARAM_CORE_GET_AUTHOR_FEED_DID="$1"
+  PARAM_CORE_GET_AUTHOR_FEED_LIMIT="$2"
+  PARAM_CORE_GET_AUTHOR_FEED_NEXT="$3"
+  PARAM_CORE_GET_AUTHOR_FEED_FILTER="$4"
+  PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID="$5"
+
+  debug 'core_get_author_feed' 'START'
+  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_DID:${PARAM_CORE_GET_AUTHOR_FEED_DID}"
+  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_LIMIT:${PARAM_CORE_GET_AUTHOR_FEED_LIMIT}"
+  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_NEXT:${PARAM_CORE_GET_AUTHOR_FEED_NEXT}"
+  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_FILTER:${PARAM_CORE_GET_AUTHOR_FEED_FILTER}"
+  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID:${PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID}"
+
+  read_session_file
+  if [ -n "${PARAM_CORE_GET_AUTHOR_FEED_NEXT}" ]
+  then
+    CURSOR="${SESSION_GETAUTHORFEED_CURSOR}"
+    if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+    then
+        _p '[next feed not found]'
+        return 0
+    fi
+  else
+    CURSOR=''
+  fi
+
+  RESULT=`api app.bsky.feed.getAuthorFeed "${PARAM_CORE_GET_AUTHOR_FEED_DID}" "${PARAM_CORE_GET_AUTHOR_FEED_LIMIT}" "${CURSOR}" "${PARAM_CORE_GET_AUTHOR_FEED_FILTER}"`
+  STATUS=$?
+  debug_single 'core_get_author_feed'
+  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+
+  if [ $STATUS -eq 0 ]
+  then
+    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID}"`
+    _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
+
+    CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+    VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
+    FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+    # CAUTION: key=value pairs are separated by tab characters
+    update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+  fi
+
+  debug 'core_get_author_feed' 'END'
 
   return $STATUS
 }

@@ -27,6 +27,7 @@ SESSION_KEY_ACCESS_JWT='SESSION_ACCESS_JWT'
 SESSION_KEY_REFRESH_JWT='SESSION_REFRESH_JWT'
 SESSION_KEY_GETTIMELINE_CURSOR='SESSION_GETTIMELINE_CURSOR'
 SESSION_KEY_GETFEED_CURSOR='SESSION_GETFEED_CURSOR'
+SESSION_KEY_GETAUTHORFEED_CURSOR='SESSION_GETAUTHORFEED_CURSOR'
 SESSION_KEY_FEED_VIEW_INDEX='SESSION_FEED_VIEW_INDEX'
 BSKYSHCLI_SESSION_LIST="
 ${SESSION_KEY_LOGIN_TIMESTAMP}
@@ -37,6 +38,7 @@ ${SESSION_KEY_ACCESS_JWT}
 ${SESSION_KEY_REFRESH_JWT}
 ${SESSION_KEY_GETTIMELINE_CURSOR}
 ${SESSION_KEY_GETFEED_CURSOR}
+${SESSION_KEY_GETAUTHORFEED_CURSOR}
 ${SESSION_KEY_FEED_VIEW_INDEX}
 "
 
@@ -211,11 +213,17 @@ debug_json()
   fi
 }
 
+error_msg()
+{
+  MESSAGE="$1"
+  _pn "ERROR: ${MESSAGE}" 1>&2
+}
+
 error()
 {
   MESSAGE="$1"
 
-  _pn "ERROR: ${MESSAGE}" 1>&2
+  error_msg "${MESSAGE}"
   exit 1
 }
 
@@ -301,6 +309,10 @@ verify_exclusive()
       SPECIFIED=0
     fi
   done
+  if [ "${SPECIFIED}" -eq 1 ]
+  then
+    error "must be specified one: ${PARAM_VERIFY_EXCLUSIVE_STRING}"
+  fi
 
   debug 'verify_exclusive' 'end'
 }
@@ -537,8 +549,8 @@ api_core()
       *)
         API_ERROR="${ERROR}"
         API_ERROR_MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
-        debug 'api_core' "${API_ERROR} ${API_ERROR_MESSAGE}"
-        error "${API_ERROR} ${API_ERROR_MESSAGE}"
+        debug 'api_core' "${API_ERROR} / ${API_ERROR_MESSAGE}"
+        error_msg "${API_ERROR} / ${API_ERROR_MESSAGE}"
         API_CORE_STATUS=1
         ;;
     esac

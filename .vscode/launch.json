@@ -76,6 +76,30 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (author-feed --actor <handle or did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} author-feed --actor '${input:actor}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (author-feed --handle <handle> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} author-feed --handle '${input:handle}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (author-feed --did <did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} author-feed --did '${input:did}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (post --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -461,6 +485,13 @@
             "id": "bsky-app-feed-url",
             "description": "input bsky.app feed URL (delete '--url' if unnecessary)",
             "default": "--url "
+        },
+        {
+            "type": "pickString",
+            "id": "author-feed-filter",
+            "description": "select filter",
+            "options": ["", "--filter posts-with-replies", "--filter posts-no-replies", "--filter posts-with-media", "--filter posts-and-author-threads"],
+            "default": ""
         }
     ]
 }
