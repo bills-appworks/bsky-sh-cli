@@ -23,8 +23,6 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-# for shells that do not support arrays
-# shellcheck disable=SC2124
 PARAM_ACTORS="$@"
 
 debug "${FILENAME}" 'START'

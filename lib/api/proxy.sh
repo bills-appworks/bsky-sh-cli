@@ -47,8 +47,6 @@ build_array_parameters()
   QUERY_KEY="$2"
   shift
   shift
-  # for shells that do not support arrays
-  # shellcheck disable=SC2124
   QUERY_VALUES="$@"
 
   debug 'build_array_parametres' 'START'

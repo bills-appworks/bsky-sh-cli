@@ -60,11 +60,10 @@ core_verify_did()
   debug 'core_verify_did' 'START'
   debug 'core_verify_did' "PARAM_VERIFY_DID:${PARAM_VERIFY_DID}"
 
-  _startswith "${PARAM_VERIFY_DID}" 'did:'
-  # redundant $? for compatible with Solaris sh
-  # shellcheck disable=SC2181
-  if [ $? -ne 0 ]
+  if _startswith "${PARAM_VERIFY_DID}" 'did:'
   then
+    :
+  else
     error "specified did is invalid: ${PARAM_VERIFY_DID}"
   fi
 
@@ -98,10 +97,7 @@ core_actor_to_did()
   debug 'core_actor_to_did' 'START'
   debug 'core_actor_to_did' "PARAM_TO_DID_ACTOR:${PARAM_TO_DID_ACTOR}"
 
-  _startswith "${PARAM_TO_DID_ACTOR}" 'did:'
-  # redundant $? for compatible with Solaris sh
-  # shellcheck disable=SC2181
-  if [ $? -eq 0 ]
+  if _startswith "${PARAM_TO_DID_ACTOR}" 'did:'
   then
     _p "${PARAM_TO_DID_ACTOR}"
     RESULT=0

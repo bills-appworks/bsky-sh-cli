@@ -654,10 +654,7 @@ command_feed()
   then
     output_help_feed
   else
-    core_is_feed_generator "$1"
-    # redundant $? for compatible with Solaris sh
-    # shellcheck disable=SC2181
-    if [ $? -eq 0 ]
+    if core_is_feed_generator "$1"
     then
       NAKED_FEED_GENERATOR="$1"
       shift

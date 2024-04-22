@@ -7,3 +7,5 @@ disable=SC2003
 # recommendation `...` -> $(...) disable for compatible with Solaris sh
 disable=SC2006
 
+# recommendation var=$@ -> var=("$@") disable for shells that do not support arrays
+disable=SC2124

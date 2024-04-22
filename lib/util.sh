@@ -283,8 +283,6 @@ verify_exclusive()
 {
   PARAM_VERIFY_EXCLUSIVE_STRING="$1"
   shift
-  # for shells that do not support arrays
-  # shellcheck disable=SC2124
   PARAM_VERIFY_EXCLUSIVE_TARGETS="$@"
 
   debug 'verify_exclusive' 'START'
@@ -324,11 +322,10 @@ get_option_type()
           ;;
         *)  # '-<any>'
           OPTION_REMAIN=`_strright "${OPTION_TYPE_TARGET}" '-'`
-          _strlen "${OPTION_REMAIN}"
-          # redundant $? for compatible with Solaris sh
-          # shellcheck disable=SC2181
-          if [ $? -gt 0 ]
+          if _strlen "${OPTION_REMAIN}"
           then
+            :
+          else
             OPTION_REMAIN=`_p "${OPTION_REMAIN}" | sed 's/[0-9]*//g'`
             if [ -z "${OPTION_REMAIN}" ]
             then  # '-[0-9]+' negative number
