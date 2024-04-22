@@ -289,11 +289,14 @@ verify_numeric_range()
 
 verify_exclusive()
 {
-  PARAM_VERIFY_EXCLUSIVE_STRING="$1"
+  PARAM_VERIFY_EXCLUSIVE_MANDATORY="$1"
+  PARAM_VERIFY_EXCLUSIVE_STRING="$2"
+  shift
   shift
   PARAM_VERIFY_EXCLUSIVE_TARGETS="$@"
 
   debug 'verify_exclusive' 'START'
+  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_MANDATORY:${PARAM_VERIFY_EXCLUSIVE_MANDATORY}"
   debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_STRING:${PARAM_VERIFY_EXCLUSIVE_STRING}"
   debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_TARGETS:${PARAM_VERIFY_EXCLUSIVE_TARGETS}"
 
@@ -309,7 +312,7 @@ verify_exclusive()
       SPECIFIED=0
     fi
   done
-  if [ "${SPECIFIED}" -eq 1 ]
+  if [ "${PARAM_VERIFY_EXCLUSIVE_MANDATORY}" -eq 0 ] && [ "${SPECIFIED}" -eq 1 ]
   then
     error "must be specified one: ${PARAM_VERIFY_EXCLUSIVE_STRING}"
   fi

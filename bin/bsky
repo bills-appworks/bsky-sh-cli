@@ -702,27 +702,13 @@ command_feed()
       PARSED_PARAM_KEYVALUE_url="${NAKED_FEED_GENERATOR}"
     fi
 
-    verify_exclusive '--actor --handle --did --url', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}" "${PARSED_PARAM_KEYVALUE_url}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    verify_exclusive 0 '--actor --handle --did --url', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}" "${PARSED_PARAM_KEYVALUE_url}"
 
-    if [ -n "${PARSED_PARAM_KEYVALUE_actor}" ]
-    then
-      DID=`core_actor_to_did "${PARSED_PARAM_KEYVALUE_actor}"`
-      RESULT=$?
-    elif [ -n "${PARSED_PARAM_KEYVALUE_handle}" ]
-    then
-      DID=`core_handle_to_did "${PARSED_PARAM_KEYVALUE_handle}"`
-      RESULT=$?
-    elif [ -n "${PARSED_PARAM_KEYVALUE_did}" ]
-    then
-      core_verify_did "${PARSED_PARAM_KEYVALUE_did}"
-      DID="${PARSED_PARAM_KEYVALUE_did}"
-      RESULT=0
-    else
-      DID=''
-      RESULT=0
-    fi
-
-    if [ $RESULT -ne 0 ]
+    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    STATUS=$?
+    if [ $STATUS -ne 0 ]
     then
       error 'feed command error occured'
     fi
@@ -730,15 +716,6 @@ command_feed()
     if [ -n "${DID}" ] && [ -z "${PARSED_PARAM_KEYVALUE_record_key}" ]
     then
       error 'parameter --actor/--handle/--did must be specified --record-key'
-    fi
-
-    if [ -n "${DID}" ] && [ -n "${PARSED_PARAM_KEYVALUE_url}" ]
-    then
-      error 'parameter --actor/--handle/--did and --url are exclusive'
-    fi
-    if [ -z "${DID}" ] && [ -z "${PARSED_PARAM_KEYVALUE_url}" ]
-    then
-      error 'parameter --actor/--handle/--did or --url is required'
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
@@ -765,7 +742,7 @@ command_author_feed()
   else
     parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0' "$@"
 
-    verify_exclusive '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
+    verify_exclusive 0 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
 
     DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
     STATUS=$?
