@@ -188,6 +188,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.actor.getProfiles (<actors>...)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.actor.getProfiles",
+            "terminalKind": "integrated",
+            "argsString": "${input:api_actors}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getFeed (<feed> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getFeed",
             "terminalKind": "integrated",
@@ -371,6 +379,12 @@
             "id": "api_handle",
             "description": "input Bluesky handle (FQDN for API)",
             "default": ".bsky.social"
+        },
+        {
+            "type": "promptString",
+            "id": "api_actors",
+            "description": "input space delimited multiple Bluesky handle (FQDN for API) or DID",
+            "default": ""
         },
         {
             "type": "promptString",
