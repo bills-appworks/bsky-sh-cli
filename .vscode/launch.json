@@ -39,7 +39,7 @@
             "name": "bsky (timeline [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} timeline ${input:timeline_limit} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} timeline ${input:limit-1-100} ${input:next} ${input:output-id}"
         },
         {
             "type": "bashdb",
@@ -299,12 +299,6 @@
             "id": "password",
             "description": "input password for Bluesky handle",
             "password": true
-        },
-        {
-            "type": "promptString",
-            "id": "timeline_limit",
-            "description": "input timeline outpput limit count (delete if unnecessary): from 1 to 100",
-            "default": "--limit "
         },
         {
             "type": "promptString",

@@ -535,37 +535,38 @@ core_delete_session()
 
 core_get_timeline()
 {
-  PARAM_TIMELINE_ALGORITHM="$1"
-  PARAM_TIMELINE_LIMIT="$2"
-  PARAM_TIMELINE_NEXT="$3"
-  PARAM_TIMELINE_OUTPUT_ID="$4"
+  PARAM_GET_TIMELINE_ALGORITHM="$1"
+  PARAM_GET_TIMELINE_LIMIT="$2"
+  PARAM_GET_TIMELINE_NEXT="$3"
+  PARAM_GET_TIMELINE_OUTPUT_ID="$4"
 
   debug 'core_get_timeline' 'START'
-  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_ALGORITHM}"
-  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_LIMIT}"
-  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_NEXT}"
-  debug 'core_get_timeline' "PARAM_TIMELINE_NEXT:${PARAM_TIMELINE_OUTPUT_ID}"
+  debug 'core_get_timeline' "PARAM_GET_TIMELINE_ALGORITHM:${PARAM_GET_TIMELINE_ALGORITHM}"
+  debug 'core_get_timeline' "PARAM_GET_TIMELINE_LIMIT:${PARAM_GET_TIMELINE_LIMIT}"
+  debug 'core_get_timeline' "PARAM_GET_TIMELINE_NEXT:${PARAM_GET_TIMELINE_NEXT}"
+  debug 'core_get_timeline' "PARAM_GET_TIMELINE_OUTPUT_ID:${PARAM_GET_TIMELINE_OUTPUT_ID}"
 
   read_session_file
-  if [ -n "${PARAM_TIMELINE_NEXT}" ]
+  if [ -n "${PARAM_GET_TIMELINE_NEXT}" ]
   then
     CURSOR="${SESSION_GETTIMELINE_CURSOR}"
     if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
     then
-      error 'next feeds not found'
+        _p '[next feed not found]'
+        exit 0
     fi
   else
     CURSOR=''
   fi
 
-  RESULT=`api app.bsky.feed.getTimeline "${PARAM_TIMELINE_ALGORITHM}" "${PARAM_TIMELINE_LIMIT}" "${CURSOR}"`
+  RESULT=`api app.bsky.feed.getTimeline "${PARAM_GET_TIMELINE_ALGORITHM}" "${PARAM_GET_TIMELINE_LIMIT}" "${CURSOR}"`
   STATUS=$?
   debug_single 'core_get_timeline'
   _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
   if [ $STATUS -eq 0 ]
   then
-    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_TIMELINE_OUTPUT_ID}"`
+    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_GET_TIMELINE_OUTPUT_ID}"`
     _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
 
     CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
@@ -617,7 +618,7 @@ core_get_feed()
       CURSOR="${SESSION_GETFEED_CURSOR}"
       if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
       then
-        _p '[next feeds not found]'
+        _p '[next feed not found]'
         exit 0
       fi
     else

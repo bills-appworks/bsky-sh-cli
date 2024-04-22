@@ -653,17 +653,8 @@ command_timeline()
     parse_parameters '--limit:1 --next:0 --output-id:0' "$@"
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
-      _isnumeric "${PARSED_PARAM_KEYVALUE_limit}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
-      then
-        error "limit parameter must be numeric value: ${PARSED_PARAM_KEYVALUE_limit}"
-      fi
-      LIMIT="${PARSED_PARAM_KEYVALUE_limit}"
-      if [ "${LIMIT}" -lt 1 ] || [ "${LIMIT}" -gt 100 ]
-      then
-        error "limit parameter must be specify from 1 to 100: ${PARSED_PARAM_KEYVALUE_limit}"
-      fi
+      verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+      LIMIT=$?
     else
       LIMIT=''
     fi
