@@ -284,6 +284,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "com.atproto.identity.resolveHandle (<handle>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.identity.resolveHandle",
+            "terminalKind": "integrated",
+            "argsString": "'${input:api_handle}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.repo.createRecord (<repo> <collection> <[rkey]> <[validate default:true]> <record> <[swapCommit]>)",
             "program": "${workspaceFolder}/lib/api/com.atproto.repo.createRecord",
             "terminalKind": "integrated",
