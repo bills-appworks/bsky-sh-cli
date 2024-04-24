@@ -244,6 +244,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.actor.getPreferences",
+            "program": "${workspaceFolder}/lib/api/app.bsky.actor.getPreferences",
+            "terminalKind": "integrated",
+            "argsString": ""
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.actor.getProfile (<actor>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.actor.getProfile",
             "terminalKind": "integrated",

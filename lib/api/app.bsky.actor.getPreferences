@@ -1,0 +1,31 @@
+#!/bin/sh
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implementation in shell script
+# Author Bluesky:@billsbs.bills-appworks.net
+# 
+# Copyright (c) 2024 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# API Reference: https://docs.bsky.app/docs/api/app-bsky-actor-get-preferences
+FILENAME='app.bsky.actor.getPreferences'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
+
+debug "${FILENAME}" 'START'
+
+debug_single "${FILENAME}"
+api_get 'app.bsky.actor.getPreferences' ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+debug "${FILENAME}" 'END'
