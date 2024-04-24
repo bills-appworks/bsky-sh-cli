@@ -33,6 +33,40 @@ FEED_PARSE_PROCEDURE='
     output_post($view_index; $post_fragment)
   )
 '
+# shellcheck disable=SC2016
+GENERAL_DUMP_PROCEDURE='
+  def extract_nodes(nodes; indent):
+    nodes as $nodes |
+    indent as $indent |
+    foreach .[] as $node (0; 0;
+      $node |
+      if type == "object"
+      then
+        $node.value |
+        if type == "array"
+        then
+          (
+            "\($indent)\($node.key):",
+            extract_nodes($node; "\($indent)  ")
+          )
+        else
+          "\($indent)\($node.key): \($node.value)"
+        end
+      else
+        "\($indent)\(.)"
+      end
+    )
+  ;
+  walk(
+    if type == "object"
+    then
+      to_entries
+    else
+      .
+    end
+  ) |
+  extract_nodes(.; "")
+'
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 
@@ -139,6 +173,31 @@ core_resolve_actor()
   _p "${DID}"
 
   debug 'core_resolve_actor' 'END'
+
+  return $STATUS
+}
+
+core_is_actor_current_session()
+{
+  PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR=$1
+
+  debug 'core_is_actor_current_session' 'START'
+  debug 'core_is_actor_current_session' "PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR:${PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR}"
+
+  DID=`core_actor_to_did "${PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR}"`
+  STATUS=$?
+  if [ $STATUS -eq 0 ]
+  then
+    read_session_file
+    if [ "${DID}" = "${SESSION_DID}" ]
+    then
+      STATUS=0
+    else
+      STATUS=1
+    fi
+  fi
+
+  debug 'core_is_actor_current_session' 'END'
 
   return $STATUS
 }
@@ -907,6 +966,70 @@ core_thread()
   update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
 
   debug 'core_thread' 'END'
+}
+
+core_get_profile()
+{
+  PARAM_CORE_GET_PROFILE_DID="$1"
+  PARAM_CORE_GET_PROFILE_OUTPUT_ID="$2"
+  PARAM_CORE_GET_PROFILE_DUMP="$3"
+
+  debug 'core_get_profile' 'START'
+  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_DID:${PARAM_CORE_GET_PROFILE_DID}"
+  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_OUTPUT_ID:${PARAM_CORE_GET_PROFILE_OUTPUT_ID}"
+  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_DUMP:${PARAM_CORE_GET_PROFILE_DUMP}"
+
+  RESULT=`api app.bsky.actor.getProfile "${PARAM_CORE_GET_PROFILE_DID}"`
+  STATUS=$?
+  debug_single 'core_get_profile'
+  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+
+  if [ $STATUS -eq 0 ]
+  then
+    if [ -n "${PARAM_CORE_GET_PROFILE_DUMP}" ]
+    then
+      _p "${RESULT}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+    else
+      if [ -n "${PARAM_CORE_GET_PROFILE_OUTPUT_ID}" ]
+      then
+        PROFILE_OUTPUT="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}"
+      else
+        PROFILE_OUTPUT="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}"
+      fi
+      PROFILE_OUTPUT="${PROFILE_OUTPUT}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}"
+      if core_is_actor_current_session "${PARAM_CORE_GET_PROFILE_DID}"
+      then
+        PROFILE_OUTPUT="${PROFILE_OUTPUT}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}"
+      fi
+      _p "${RESULT}" | jq -r '
+        .did as $DID |
+        .handle as $HANDLE |
+        .displayName as $DISPLAYNAME |
+        .description as $DESCRIPTION |
+        (.avatar // "(default)") as $AVATAR |
+        (.banner // "(default)") as $BANNER |
+        .followersCount as $FOLLOWERSCOUNT |
+        .followsCount as $FOLLOWSCOUNT |
+        .postsCount as $POSTSCOUNT |
+        .associated.lists as $ASSOCIATED_LISTS |
+        .associated.feedgens as $ASSOCIATED_FEEDGENS |
+        .associated.labeler as $ASSOCIATED_LABELER |
+        .indexedAt as $INDEXEDAT |
+        .viewer.muted as $VIEWER_MUTED |
+        .viewer.blockedBy as $VIEWER_BLOCKEDBY |
+        .viewer.blocking as $VIEWER_BLOCKING |
+        .viewer.blockingByList as $VIEWER_BLOCKINGBYLIST |
+        .viewer.following as $VIEWER_FOLLOWING |
+        .viewer.followedBy as $VIEWER_FOLLOWEDBY |
+        .labels as $LABELS |
+        "'"${PROFILE_OUTPUT}"'"
+      '
+    fi
+  fi
+
+  debug 'core_get_profile' 'END'
+
+  return $STATUS
 }
 
 core_info_session_which()

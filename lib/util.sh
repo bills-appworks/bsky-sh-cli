@@ -318,6 +318,8 @@ verify_exclusive()
   fi
 
   debug 'verify_exclusive' 'end'
+
+  return $SPECIFIED
 }
 
 get_option_type()

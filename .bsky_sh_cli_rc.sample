@@ -37,3 +37,11 @@
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT) \($FULLSIZE)'
 # sleep interval for following support commands (timeline, feed, etc.)
 #BSKYSHCLI_SLEEP_INTERVAL='5s'
+# template for profile
+#BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
+# template for profile (output id)
+#BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='[avatar] \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) (\($DID))\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
+# template for navigation common part of profile 
+#BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='[posts]\n bsky author-feed --handle \($HANDLE) --filter posts-no-replies\n[replies]\n bsky author-feed --handle \($HANDLE) --filter posts-with-replies\n[media]\n bsky author-feed --handle \($HANDLE) --filter posts-with-media'
+# template for navigation my account part of profile
+#BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='[like]\n (not yet implemented)\n[feed]\n (not yet implemented)\n[list]\n (not yet implemented)'

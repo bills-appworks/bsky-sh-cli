@@ -127,6 +127,50 @@ api_get()
   debug 'api_get' 'END'
 }
 
+api_get_nobearer_raw_queries()
+{
+  ENDPOINT="$1"
+  RAW_QUERIES="$2"
+
+  debug 'api_get_nobearer_raw_queries' 'START'
+  debug 'api_get_nobearer_raw_queries' "ENDPOINT:${ENDPOINT}"
+  debug 'api_get_nobearer_raw_queries' "RAW_QUERIES:${RAW_QUERIES}"
+
+  debug_single 'api_get_nobearer_raw_queries'
+  curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}${RAW_QUERIES}" -H "${HEADER_ACCEPT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+  debug 'api_get_nobearer_raw_queries' 'END'
+}
+
+api_get_nobearer()
+{
+  ENDPOINT="$1"
+  shift
+
+  debug 'api_get_nobearer' 'START'
+  debug 'api_get_nobearer' "ENDPOINT:${ENDPOINT}"
+  debug 'api_get_nobearer' "QUERIES:$*"
+
+  QUERY_PARAMETER=''
+  while [ $# -gt 0 ]
+  do
+    if [ $# -lt 2 ]
+    then
+      error "query key $1 must have query value"
+    fi
+    if [ "$2" != '''' ] && [ -n "$2" ]
+    then
+      QUERY_PARAMETER=`build_query_parameter "${QUERY_PARAMETER}" "$1" "$2"`
+    fi
+    shift
+    shift
+  done
+
+  api_get_nobearer_raw_queries "${ENDPOINT}" "${QUERY_PARAMETER}"
+
+  debug 'api_get_nobearer' 'END'
+}
+
 api_post_nobearer()
 {
   ENDPOINT="$1"

@@ -188,6 +188,46 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (profile --actor <handle or did> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} profile --actor '${input:actor}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (profile --handle <handle> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} profile --handle '${input:handle}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (profile --did <did> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} profile --did '${input:did}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (profile [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} profile ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (profile --actor <handle or did> --dump)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} profile --actor '${input:actor}' --dump"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (info session [target] [--output-id])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",

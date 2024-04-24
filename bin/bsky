@@ -10,7 +10,7 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 # following definitions are same to lib/api/common.sh
-# for indipendence of this bsky command
+# for independence of this bsky command
 
 # global option (default value)
 BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
@@ -32,6 +32,14 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID
 BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT) \($FULLSIZE)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='[avatar] \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) (\($DID))\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='[posts]\n bsky author-feed --handle \($HANDLE) --filter posts-no-replies\n[replies]\n bsky author-feed --handle \($HANDLE) --filter posts-with-replies\n[media]\n bsky author-feed --handle \($HANDLE) --filter posts-with-media'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='[like]\n (not yet implemented)\n[feed]\n (not yet implemented)\n[list]\n (not yet implemented)'
 
 BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
@@ -129,6 +137,7 @@ commands:
   quote        post by quoting an existing post.
   like         like on existing post.
   thread       show thread of specified post.
+  profile      show profile.
   info         show informations.
   help         show this help.
 
@@ -227,9 +236,9 @@ parameters:
     Specify record key for part of custom feed (feed generator) 
   --handle <handle>
     Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
-  --did
+  --did <did>
     Specify DID of account for custom feed (feed generator) creator.
-  --url
+  --url <bsky.app feed URL>
     Specify URL of custom feed (feed generator) handled by bsky.app (https://bsky.app/profile/<handle or did>/feed/<record key>).
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
@@ -252,21 +261,32 @@ output_help_author_feed()
   cat << 'EOS'
 bsky author-feed help
 
-usage: bsky author-feed [--limit <number>] [--next] [--filter <filter>]
+usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--filter <filter>] [--output-id]
+       or
+       bsky author-feed --handle <handle> [--limit <number>] [--next] [--filter <filter>] [--output-id]
+       or
+       bsky author-feed --did <did> [--limit <number>] [--next] [--filter <filter>] [--output-id]
 
 parameters:
+  --actor <handle or did>
+    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --handle <handle>
+    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --did <did>
+    Specify DID of account for custom feed (feed generator) creator.
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
   --next
     Output next feeds from previous author-feed command.
-  --output-id
-    Output identifier of AT protocol (uri, cid)
   --filter <filter>
     Specify type of filter for output posts.
-    posts-with-replies (default)
-    posts-no-replies
-    posts-with-media
-    posts-and-author-threads
+    filter:
+      posts-with-replies (default)
+      posts-no-replies
+      posts-with-media
+      posts-and-author-threads
+  --output-id
+    Output identifier of AT protocol (uri, cid)
 
 note:
   you must have started a Bluesky session with the login command.
@@ -440,6 +460,39 @@ EOS
   debug 'output_help_thread' 'END'
 }
 
+output_help_profile()
+{
+  debug 'output_help_profile' 'START'
+
+  cat << 'EOS'
+bsky author-feed help
+
+usage: bsky profile --actor <handle or did> [--output-id]
+       or
+       bsky profile --handle <handle> [--output-id]
+       or
+       bsky profile --did <did> [--output-id]
+       or
+       bsky profile [--output-id]
+
+parameters:
+  --actor <handle or did>
+    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --handle <handle>
+    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+  --did <did>
+    Specify DID of account for custom feed (feed generator) creator.
+  --output-id
+    Output identifier of AT protocol (uri, cid)
+
+note:
+  if --actor, --handle, and --did are all omitted, the current session account will be targeted.
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_profile' 'END'
+}
+
 output_help_info()
 {
   debug 'output_help_info' 'START'
@@ -553,7 +606,6 @@ parse_parameters_login()
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
-  # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
 
@@ -1007,6 +1059,41 @@ command_thread()
   debug 'command_thread' 'END'
 }
 
+command_profile()
+{
+  debug 'command_profile' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_profile
+  else
+    parse_parameters '--actor:1 --handle:1 --did:1 --output-id:0 --dump:0' "$@"
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    if verify_exclusive 1 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
+    then
+      :
+    else
+      read_session_file
+      PARSED_PARAM_KEYVALUE_did=$SESSION_DID
+    fi
+
+    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    STATUS=$?
+    if [ $STATUS -ne 0 ]
+    then
+      error 'profile command error occured'
+    fi
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_get_profile "${DID}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}"
+  fi
+
+  debug 'command_profile' 'END'
+}
+
 command_info_session()
 {
   debug 'command_info_session' 'START'
@@ -1187,6 +1274,10 @@ case $1 in
   thread)
     shift
     command_thread "$@"
+    ;;
+  profile)
+    shift
+    command_profile "$@"
     ;;
   info)
     shift
