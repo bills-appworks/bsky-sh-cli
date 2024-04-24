@@ -112,7 +112,7 @@ core_handle_to_did()
   debug 'core_handle_to_did' "PARAM_TO_DID_HANDLE:${PARAM_TO_DID_HANDLE}"
 
   PARAM_TO_DID_HANDLE=`core_canonicalize_handle "${PARAM_TO_DID_HANDLE}"`
-  RESULT=`api app.bsky.actor.getProfile "${PARAM_TO_DID_HANDLE}"`
+  RESULT=`api com.atproto.identity.resolveHandle "${PARAM_TO_DID_HANDLE}"`
   STATUS=$?
   if [ $STATUS -eq 0 ]
   then
