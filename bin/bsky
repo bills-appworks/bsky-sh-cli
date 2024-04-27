@@ -683,15 +683,50 @@ parse_global_option()
   return "${OPTIONS}"
 }
 
+interact_string()
+{
+  PARAM_DESCRIPTION="$1"
+  PARAM_PROMPT="$2"
+  PARAM_IS_SECRET="$3"
+
+  debug 'interact_string' 'START'
+  debug 'interact_string' "PARAM_DESCRIPTION:${PARAM_DESCRIPTION}"
+  debug 'interact_string' "PARAM_PROMPT:${PROMPT}"
+  debug 'interact_string' "PARAM_IS_SECRET:${PARAM_IS_SECRET}"
+
+  if [ -n "${PARAM_DESCRIPTION}" ]
+  then
+    _pn "${PARAM_DESCRIPTION}"
+  fi
+  if [ -n "${PARAM_PROMPT}" ]
+  then
+    PARAM_PROMPT="${PARAM_PROMPT}: "
+  else
+    PARAM_PROMPT='> '
+  fi
+  _p "${PARAM_PROMPT}"
+  if [ "${PARAM_IS_SECRET}" -eq 0 ]
+  then
+    stty -echo
+  fi
+  # -r option recommendation disable for compatible with Solaris sh
+  # shellcheck disable=SC2162
+  read RESULT_INTERACT_STRING
+  if [ "${PARAM_IS_SECRET}" -eq 0 ]
+  then
+    stty echo
+    _pn ''
+  fi
+
+  debug 'interact_string' 'END'
+}
+
 interact_login_2FA()
 {
   debug 'interact_login_2FA' 'START'
 
-  _pn 'input sign in code has been sent to your email address'
-  _p 'code: '
-  # -r option recommendation disable for compatible with Solaris sh
-  # shellcheck disable=SC2162
-  read AUTH_FACTOR_TOKEN
+  interact_string 'input sign in code has been sent to your email address' 'code' 1
+  AUTH_FACTOR_TOKEN="${RESULT_INTERACT_STRING}"
   core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}" "${AUTH_FACTOR_TOKEN}"
   STATUS=$?
   case $STATUS in
@@ -717,12 +752,14 @@ command_login()
     parse_parameters_login "$@"
     if [ -z "${PARSED_PARAM_HANDLE}" ]
     then
-      error 'Handle not specified.'
+      interact_string 'input Bluesky handle' 'handle' 1
+      PARSED_PARAM_HANDLE="${RESULT_INTERACT_STRING}"
     fi
 
     if [ -z "${PARSED_PARAM_PASSWORD}" ]
     then
-      error 'Password not specified.'
+      interact_string "input password of ${PARSED_PARAM_HANDLE} (no echo back)" 'password' 0
+      PARSED_PARAM_PASSWORD="${RESULT_INTERACT_STRING}"
     fi
 
     core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}"
