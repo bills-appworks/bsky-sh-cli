@@ -757,8 +757,9 @@ read_session_file()
     # SC1090 disable for dynamical(variable) path source(.) using and generize on runtime
     # shellcheck source=/dev/null
     . "${SESSION_FILEPATH}"
+    STATUS=0
   else
-    error "session not found: ${SESSION_FILEPATH}"
+    STATUS=1
   fi
 
   debug 'read_session_file' 'END'
@@ -828,6 +829,23 @@ clear_session_file()
   fi
 
   debug 'clear_session_file' 'END'
+}
+
+is_session_exist()
+{
+  debug 'is_session_exist' 'START'
+
+  SESSION_FILEPATH=`get_session_filepath`
+  if [ -e "${SESSION_FILEPATH}" ]
+  then
+    STATUS=0
+  else
+    STATUS=1
+  fi
+
+  debug 'is_session_exist' 'END'
+
+  return $STATUS
 }
 
 # ifndef BSKYSHCLI_DEFINE_UTIL

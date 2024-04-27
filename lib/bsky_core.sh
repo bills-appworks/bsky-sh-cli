@@ -1621,8 +1621,9 @@ core_info_session_status()
   debug 'core_info_session_status' 'START'
 
   _p "login status: "
-  SESSION_FILEPATH=`get_session_filepath`
-  if [ -e "${SESSION_FILEPATH}" ]
+#  SESSION_FILEPATH=`get_session_filepath`
+#  if [ -e "${SESSION_FILEPATH}" ]
+  if is_session_exist
   then
     _pn "login"
   else
