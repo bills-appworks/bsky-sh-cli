@@ -641,9 +641,9 @@ parse_parameters_login()
 
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
-  PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
+  PARSED_PARAM_HANDLE="${PARSED_PARAM_KEYVALUE_handle}"
   # shellcheck disable=SC2154
-  PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
+  PARSED_PARAM_PASSWORD="${PARSED_PARAM_KEYVALUE_password}"
 
   debug 'parse_parameters_login' 'END'
 }
@@ -683,6 +683,29 @@ parse_global_option()
   return "${OPTIONS}"
 }
 
+interact_login_2FA()
+{
+  debug 'interact_login_2FA' 'START'
+
+  _pn 'input sign in code has been sent to your email address'
+  _p 'code: '
+  # -r option recommendation disable for compatible with Solaris sh
+  # shellcheck disable=SC2162
+  read AUTH_FACTOR_TOKEN
+  core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}" "${AUTH_FACTOR_TOKEN}"
+  STATUS=$?
+  case $STATUS in
+    0)
+      read_session_file
+      _pn "login session of ${SESSION_HANDLE}"
+      ;;
+  esac
+
+  debug 'interact_login_2FA' 'END'
+
+  return $STATUS
+}
+
 command_login()
 {
   debug 'command_login' 'START'
@@ -692,37 +715,31 @@ command_login()
     output_help_login
   else
     parse_parameters_login "$@"
-    if [ -z "${PARAM_HANDLE}" ]
+    if [ -z "${PARSED_PARAM_HANDLE}" ]
     then
       error 'Handle not specified.'
     fi
 
-    if [ -z "${PARAM_PASSWORD}" ]
+    if [ -z "${PARSED_PARAM_PASSWORD}" ]
     then
       error 'Password not specified.'
     fi
 
-    core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
+    core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}"
     STATUS=$?
     case $STATUS in
       0)
         read_session_file
         _pn "login session of ${SESSION_HANDLE}"
         ;;
-      3)  # 2FA token required
-        _pn 'input sign in code has been sent to your email address'
-        _p 'code: '
-        # -r option recommendation disable for compatible with Solaris sh
-        # shellcheck disable=SC2162
-        read AUTH_FACTOR_TOKEN
-        core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}" "${AUTH_FACTOR_TOKEN}"
-        STATUS=$?
-        case $STATUS in
-          0)
-            read_session_file
-            _pn "login session of ${SESSION_HANDLE}"
-            ;;
-        esac
+      3)
+        # 2FA token required
+        STATUS=1
+        until [ $STATUS -eq 0 ]
+        do
+          interact_login_2FA
+          STATUS=$?
+        done
         ;;
     esac
   fi
