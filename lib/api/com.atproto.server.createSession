@@ -25,14 +25,22 @@ fi
 
 PARAM_BLUESKY_HANDLE=$1
 PARAM_BLUESKY_PASSWORD=$2
+PARAM_AUTH_FACTOR_TOKEN=$3
 
 debug "${FILENAME}" 'START'
 
 # debug mode turn off (prevent password recording)
 debug_mode_suppress
 
+if [ -n "${PARAM_AUTH_FACTOR_TOKEN}" ]
+then
+  POST_BODY='{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'", "authFactorToken": "'"${PARAM_AUTH_FACTOR_TOKEN}"'"}'
+else
+  POST_BODY='{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}'
+fi
+
 debug_single "${FILENAME}"
-RESULT=`api_post_nobearer 'com.atproto.server.createSession' '{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}' | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+RESULT=`api_post_nobearer 'com.atproto.server.createSession' "${POST_BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
 # restore debug mode
 debug_mode_restore

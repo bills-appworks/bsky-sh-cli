@@ -703,8 +703,28 @@ command_login()
     fi
 
     core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}"
-    read_session_file
-    _pn "login session of ${SESSION_HANDLE}"
+    STATUS=$?
+    case $STATUS in
+      0)
+        read_session_file
+        _pn "login session of ${SESSION_HANDLE}"
+        ;;
+      3)  # 2FA token required
+        _pn 'input sign in code has been sent to your email address'
+        _p 'code: '
+        # -r option recommendation disable for compatible with Solaris sh
+        # shellcheck disable=SC2162
+        read AUTH_FACTOR_TOKEN
+        core_create_session "${PARAM_HANDLE}" "${PARAM_PASSWORD}" "${AUTH_FACTOR_TOKEN}"
+        STATUS=$?
+        case $STATUS in
+          0)
+            read_session_file
+            _pn "login session of ${SESSION_HANDLE}"
+            ;;
+        esac
+        ;;
+    esac
   fi
 
   debug 'command_login' 'END'

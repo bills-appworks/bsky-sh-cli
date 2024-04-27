@@ -882,6 +882,7 @@ core_create_session()
 {
   HANDLE="$1"
   PASSWORD="$2"
+  AUTH_FACTOR_TOKEN="$3"
 
   debug 'core_create_session' 'START'
   debug 'core_create_session' "HANDLE:${HANDLE}"
@@ -892,9 +893,16 @@ core_create_session()
     MESSAGE='(empty)'
   fi
   debug 'core_create_session' "PASSWORD:${MESSAGE}"
+  if [ -n "${AUTH_FACTOR_TOKEN}" ]
+  then
+    MESSAGE='(defined)'
+  else
+    MESSAGE='(empty)'
+  fi
+  debug 'core_create_session' "AUTH_FACTOR_TOKEN:${MESSAGE}"
 
   HANDLE=`core_canonicalize_handle "${HANDLE}"`
-  api com.atproto.server.createSession "${HANDLE}" "${PASSWORD}" > /dev/null
+  api com.atproto.server.createSession "${HANDLE}" "${PASSWORD}" "${AUTH_FACTOR_TOKEN}" > /dev/null
   API_STATUS=$?
 
   debug 'core_create_session' 'END'

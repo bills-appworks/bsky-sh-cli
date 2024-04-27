@@ -551,6 +551,9 @@ api_core()
       ExpiredToken)
         API_CORE_STATUS=2
         ;;
+      AuthFactorTokenRequired)
+        API_CORE_STATUS=3
+        ;;
       *)
         API_ERROR="${ERROR}"
         API_ERROR_MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
@@ -610,6 +613,10 @@ api()
       debug_single 'api-3'
       api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       API_STATUS=$?
+      ;;
+    3)
+      # 2FA token required
+      API_STATUS=3
       ;;
   esac
 
