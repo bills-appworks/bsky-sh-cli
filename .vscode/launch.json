@@ -228,6 +228,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (pref [--group <preference group>] [--item <preference item>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} pref ${input:pref-group} ${input:pref-item}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (pref --dump)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} pref --dump"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (info session [target] [--output-id])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -542,6 +558,19 @@
             "description": "select filter",
             "options": ["", "--filter posts-with-replies", "--filter posts-no-replies", "--filter posts-with-media", "--filter posts-and-author-threads"],
             "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "pref-group",
+            "description": "select preference",
+            "options": ["", "--group adult-content", "--group content-label", "--group saved-feeds", "--group personal-details", "--group feed-view", "--group thread-view", "--group interests", "--group muted-words", "--group hidden-posts"],
+            "default": ""
+        },
+          {
+            "type": "promptString",
+            "id": "pref-item",
+            "description": "input preference item (delete if unnecessary)",
+            "default": "--item "
         }
     ]
 }

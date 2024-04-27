@@ -52,6 +52,12 @@ GENERAL_DUMP_PROCEDURE='
         else
           "\($indent)\($node.key): \($node.value)"
         end
+      elif type == "array"
+      then
+        (
+          "\($indent)  --",
+          extract_nodes($node; "\($indent)  ")
+        )
       else
         "\($indent)\(.)"
       end
@@ -68,7 +74,8 @@ GENERAL_DUMP_PROCEDURE='
   extract_nodes(.; "")
 '
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
-FEED_GENERATOR_PATTERN='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
+FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
+#FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
 
 core_canonicalize_handle()
 {
@@ -209,7 +216,7 @@ core_is_feed_generator()
   debug 'core_is_feed_generator' 'START'
   debug 'core_is_feed_generator' "PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET:${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}"
 
-  VERIFY_RESULT=`_p "${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}" | sed "s_${FEED_GENERATOR_PATTERN}__g"`
+  VERIFY_RESULT=`_p "${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}__g"`
   if [ -z "${VERIFY_RESULT}" ]
   then
     IS_FEED_GENERATOR=0
@@ -243,8 +250,8 @@ core_create_feed_at_uri_bsky_app_url()
   debug 'core_create_feed_at_uri_bsky_app_url' 'START'
   debug 'core_create_feed_at_uri_bsky_app_url' "PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL:${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}"
 
-  ACTOR=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN}_\1_g"`
-  RECORD_KEY=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN}_\2_g"`
+  ACTOR=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\1_g"`
+  RECORD_KEY=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\2_g"`
   DID=`core_actor_to_did "${ACTOR}"`
   STATUS=$?
   if [ $STATUS -eq 0 ]
@@ -554,6 +561,321 @@ core_create_session_chunk()
      '
 
   debug 'core_create_session_chunk' 'END'
+}
+
+core_verify_pref_group_name()
+{
+  PARAM_CORE_VERIFY_PREF_GROUP_NAME="$1"
+
+  debug 'core_verify_pref_group_name' 'START'
+  debug 'core_verify_pref_group_name' "CORE_VERIFY_PREF_GROUP_NAME:${CORE_VERIFY_PREF_GROUP_NAME}"
+
+  STATUS=0
+  case $PARAM_CORE_VERIFY_PREF_GROUP_NAME in
+    adult-content|content-label|saved-feeds|personal-details|feed-view|thread-view|interests|muted-words|hidden-posts)
+      ;;
+    *)
+      STATUS=1
+      ;;
+  esac
+
+  debug 'core_verify_pref_group_name' 'END'
+
+  return $STATUS
+}
+
+core_verify_pref_item_name()
+{
+  PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP="$1"
+  PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM="$2"
+
+  debug 'core_verify_pref_item_name' 'START'
+  debug 'core_verify_pref_item_name' "PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP:${PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP}"
+  debug 'core_verify_pref_item_name' "PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM:${PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM}"
+
+  STATUS=0
+  ERRORS=''
+  case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP in
+    adult-content)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        enabled)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    content-label)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        labeler-did|label|visibility)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    saved-feeds)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        pinned|saved|timeline-index)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    personal-details)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        birth-date)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    feed-view)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        feed|hide-replies|hide-replies-by-unfollowed|hide-replies-by-like-count|hide-reposts|hide-quote-posts)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    thread-view)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        sort|prioritize-followed-users)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    interests)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        tags)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    muted-words)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        items)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    hidden-posts)
+      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+        items)
+          ;;
+        *)
+          STATUS=1
+          ;;
+      esac
+      ;;
+    *)
+      STATUS=1
+      ;;
+  esac
+
+  debug 'core_verify_pref_item_name' 'END'
+
+  return $STATUS
+}
+
+core_verify_pref_group_parameter()
+{
+  PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP="$1"
+
+  debug 'core_verify_pref_group_parameter' 'START'
+  debug 'core_verify_pref_group_parameter' "PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP:${PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP}"
+
+  EVACUATED_IFS=$IFS
+  IFS=','
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP
+  IFS=$EVACUATED_IFS
+  SPECIFIED_COUNT=$#
+  ERRORS=''
+  while [ $# -gt 0 ]
+  do
+    GROUP_ELEMENT=$1
+    if core_verify_pref_group_name "${GROUP_ELEMENT}"
+    then
+      RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER="${GROUP_ELEMENT}"
+      GROUP_ELEMENT=`_p "${GROUP_ELEMENT}" | sed 's/-/_/g'`
+      eval "CORE_VERIFY_PREF_GROUP_${GROUP_ELEMENT}='defined'"
+    else
+      ERRORS="${ERRORS} ${GROUP_ELEMENT}"
+    fi
+    shift
+  done
+  if [ -n "${ERRORS}" ]
+  then
+    error "invalid preference group name:${ERRORS}"
+  fi
+
+  debug 'core_verify_pref_group_parameter' 'END'
+
+  return $SPECIFIED_COUNT
+}
+
+core_verify_pref_item_parameter()
+{
+  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT="$1"
+  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE="$2"
+  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM="$3"
+
+  debug 'core_verify_pref_item_parameter' 'START'
+  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}"
+  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE}"
+  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM}"
+
+  STATUS=0
+  EVACUATED_IFS=$IFS
+  IFS=','
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM
+  IFS=$EVACUATED_IFS
+  SPECIFIED_COUNT=$#
+  ALL_STATUS=0
+  while [ $# -gt 0 ]
+  do
+    ITEM_ELEMENT=$1
+    ITEM_LHS=`_strleft "${ITEM_ELEMENT}" '='`
+    ITEM_MODIFIED=`_p "${ITEM_LHS}" | sed 's/[^.]//g'`
+    if [ -n "${ITEM_MODIFIED}" ]
+    then
+      ITEM_MODIFIER=`_strleft "${ITEM_LHS}" '\.'`
+      ITEM_CANONICAL=`_strright "${ITEM_LHS}" '\.'`
+    else
+      ITEM_MODIFIER=''
+      ITEM_CANONICAL="${ITEM_LHS}"
+    fi
+    ITEM_RHS=`_strright "${ITEM_ELEMENT}" '='`
+
+    if [ "${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}" -eq 0 ]
+    then
+      if [ -n "${ITEM_MODIFIER}" ]
+      then
+        if core_verify_pref_group_name "${ITEM_MODIFIER}"
+        then
+          ELEMENT_STATUS=0
+          GROUP_NAME="${ITEM_MODIFIER}"
+        else
+          ELEMENT_STATUS=1
+          error_msg "invalid preference item modifier: ${ITEM_LHS}"
+        fi
+      else
+        ELEMENT_STATUS=1
+        error_msg "must be specified preference item modifier or --group: ${ITEM_LHS}"
+      fi
+    elif [ "${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}" -eq 1 ]
+    then
+      if [ -n "${ITEM_MODIFIER}" ]
+      then
+        ELEMENT_STATUS=1
+        error_msg "preference group and preference item modifier are exclusive: ${ITEM_LHS}"
+      else
+        ELEMENT_STATUS=0
+        GROUP_NAME="${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE}"
+      fi
+    else  # > 1
+      ELEMENT_STATUS=1
+      error_msg "multiple preference group and preference item are exclusive: ${ITEM_LHS}"
+    fi
+
+    core_verify_pref_item_name "${GROUP_NAME}" "${ITEM_CANONICAL}"
+    VERIFY_ITEM_STATUS=$?
+    if [ "${VERIFY_ITEM_STATUS}" -ne 0 ]
+    then
+      ELEMENT_STATUS=1
+      error_msg "item not found in group: ${ITEM_LHS} in ${GROUP_NAME}"
+    fi
+
+    if [ "${ELEMENT_STATUS}" -eq 0 ]
+    then
+      GROUP_SCORED=`_p "${GROUP_NAME}" | sed 's/-/_/g'`
+      ITEM_SCORED=`_p "${ITEM_LHS}" | sed 's/-/_/g'`
+      if [ -z "${ITEM_RHS}" ]
+      then
+        ITEM_RHS='defined'
+      fi
+      eval "CORE_VERIFY_PREF_ITEM__${GROUP_SCORED}__${ITEM_SCORED}='${ITEM_RHS}'"
+    else
+      ALL_STATUS=1
+    fi
+    shift
+  done
+  if [ "${ALL_STATUS}" -ne 0 ]
+  then
+    error 'preference item parameter error occured'
+  fi
+
+  debug 'core_verify_pref_item_parameter' 'END'
+
+  return $SPECIFIED_COUNT
+}
+
+core_output_pref_item()
+{
+  PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK="$1"
+  PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE="$2"
+  PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION="$3"
+  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION="$4"
+  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY="$5"
+  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE="$6"
+
+  debug 'core_output_pref_item' 'START'
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK:${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}"
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE:${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION:${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}"
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}"
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"
+  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE}"
+
+  export STR_NO_CONF='(no configured)'
+
+  case $PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE in
+    string|boolean|number)
+      OUTPUT=`_p "${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}" | jq -r '
+        .preferences as $pref |
+        $pref[] |
+        select(."$type" == "'"${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"'") |
+        .'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"' // env.STR_NO_CONF
+      '`
+      if [ -z "${OUTPUT}" ]
+      then
+        OUTPUT="${STR_NO_CONF}"
+      fi
+      _pn "${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}.${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}: ${OUTPUT}"
+      ;;
+    array)
+      OUTPUT=`_p "${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}" | jq -r '
+        "['"${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}"'.'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}"']",
+        .preferences as $pref |
+        $pref[] |
+        select(."$type" == "'"${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"'") |
+        if has("'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"'") then .'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"'[] else env.STR_NO_CONF end
+      '`
+      if [ -z "${OUTPUT}" ]
+      then
+        OUTPUT="${STR_NO_CONF}"
+      fi
+      _pn "${OUTPUT}"
+      ;;
+    *)
+      error "internal error: ${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE}"
+      ;;
+  esac
+
+  debug 'core_output_pref_item' 'END'
 }
 
 core_create_session()
@@ -1030,6 +1352,250 @@ core_get_profile()
   debug 'core_get_profile' 'END'
 
   return $STATUS
+}
+
+core_get_pref()
+{
+  PARAM_CORE_GET_PREF_GROUP="$1"
+  PARAM_CORE_GET_PREF_ITEM="$2"
+  PARAM_CORE_GET_PREF_DUMP="$3"
+
+  debug 'core_get_pref' 'START'
+
+  RESULT=`api app.bsky.actor.getPreferences`
+  STATUS=$?
+  debug_single 'core_get_preferences'
+  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+
+  if [ $STATUS -eq 0 ]
+  then
+    if [ -n "${PARAM_CORE_GET_PREF_DUMP}" ]
+    then
+      _p "${RESULT}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+    else
+      core_verify_pref_group_parameter "${PARAM_CORE_GET_PREF_GROUP}"
+      GROUP_COUNT=$?
+      core_verify_pref_item_parameter "${GROUP_COUNT}" "${RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER}" "${PARAM_CORE_GET_PREF_ITEM}"
+      ITEM_COUNT=$?
+      export STR_NO_CONF='(no configured)'
+      if [ "${ITEM_COUNT}" -eq 0 ]
+      then
+        if [ -n "${CORE_VERIFY_PREF_GROUP_adult_content}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> adult contents",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#adultContentPref" ) |
+            (.enabled // env.STR_NO_CONF) as $adultContents_enabled |
+            "enabled: \($adultContents_enabled)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_content_label}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> content label",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#contentLabelPref") |
+            (.labelerDid // env.STR_NO_CONF) as $contentLabel_labelerDid |
+            (.label // env.STR_NO_CONF) as $contentLabel_label |
+            (.visibility // env.STR_NO_CONF) as $contentLabel_visibility |
+            "labeler did: \($contentLabel_labelerDid)",
+            "label: \($contentLabel_label)",
+            "visibility: \($contentLabel_visibility)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_saved_feeds}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> saved feeds",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#savedFeedsPref") |
+            (if has("pinned") then .pinned | join("\n") else env.STR_NO_CONF end) as $savedFeeds_pinned |
+            (if has("saved") then .saved | join("\n") else env.STR_NO_CONF end) as $savedFeeds_saved |
+            (.timelineIndex // env.STR_NO_CONF) as $savedFeeds_timelineIndex |
+            "[pinned]",
+            "\($savedFeeds_pinned)",
+            "[saved]",
+            "\($savedFeeds_saved)",
+            "timeline index: \($savedFeeds_timelineIndex)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_personal_details}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> personal details",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#personalDetailsPref") |
+            (if has ("birthDate") then .birthDate | split("T")[0] else env.STR_NO_CONF end) as $personalDetails_birthDate |
+            "birth date: \($personalDetails_birthDate)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_feed_view}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> feed view",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#feedViewPref") |
+            (.feed // env.STR_NO_CONF) as $feedView_feed |
+            (.hideReplies // env.STR_NO_CONF) as $feedView_hideReplies |
+            (.hideRepliesByUnfollowed // env.STR_NO_CONF) as $feedView_hideRepliesByUnfollowed |
+            (.hideRepliesByLikeCount // env.STR_NO_CONF) as $feedView_hideRepliesByLikeCount |
+            (.hideReposts // env.STR_NO_CONF) as $feedView_hideReposts |
+            (.hideQuotePosts // env.STR_NO_CONF) as $feedView_hideQuotePosts |
+            "feed: \($feedView_feed)",
+            "hide replies: \($feedView_hideReplies)",
+            "hide replies by unfollowed: \($feedView_hideRepliesByUnfollowed)",
+            "hide replies by like count: \($feedView_hideRepliesByLikeCount)",
+            "hide reposts: \($feedView_hideReposts)",
+            "hide quote posts: \($feedView_hideQuotePosts)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_thread_view}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> thread view",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#threadViewPref") |
+            (.sort // env.STR_NO_CONF) as $threadView_sort |
+            (.prioritizeFollowedUsers // env.STR_NO_CONF) as $threadView_prioritizeFollowedUsers |
+            "sort: \($threadView_sort)",
+            "prioritize followed users: \($threadView_prioritizeFollowedUsers)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_interests}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> interests",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#interestsPref") |
+            (if has("tags") then .tags | join("\n") else env.STR_NO_CONF end) as $interests_tags |
+            "[tags]",
+            "\($interests_tags)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_muted_words}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> muted words",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#muteWordsPref") |
+            (if has("items") then .items | join("\n") else env.STR_NO_CONF end) as $mutedWords_items |
+            "[items]",
+            "\($mutedWords_items)"
+          '
+        fi
+        if [ -n "${CORE_VERIFY_PREF_GROUP_hidden_posts}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        then
+          _p "${RESULT}" | jq -r '
+            ">>>> hidden posts",
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#hiddenPostsPref") |
+            (if has("items") then .items | join("\n") else env.STR_NO_CONF end) as $hiddenPosts_items |
+            "[items]",
+            "\($hiddenPosts_items)"
+          '
+        fi
+      else  # ITEM_COUNT > 0
+        if [ -n "${CORE_VERIFY_PREF_ITEM__adult_content__enabled}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#adultContentPref' 'adult-content' 'enabled' 'enabled' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__labeler_did}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'labeler-did' 'labelerDid' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__label}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'label' 'label' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__visibility}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'visibility' 'visibility' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__pinned}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'pinned' 'pinned' 'array'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__saved}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'saved' 'saved' 'array'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__timeline_index}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'timeline-index' 'timelineIndex' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__personal_details__birth_date}" ]
+        then
+          OUTPUT=`_p "${RESULT}" | jq -r '
+            .preferences as $pref |
+            $pref[] |
+            select(."$type" == "app.bsky.actor.defs#personalDetailsPref") |
+            if has ("birthDate") then .birthDate | split("T")[0] else env.STR_NO_CONF end
+          '`
+          if [ -z "${OUTPUT}" ]
+          then
+            OUTPUT="${STR_NO_CONF}"
+          fi
+          _pn "personal-details.birth-date: ${OUTPUT}"
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__feed}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'feed' 'feed' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies' 'hideReplies' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies_by_unfollowed}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-unfollowed' 'hideRepliesByUnfollowed' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies_by_like_count}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-like-count' 'hideRepliesByLikeCount' 'number'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_reposts}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-reposts' 'hideReposts' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_quote_posts}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-quote-posts' 'hideQuotePosts' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__thread_view__sort}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'sort' 'sort' 'string'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__thread_view__prioritize_followed_users}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'prioritize-followed-users' 'prioritizeFollowedUsers' 'boolean'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__interests__tags}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#interestsPref' 'interests' 'tags' 'tags' 'array'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__muted_words__items}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#mutedWordsPref' 'muted-words' 'items' 'items' 'array'
+        fi
+        if [ -n "${CORE_VERIFY_PREF_ITEM__hidden_posts__items}" ]
+        then
+          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#hiddenPostsPref' 'hidden-posts' 'items' 'items' 'array'
+        fi
+      fi
+    fi
+  fi
+
+  debug 'core_get_pref' 'END'
 }
 
 core_info_session_which()

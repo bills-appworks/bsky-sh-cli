@@ -138,7 +138,7 @@ commands:
   like         like on existing post.
   thread       show thread of specified post.
   profile      show profile.
-  info         show informations.
+  info         show session/meta informations.
   help         show this help.
 
 To see command help:
@@ -491,6 +491,42 @@ note:
 EOS
 
   debug 'output_help_profile' 'END'
+}
+
+output_help_pref()
+{
+  debug 'output_help_pref' 'START'
+
+  cat << 'EOS'
+bsky pref help
+
+usage: bsky pref [--group <preference group>] [--item <preference item>] [--output-id]
+
+parameters:
+  --group <preference group>[,<preference group>...]
+    Specify preference group.
+    If parameter --item is omitted, all items under the group will be targeted.
+    Unconfigured (unset) items are not displayed.
+    preference group:
+      adult-content
+      content-label
+      saved-feeds
+      personal-details
+      feed-view
+      thread-view
+      interests
+      muted-words
+      hidden-posts
+  
+  --item <preference item>[,<preference item>...]
+    Specify preference item.
+    If this parameter value is specified in the format '<group>.<item>', the --group parameter must not specified.
+    If this parameter value is specified in the format '<item>', only one --group parameter can be specified.
+    preference item:
+      (items description is under construction)
+
+EOS
+  debug 'output_help_pref' 'END'
 }
 
 output_help_info()
@@ -1094,6 +1130,24 @@ command_profile()
   debug 'command_profile' 'END'
 }
 
+command_pref()
+{
+  debug 'command_pref' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_pref
+  else
+    parse_parameters '--group:1 --item:1 --dump:0' "$@"
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_get_pref "${PARSED_PARAM_KEYVALUE_group}" "${PARSED_PARAM_KEYVALUE_item}" "${PARSED_PARAM_KEYONLY_dump}"
+  fi
+
+  debug 'command_pref' 'END'
+}
+
 command_info_session()
 {
   debug 'command_info_session' 'START'
@@ -1278,6 +1332,10 @@ case $1 in
   profile)
     shift
     command_profile "$@"
+    ;;
+  pref)  # non-public command
+    shift
+    command_pref "$@"
     ;;
   info)
     shift
