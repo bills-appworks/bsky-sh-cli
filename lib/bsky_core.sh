@@ -349,7 +349,32 @@ core_build_reply_fragment()
   fi
   result=`api com.atproto.repo.getRecord "${AT_URI_ELEMENT_AUTHORITY}" "${AT_URI_ELEMENT_COLLECTION}" "${AT_URI_ELEMENT_RKEY}"`
   debug_single 'core_build_reply_fragment'
-  _p "${result}" | jq -c 'if (.value|has("reply")) then .+ {root_uri:.value.reply.root.uri,root_cid:.value.reply.root.cid} else .+ {root_uri:.uri,root_cid:.cid} end | {reply:{root:{uri:.root_uri,cid:.root_cid},parent:{uri:.uri,cid:.cid}}}' | sed 's/^.\(.*\).$/\1/' | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  _p "${result}" | jq -c '
+    if (.value | has("reply"))
+    then
+      . + {
+        root_uri: .value.reply.root.uri,
+        root_cid: .value.reply.root.cid
+      }
+    else
+      . + {
+        root_uri: .uri,
+        root_cid: .cid
+      }
+    end |
+    {
+      reply: {
+        root: {
+          uri: .root_uri,
+          cid: .root_cid
+        },
+        parent: {
+          uri: .uri,
+          cid: .cid
+        }
+      }
+    }
+  ' | sed 's/^.\(.*\).$/\1/' | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'core_build_reply_fragment' 'END'
 }

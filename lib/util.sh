@@ -6,8 +6,8 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then  # ifndef BSKYSCHCLI_DEFINE_UTIL
 BSKYSHCLI_DEFINE_UTIL='defined'
@@ -54,39 +54,39 @@ _pn()
 
 _strlen()
 {
-  param_string=$1
+  param_strlen_string=$1
 
-  result=`_p "${param_string}" | wc -c`
+  result=`_p "${param_strlen_string}" | wc -c`
   return "${result}"
 }
 
 _strleft()
 {
-  param_string=$1
-  param_separator=$2
+  param_strleft_string=$1
+  param_strleft_separator=$2
 
-  _p "${param_string}" | sed "s/\(^[^${param_separator}]*\)${param_separator}.*$/\1/"
+  _p "${param_strleft_string}" | sed "s/\(^[^${param_strleft_separator}]*\)${param_strleft_separator}.*$/\1/"
 }
 
 _strright()
 {
-  param_string=$1
-  param_separator=$2
+  param_strright_string=$1
+  param_strright_separator=$2
 
-  separator_in_string=`_p "${param_string}" | sed "s/[^${param_separator}]//g"`
+  separator_in_string=`_p "${param_strright_string}" | sed "s/[^${param_strright_separator}]//g"`
   if [ -z "${separator_in_string}" ]
   then
     _p ''
   else
-    _p "${param_string}" | sed "s/^.*${param_separator}\([^${param_separator}]*$\)/\1/"
+    _p "${param_strright_string}" | sed "s/^.*${param_strright_separator}\([^${param_strright_separator}]*$\)/\1/"
   fi
 }
 
 _isnumeric()
 {
-  param_string=$1
+  param_isnumeric_string=$1
 
-  not_numeric=`_p "${param_string}" | sed 's/[0-9]//g'`
+  not_numeric=`_p "${param_isnumeric_string}" | sed 's/[0-9]//g'`
   if [ -z "${not_numeric}" ]
   then
     status=0
@@ -99,25 +99,25 @@ _isnumeric()
 
 _cut()
 {
-  param_string=$1
+  param_cut_string=$1
   shift
 
-  _p "`_p "${param_string}" | cut "$@" | tr -d '\n'`"
+  _p "`_p "${param_cut_string}" | cut "$@" | tr -d '\n'`"
 }
 
 _slice()
 {
-  param_string=$1
-  param_separator=$2
+  param_slice_string=$1
+  param_slice_separator=$2
 
-  separator_in_string=`_p "${param_string}" | sed "s/[^${param_separator}]//g"`
+  separator_in_string=`_p "${param_slice_string}" | sed "s/[^${param_slice_separator}]//g"`
   _strlen "${separator_in_string}"
   separator_count=$?
   element_count=`expr "${separator_count}" + 1`
   element_index=1
   while [ "${element_index}" -le "${element_count}" ]
   do
-    string_element=`_cut "${param_string}" -d "${param_separator}" -f "${element_index}"`
+    string_element=`_cut "${param_slice_string}" -d "${param_slice_separator}" -f "${element_index}"`
     eval "RESULT_slice_${element_index}='${string_element}'"
     element_index=`expr "${element_index}" + 1`
   done
@@ -127,13 +127,13 @@ _slice()
 
 _startswith()
 {
-  param_string=$1
-  param_substring=$2
+  param_startswith_string=$1
+  param_startswith_substring=$2
 
-  _strlen "${param_substring}"
+  _strlen "${param_startswith_substring}"
   substring_len=$?
-  compare_string=`_cut "${param_string}" -c "1-${substring_len}"`
-  if [ "${compare_string}" = "${param_substring}" ]
+  compare_string=`_cut "${param_startswith_string}" -c "1-${substring_len}"`
+  if [ "${compare_string}" = "${param_startswith_substring}" ]
   then
     status=0
   else
