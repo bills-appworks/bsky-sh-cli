@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-actor-get-preferences
-filename='app.bsky.actor.getPreferences'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='app.bsky.actor.getPreferences'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,9 +23,9 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-debug "${filename}" 'START'
+debug "${FILENAME}" 'START'
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 api_get 'app.bsky.actor.getPreferences' ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'

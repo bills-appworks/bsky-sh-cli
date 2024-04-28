@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-feed-get-feed-generator
-filename='app.bsky.feed.getFeedGenerator'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='app.bsky.feed.getFeedGenerator'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -25,9 +25,9 @@ fi
 
 param_feed=$1
 
-debug "${filename}" 'START'
+debug "${FILENAME}" 'START'
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 api_get 'app.bsky.feed.getFeedGenerator' '' 'feed' "${param_feed}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'

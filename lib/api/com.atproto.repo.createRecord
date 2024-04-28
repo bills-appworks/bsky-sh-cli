@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-create-record
-filename='com.atproto.repo.createrecord'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='com.atproto.repo.createrecord'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -30,8 +30,8 @@ param_validate=$4
 param_record=$5
 param_swapcommit=$6
 
-debug "${filename}" 'START'
-debug "${filename}" "repo:${param_repo} collection:${param_collection} rkey:${param_rkey} validate:${param_validate} record:${param_record} swapcommit:${param_swapcommit}"
+debug "${FILENAME}" 'START'
+debug "${FILENAME}" "repo:${param_repo} collection:${param_collection} rkey:${param_rkey} validate:${param_validate} record:${param_record} swapcommit:${param_swapcommit}"
 
 if [ -n "${param_repo}" ]
 then
@@ -82,10 +82,10 @@ then
   body="${body},${swapcommit}"
 fi
 body="${body}}"
-debug "${filename}" "body:${body}"
+debug "${FILENAME}" "body:${body}"
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 api_post 'com.atproto.repo.createrecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'
 

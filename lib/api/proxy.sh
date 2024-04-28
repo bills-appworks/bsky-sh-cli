@@ -6,8 +6,8 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_DEFINE_PROXY}" ]; then
 BSKYSHCLI_DEFINE_PROXY='defined'

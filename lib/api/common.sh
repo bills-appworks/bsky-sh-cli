@@ -6,15 +6,15 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_DEFINE_API_COMMON}" ]; then  # ifndef BSKYSHCLI_DEFINE_API_COMMON
 BSKYSHCLI_DEFINE_API_COMMON='defined'
 
 BSKYSHCLI_DEFAULT_RESOURCE_CONFIG_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
-BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${file_dir}/../.."
+BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/../.."
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && pwd)`
 BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
 

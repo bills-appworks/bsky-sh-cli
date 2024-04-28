@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-feed-get-post-thread
-filename='app.bsky.feed.getPostThread'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='app.bsky.feed.getPostThread'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -27,9 +27,9 @@ param_uri=$1
 param_depth=$2
 param_parent_height=$3
 
-debug "${filename}" 'START'
+debug "${FILENAME}" 'START'
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 api_get 'app.bsky.feed.getPostThread' '' 'uri' "${param_uri}" 'depth' "${param_depth}" 'parentHeight' "${param_parent_height}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'

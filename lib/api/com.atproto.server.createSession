@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-server-create-session
-filename='com.atproto.server.createSession'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='com.atproto.server.createSession'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -27,7 +27,7 @@ param_bluesky_handle=$1
 param_bluesky_password=$2
 param_auth_factor_token=$3
 
-debug "${filename}" 'START'
+debug "${FILENAME}" 'START'
 
 # debug mode turn off (prevent password recording)
 debug_mode_suppress
@@ -39,7 +39,7 @@ else
   post_body='{"identifier": "'"${param_bluesky_handle}"'", "password": "'"${param_bluesky_password}"'"}'
 fi
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 result=`api_post_nobearer 'com.atproto.server.createSession' "${post_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
 # restore debug mode
@@ -52,4 +52,4 @@ create_session_file "${param_bluesky_handle}" "${access_jwt}" "${refresh_jwt}" "
 
 _p "${result}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'

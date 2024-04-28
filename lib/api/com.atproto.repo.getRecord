@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-get-record
-filename='com.atproto.repo.getRecord'
-file_dir=`dirname "$0"`
-file_dir=`(cd "${file_dir}" && pwd)`
+FILENAME='com.atproto.repo.getRecord'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${file_dir}"
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -28,9 +28,9 @@ param_collection=$2
 param_rkey=$3
 param_cid=$4
 
-debug "${filename}" 'START'
+debug "${FILENAME}" 'START'
 
-debug_single "${filename}"
+debug_single "${FILENAME}"
 api_get 'com.atproto.repo.getRecord' '' 'repo' "${param_repo}" 'collection' "${param_collection}" 'rkey' "${param_rkey}" 'cid' "${param_cid}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${filename}" 'END'
+debug "${FILENAME}" 'END'
