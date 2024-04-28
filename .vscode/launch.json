@@ -260,6 +260,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (version)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "version"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.actor.getPreferences",
             "program": "${workspaceFolder}/lib/api/app.bsky.actor.getPreferences",
             "terminalKind": "integrated",

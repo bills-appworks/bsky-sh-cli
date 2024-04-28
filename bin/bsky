@@ -9,6 +9,8 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
+BSKYSHCLI_CLI_VERSION='0.1.0'
+
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
 
@@ -125,6 +127,9 @@ global options:
   --session-refresh
       forces a session refresh on command exectuion.
 
+  --version
+      show bsky CLI version. other options/command/parameters are ignored.
+
 commands:
   login        login to Bluesky for create session.
   logout       logout from Bluesky for clear session.
@@ -140,6 +145,7 @@ commands:
   profile      show profile.
   info         show session/meta informations.
   help         show this help.
+  version      show bsky CLI version.
 
 To see command help:
   bsky <command> help
@@ -629,6 +635,20 @@ EOS
   debug 'output_help_info_meta' 'END'
 }
 
+output_help_version()
+{
+  debug 'output_help_version' 'START'
+
+
+  cat << 'EOS'
+bsky version help
+
+usage: bsky version
+EOS
+
+  debug 'output_help_version' 'END'
+}
+
 parse_parameters_login()
 {
   debug 'parse_parameters_login' 'START'
@@ -653,7 +673,7 @@ parse_global_option()
 
   # if the subsequent command is 'login', parameter may include a password
   debug_mode_suppress
-  parse_parameters '-P:1 --profile:1 --session-refresh:0' "$@"
+  parse_parameters '-P:1 --profile:1 --session-refresh:0 --version:0' "$@"
   options=$?
   debug_mode_restore
   
@@ -675,6 +695,12 @@ parse_global_option()
   if [ -n "${PARSED_PARAM_KEYONLY_session_refresh}" ]
   then
     BSKYSHCLI_GLOBAL_OPTION_SESSION_REFRESH='defined'
+  fi
+
+  if [ -n "${PARSED_PARAM_KEYONLY_version}" ]
+  then
+    command_version
+    exit 0
   fi
 
   debug 'parse_global_option' 'END'
@@ -1345,6 +1371,15 @@ command_info()
   debug 'command_info' 'END'
 }
 
+command_version()
+{
+  debug 'command_version' 'START'
+
+  _pn "bsky (bsky-sh-cli) ${BSKYSHCLI_CLI_VERSION}"
+
+  debug 'command_version' 'END'
+}
+
 # entry point
 
 set_timezone
@@ -1427,6 +1462,10 @@ case $1 in
     ;;
   help)
     output_help_general
+    ;;
+  version)
+    shift
+    command_version "$@"
     ;;
   *)
     output_help_general
