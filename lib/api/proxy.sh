@@ -6,8 +6,8 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_DEFINE_PROXY}" ]; then
 BSKYSHCLI_DEFINE_PROXY='defined'
@@ -19,95 +19,98 @@ HEADER_CONTENT_TYPE='Content-Type: application/json'
 
 build_query_parameter()
 {
-  STACK="$1"
-  QUERY_KEY="$2"
-  QUERY_VALUE="$3"
+  param_stack="$1"
+  param_query_key="$2"
+  param_query_value="$3"
 
   debug 'build_query_parameter' 'START'
-  debug 'build_query_parameter' "STACK:${STACK}"
-  debug 'build_query_parameter' "QUERY_KEY:${QUERY_KEY}"
-  debug 'build_query_parameter' "QUERY_VALUE:${QUERY_VALUE}"
+  debug 'build_query_parameter' "param_stack:${param_stack}"
+  debug 'build_query_parameter' "param_query_key:${param_query_key}"
+  debug 'build_query_parameter' "param_query_value:${param_query_value}"
 
-  QUERY_VALUE=`_p "${QUERY_VALUE}" | jq -Rr '@uri'`
-  if [ -z "${STACK}" ]
+  query_value=`_p "${param_query_value}" | jq -Rr '@uri'`
+  if [ -z "${param_stack}" ]
   then
-    STACK='?'
+    stack='?'
   else
-    STACK="${STACK}&"
+    stack="${param_stack}&"
   fi
-  STACK="${STACK}${QUERY_KEY}=${QUERY_VALUE}"
-  _p "${STACK}"
+  stack="${stack}${param_query_key}=${query_value}"
+  _p "${stack}"
 
   debug 'build_query_parameter' 'END'
 }
 
 build_array_parameters()
 {
-  STACK="$1"
-  QUERY_KEY="$2"
+  param_stack="$1"
+  param_query_key="$2"
   shift
   shift
-  QUERY_VALUES="$@"
+  param_query_values="$@"
 
   debug 'build_array_parametres' 'START'
-  debug 'build_array_parametres' "STACK:${STACK}"
-  debug 'build_array_parametres' "QUERY_KEY:${QUERY_KEY}"
-  debug 'build_array_parametres' "QUERY_VALUES:${QUERY_VALUES}"
+  debug 'build_array_parametres' "param_stack:${param_stack}"
+  debug 'build_array_parametres' "param_query_key:${param_query_key}"
+  debug 'build_array_parametres' "param_query_values:${param_query_values}"
 
-  for QUERY_VALUE in $QUERY_VALUES
+  stack="${param_stack}"
+  for query_value in $param_query_values
   do
-    STACK=`build_query_parameter "${STACK}" "${QUERY_KEY}" "${QUERY_VALUE}"`
+    stack=`build_query_parameter "${stack}" "${param_query_key}" "${query_value}"`
   done
-  _p "${STACK}"
+  _p "${stack}"
 
   debug 'build_array_parametres' 'END'
 }
 
 create_authorization_header()
 {
-  BEARER="$1"
+  param_bearer="$1"
 
   debug 'create_authorization_header' 'START'
 
-  _p "${HEADER_AUTHORIZATION_PREFIX} ${BEARER}"
+  _p "${HEADER_AUTHORIZATION_PREFIX} ${param_bearer}"
 
   debug 'create_authorization_header' 'END'
 }
 
 api_get_raw_queries()
 {
-  ENDPOINT="$1"
-  BEARER="$2"
-  RAW_QUERIES="$3"
+  param_endpoint="$1"
+  param_bearer="$2"
+  param_raw_queries="$3"
 
   debug 'api_get_raw_queries' 'START'
-  debug 'api_get_raw_queries' "ENDPOINT:${ENDPOINT}"
-  debug 'api_get_raw_queries' "RAW_QUERIES:${RAW_QUERIES}"
+  debug 'api_get_raw_queries' "param_endpoint:${param_endpoint}"
+  debug 'api_get_raw_queries' "param_raw_queries:${param_raw_queries}"
 
-  if [ -z "${BEARER}" ]
+  if [ -n "${param_bearer}" ]
   then
+    bearer="${param_bearer}"
+  else
     read_session_file
-    BEARER="${SESSION_ACCESS_JWT}"
+    bearer="${SESSION_ACCESS_JWT}"
   fi
-  HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
+  header_authorization=`create_authorization_header "${bearer}"`
   debug_single 'api_get_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}${RAW_QUERIES}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_get_raw_queries' 'END'
 }
 
 api_get()
 {
-  ENDPOINT="$1"
-  BEARER="$2"
+  param_endpoint="$1"
+  param_bearer="$2"
   shift
   shift
 
   debug 'api_get' 'START'
-  debug 'api_get' "ENDPOINT:${ENDPOINT}"
+  debug 'api_get' "param_endpoint:${param_endpoint}"
   debug 'api_get' "QUERIES:$*"
 
-  QUERY_PARAMETER=''
+  query_parameter=''
   while [ $# -gt 0 ]
   do
     if [ $# -lt 2 ]
@@ -116,42 +119,42 @@ api_get()
     fi
     if [ "$2" != '''' ] && [ -n "$2" ]
     then
-      QUERY_PARAMETER=`build_query_parameter "${QUERY_PARAMETER}" "$1" "$2"`
+      query_parameter=`build_query_parameter "${query_parameter}" "$1" "$2"`
     fi
     shift
     shift
   done
 
-  api_get_raw_queries "${ENDPOINT}" "${BEARER}" "${QUERY_PARAMETER}"
+  api_get_raw_queries "${param_endpoint}" "${param_bearer}" "${query_parameter}"
 
   debug 'api_get' 'END'
 }
 
 api_get_nobearer_raw_queries()
 {
-  ENDPOINT="$1"
-  RAW_QUERIES="$2"
+  param_endpoint="$1"
+  param_raw_queries="$2"
 
   debug 'api_get_nobearer_raw_queries' 'START'
-  debug 'api_get_nobearer_raw_queries' "ENDPOINT:${ENDPOINT}"
-  debug 'api_get_nobearer_raw_queries' "RAW_QUERIES:${RAW_QUERIES}"
+  debug 'api_get_nobearer_raw_queries' "param_endpoint:${param_endpoint}"
+  debug 'api_get_nobearer_raw_queries' "param_raw_queries:${param_raw_queries}"
 
   debug_single 'api_get_nobearer_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${ENDPOINT}${RAW_QUERIES}" -H "${HEADER_ACCEPT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_get_nobearer_raw_queries' 'END'
 }
 
 api_get_nobearer()
 {
-  ENDPOINT="$1"
+  param_endpoint="$1"
   shift
 
   debug 'api_get_nobearer' 'START'
-  debug 'api_get_nobearer' "ENDPOINT:${ENDPOINT}"
+  debug 'api_get_nobearer' "param_endpoint:${param_endpoint}"
   debug 'api_get_nobearer' "QUERIES:$*"
 
-  QUERY_PARAMETER=''
+  query_parameter=''
   while [ $# -gt 0 ]
   do
     if [ $# -lt 2 ]
@@ -160,61 +163,61 @@ api_get_nobearer()
     fi
     if [ "$2" != '''' ] && [ -n "$2" ]
     then
-      QUERY_PARAMETER=`build_query_parameter "${QUERY_PARAMETER}" "$1" "$2"`
+      query_parameter=`build_query_parameter "${query_parameter}" "$1" "$2"`
     fi
     shift
     shift
   done
 
-  api_get_nobearer_raw_queries "${ENDPOINT}" "${QUERY_PARAMETER}"
+  api_get_nobearer_raw_queries "${param_endpoint}" "${query_parameter}"
 
   debug 'api_get_nobearer' 'END'
 }
 
 api_post_nobearer()
 {
-  ENDPOINT="$1"
-  BODY="$2"
+  param_endpoint="$1"
+  param_body="$2"
 
   debug 'api_post_nobearer' 'START'
-  debug 'api_post_nobearer' "ENDPOINT:${ENDPOINT}"
+  debug 'api_post_nobearer' "param_endpoint:${param_endpoint}"
 # WARNING: parameters may contain sensitive information (e.g. passwords) and will remain in the debug log
-#  debug_json 'api_post_nobearer' "BODY:${BODY}"
+#  debug_json 'api_post_nobearer' "param_body:${param_body}"
   debug_single 'api_post_nobearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_CONTENT_TYPE}" -d "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -d "${param_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post_nobearer' 'END'
 }
 
 api_post_bearer()
 {
-  ENDPOINT="$1"
-  BEARER="$2"
+  param_endpoint="$1"
+  param_bearer="$2"
 
   debug 'api_post_bearer' 'START'
-  debug 'api_post_bearer' "ENDPOINT:${ENDPOINT}"
+  debug 'api_post_bearer' "param_endpoint:${param_endpoint}"
 
-  HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
+  header_authorization=`create_authorization_header "${param_bearer}"`
   debug_single 'api_post_bearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post_bearer' 'END'
 }
 
 api_post()
 {
-  ENDPOINT="$1"
-  BODY="$2"
+  param_endpoint="$1"
+  param_body="$2"
 
   debug 'api_post' 'START'
-  debug 'api_post' "ENDPOINT:${ENDPOINT}"
-  debug 'api_post' "BODY:${BODY}"
+  debug 'api_post' "param_endpoint:${param_endpoint}"
+  debug 'api_post' "param_body:${param_body}"
 
   read_session_file
-  BEARER="${SESSION_ACCESS_JWT}"
-  HEADER_AUTHORIZATION=`create_authorization_header "${BEARER}"`
+  bearer="${SESSION_ACCESS_JWT}"
+  header_authorization=`create_authorization_header "${bearer}"`
   debug_single 'api_post'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${ENDPOINT}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${HEADER_AUTHORIZATION}" -d "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post' 'END'
 }
