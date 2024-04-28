@@ -9,7 +9,7 @@
 
 # recommend to use at pre-commit
 
-TARGETS='
+targets='
   shellcheck.sh
   bin/bsky
   lib/bsky_core.sh
@@ -17,17 +17,17 @@ TARGETS='
   lib/api/*
 '
 
-STATUS_MAX=0
-for TARGET in $TARGETS
+status_max=0
+for target in $targets
 do
-  echo "shellcheck >>>> ${TARGET}"
+  echo "shellcheck >>>> ${target}"
 # if checking SC1090:source to resource config file, set source-path to home directory
-##  shellcheck --source-path="${HOME}" "$@" "${TARGET}"
-  shellcheck "$@" "${TARGET}"
-  STATUS=$?
-  if [ $STATUS -gt $STATUS_MAX ]
+##  shellcheck --source-path="${HOME}" "$@" "${target}"
+  shellcheck "$@" "${target}"
+  status=$?
+  if [ $status -gt $status_max ]
   then
-    STATUS_MAX=$STATUS
+    status_max=$status
   fi
 done
-exit $STATUS_MAX
+exit $status_max
