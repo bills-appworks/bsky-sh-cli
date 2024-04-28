@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-identity-resolve-handle
-FILENAME='com.atproto.identity.resolveHandle'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='com.atproto.identity.resolveHandle'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,11 +23,11 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_HANDLE=$1
+param_handle=$1
 
-debug "${FILENAME}" 'START'
+debug "${filename}" 'START'
 
-debug_single "${FILENAME}"
-api_get 'com.atproto.identity.resolveHandle' '' 'handle' "${PARAM_HANDLE}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+debug_single "${filename}"
+api_get 'com.atproto.identity.resolveHandle' '' 'handle' "${param_handle}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'

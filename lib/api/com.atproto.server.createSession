@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-server-create-session
-FILENAME='com.atproto.server.createSession'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='com.atproto.server.createSession'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,33 +23,33 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_BLUESKY_HANDLE=$1
-PARAM_BLUESKY_PASSWORD=$2
-PARAM_AUTH_FACTOR_TOKEN=$3
+param_bluesky_handle=$1
+param_bluesky_password=$2
+param_auth_factor_token=$3
 
-debug "${FILENAME}" 'START'
+debug "${filename}" 'START'
 
 # debug mode turn off (prevent password recording)
 debug_mode_suppress
 
-if [ -n "${PARAM_AUTH_FACTOR_TOKEN}" ]
+if [ -n "${param_auth_factor_token}" ]
 then
-  POST_BODY='{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'", "authFactorToken": "'"${PARAM_AUTH_FACTOR_TOKEN}"'"}'
+  post_body='{"identifier": "'"${param_bluesky_handle}"'", "password": "'"${param_bluesky_password}"'", "authFactorToken": "'"${param_auth_factor_token}"'"}'
 else
-  POST_BODY='{"identifier": "'"${PARAM_BLUESKY_HANDLE}"'", "password": "'"${PARAM_BLUESKY_PASSWORD}"'"}'
+  post_body='{"identifier": "'"${param_bluesky_handle}"'", "password": "'"${param_bluesky_password}"'"}'
 fi
 
-debug_single "${FILENAME}"
-RESULT=`api_post_nobearer 'com.atproto.server.createSession' "${POST_BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+debug_single "${filename}"
+result=`api_post_nobearer 'com.atproto.server.createSession' "${post_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
 # restore debug mode
 debug_mode_restore
 
-ACCESS_JWT=`_p "${RESULT}" | jq -r '.accessJwt'`
-REFRESH_JWT=`_p "${RESULT}" | jq -r '.refreshJwt'`
-DID=`_p "${RESULT}" | jq -r '.did'`
-create_session_file "${PARAM_BLUESKY_HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" "${DID}"
+access_jwt=`_p "${result}" | jq -r '.accessJwt'`
+refresh_jwt=`_p "${result}" | jq -r '.refreshJwt'`
+did=`_p "${result}" | jq -r '.did'`
+create_session_file "${param_bluesky_handle}" "${access_jwt}" "${refresh_jwt}" "${did}"
 
-_p "${RESULT}"
+_p "${result}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'

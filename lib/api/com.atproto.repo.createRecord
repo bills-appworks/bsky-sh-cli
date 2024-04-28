@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-create-record
-FILENAME='com.atproto.repo.createRecord'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='com.atproto.repo.createrecord'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,69 +23,69 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_REPO=$1
-PARAM_COLLECTION=$2
-PARAM_RKEY=$3
-PARAM_VALIDATE=$4
-PARAM_RECORD=$5
-PARAM_SWAPCOMMIT=$6
+param_repo=$1
+param_collection=$2
+param_rkey=$3
+param_validate=$4
+param_record=$5
+param_swapcommit=$6
 
-debug "${FILENAME}" 'START'
-debug "${FILENAME}" "REPO:${PARAM_REPO} COLLECTION:${PARAM_COLLECTION} RKEY:${PARAM_RKEY} VALIDATE:${PARAM_VALIDATE} RECORD:${PARAM_RECORD} SWAPCOMMIT:${PARAM_SWAPCOMMIT}"
+debug "${filename}" 'START'
+debug "${filename}" "repo:${param_repo} collection:${param_collection} rkey:${param_rkey} validate:${param_validate} record:${param_record} swapcommit:${param_swapcommit}"
 
-if [ -n "${PARAM_REPO}" ]
+if [ -n "${param_repo}" ]
 then
-  REPO=`create_json_keyvalue 'repo' "${PARAM_REPO}" 0`
-  BODY="{${REPO}"
+  repo=`create_json_keyvalue 'repo' "${param_repo}" 0`
+  body="{${repo}"
 else
   error 'parameter repo must be specified'
 fi
-if [ -n "${PARAM_COLLECTION}" ]
+if [ -n "${param_collection}" ]
 then
-  COLLECTION=`create_json_keyvalue 'collection' "${PARAM_COLLECTION}" 0`
-  BODY="${BODY},${COLLECTION}"
+  collection=`create_json_keyvalue 'collection' "${param_collection}" 0`
+  body="${body},${collection}"
 else
   error 'parameter collection must be specified'
 fi
-if [ -n "${PARAM_RKEY}" ]
+if [ -n "${param_rkey}" ]
 then
-  RKEY_LEN=`_strlen "${RKEY}"`
-  if [ "${RKEY_LEN}" -gt 15 ]
+  rkey_len=`_strlen "${param_rkey}"`
+  if [ "${rkey_len}" -gt 15 ]
   then
-    error "parameter rkey must be specify length <= 15 characters: ${PARAM_RKEY}"
+    error "parameter rkey must be specify length <= 15 characters: ${param_rkey}"
   fi
-  RKEY=`create_json_keyvalue 'rkey' "${PARAM_RKEY}" 0`
-  BODY="${BODY},${RKEY}"
+  rkey=`create_json_keyvalue 'rkey' "${param_rkey}" 0`
+  body="${body},${rkey}"
 fi
-if [ -n "${PARAM_VALIDATE}" ]
+if [ -n "${param_validate}" ]
 then
-  case $PARAM_VALIDATE in
+  case $param_validate in
     true|false)
       ;;
     *)
-      error "parameter validate must be specify true or false: ${PARAM_VALIDATE}"
+      error "parameter validate must be specify true or false: ${param_validate}"
       ;;
   esac
-  VALIDATE=`create_json_keyvalue 'validate' "${PARAM_VALIDATE}" 1`
-  BODY="${BODY},${VALIDATE}"
+  validate=`create_json_keyvalue 'validate' "${param_validate}" 1`
+  body="${body},${validate}"
 fi
-if [ -n "${PARAM_RECORD}" ]
+if [ -n "${param_record}" ]
 then
-  RECORD=`create_json_keyvalue 'record' "${PARAM_RECORD}" 1`
-  BODY="${BODY},${RECORD}"
+  record=`create_json_keyvalue 'record' "${param_record}" 1`
+  body="${body},${record}"
 else
   error 'parameter record must be specified'
 fi
-if [ -n "${PARAM_SWAPCOMMIT}" ]
+if [ -n "${param_swapcommit}" ]
 then
-  SWAPCOMMIT=`create_json_keyvalue 'swapCommit' "${PARAM_SWAPCOMMIT}" 0`
-  BODY="${BODY},${SWAPCOMMIT}"
+  swapcommit=`create_json_keyvalue 'swapcommit' "${param_swapcommit}" 0`
+  body="${body},${swapcommit}"
 fi
-BODY="${BODY}}"
-debug "${FILENAME}" "BODY:${BODY}"
+body="${body}}"
+debug "${filename}" "body:${body}"
 
-debug_single "${FILENAME}"
-api_post 'com.atproto.repo.createRecord' "${BODY}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+debug_single "${filename}"
+api_post 'com.atproto.repo.createrecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'
 

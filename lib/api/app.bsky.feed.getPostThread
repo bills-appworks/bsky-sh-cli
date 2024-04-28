@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-feed-get-post-thread
-FILENAME='app.bsky.feed.getPostThread'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='app.bsky.feed.getPostThread'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,13 +23,13 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_URI=$1
-PARAM_DEPTH=$2
-PARAM_PARENT_HEIGHT=$3
+param_uri=$1
+param_depth=$2
+param_parent_height=$3
 
-debug "${FILENAME}" 'START'
+debug "${filename}" 'START'
 
-debug_single "${FILENAME}"
-api_get 'app.bsky.feed.getPostThread' '' 'uri' "${PARAM_URI}" 'depth' "${PARAM_DEPTH}" 'parentHeight' "${PARAM_PARENT_HEIGHT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+debug_single "${filename}"
+api_get 'app.bsky.feed.getPostThread' '' 'uri' "${param_uri}" 'depth' "${param_depth}" 'parentHeight' "${param_parent_height}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'

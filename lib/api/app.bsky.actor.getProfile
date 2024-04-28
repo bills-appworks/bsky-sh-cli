@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-actor-get-profile
-FILENAME='app.bsky.actor.getProfile'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='app.bsky.actor.getProfile'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,11 +23,11 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_ACTOR=$1
+param_actor=$1
 
-debug "${FILENAME}" 'START'
+debug "${filename}" 'START'
 
-debug_single "${FILENAME}"
-api_get 'app.bsky.actor.getProfile' '' 'actor' "${PARAM_ACTOR}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+debug_single "${filename}"
+api_get 'app.bsky.actor.getProfile' '' 'actor' "${param_actor}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'

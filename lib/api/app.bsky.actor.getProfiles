@@ -8,13 +8,13 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-actor-get-profiles
-FILENAME='app.bsky.actor.getProfiles'
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+filename='app.bsky.actor.getProfiles'
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_API_PATH}" ]
 then
-  BSKYSHCLI_API_PATH="${FILE_DIR}"
+  BSKYSHCLI_API_PATH="${file_dir}"
 fi
 # SC1091
 # shellcheck source=SCRIPTDIR/common.sh
@@ -23,14 +23,14 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-PARAM_ACTORS="$@"
+param_actors="$@"
 
-debug "${FILENAME}" 'START'
+debug "${filename}" 'START'
 
 # no double quote for use word splitting
 # shellcheck disable=SC2086
-PARAMETERS=`build_array_parameters '' 'actors' ${PARAM_ACTORS}`
-debug_single "${FILENAME}"
-api_get_raw_queries 'app.bsky.actor.getProfiles' '' "${PARAMETERS}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+parameters=`build_array_parameters '' 'actors' ${param_actors}`
+debug_single "${filename}"
+api_get_raw_queries 'app.bsky.actor.getProfiles' '' "${parameters}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
-debug "${FILENAME}" 'END'
+debug "${filename}" 'END'
