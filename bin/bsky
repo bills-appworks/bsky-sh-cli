@@ -636,7 +636,6 @@ parse_parameters_login()
   # parameter may include a password
   debug_mode_suppress
   parse_parameters '--handle:1 --password:1' "$@"
-  OPTIONS=$?
   debug_mode_restore
 
   # dynamic assignment in parse_parameters
@@ -655,7 +654,7 @@ parse_global_option()
   # if the subsequent command is 'login', parameter may include a password
   debug_mode_suppress
   parse_parameters '-P:1 --profile:1 --session-refresh:0' "$@"
-  OPTIONS=$?
+  options=$?
   debug_mode_restore
   
   if [ -n "${PARSED_PARAM_KEYVALUE_P}" ]
@@ -680,39 +679,39 @@ parse_global_option()
 
   debug 'parse_global_option' 'END'
 
-  return "${OPTIONS}"
+  return "${options}"
 }
 
 interact_string()
 {
-  PARAM_DESCRIPTION="$1"
-  PARAM_PROMPT="$2"
-  PARAM_IS_SECRET="$3"
+  param_description="$1"
+  param_prompt="$2"
+  param_is_secret="$3"
 
   debug 'interact_string' 'START'
-  debug 'interact_string' "PARAM_DESCRIPTION:${PARAM_DESCRIPTION}"
-  debug 'interact_string' "PARAM_PROMPT:${PROMPT}"
-  debug 'interact_string' "PARAM_IS_SECRET:${PARAM_IS_SECRET}"
+  debug 'interact_string' "param_description:${param_description}"
+  debug 'interact_string' "param_prompt:${param_prompt}"
+  debug 'interact_string' "param_is_secret:${param_is_secret}"
 
-  if [ -n "${PARAM_DESCRIPTION}" ]
+  if [ -n "${param_description}" ]
   then
-    _pn "${PARAM_DESCRIPTION}"
+    _pn "${param_description}"
   fi
-  if [ -n "${PARAM_PROMPT}" ]
+  if [ -n "${param_prompt}" ]
   then
-    PARAM_PROMPT="${PARAM_PROMPT}: "
+    prompt="${param_prompt}: "
   else
-    PARAM_PROMPT='> '
+    prompt='> '
   fi
-  _p "${PARAM_PROMPT}"
-  if [ "${PARAM_IS_SECRET}" -eq 0 ]
+  _p "${prompt}"
+  if [ "${param_is_secret}" -eq 0 ]
   then
     stty -echo
   fi
   # -r option recommendation disable for compatible with Solaris sh
   # shellcheck disable=SC2162
   read RESULT_INTERACT_STRING
-  if [ "${PARAM_IS_SECRET}" -eq 0 ]
+  if [ "${param_is_secret}" -eq 0 ]
   then
     stty echo
     _pn ''
@@ -723,13 +722,16 @@ interact_string()
 
 interact_login_2FA()
 {
+  param_handle="$1"
+  param_password="$2"
+
   debug 'interact_login_2FA' 'START'
 
   interact_string 'input sign in code has been sent to your email address' 'code' 1
-  AUTH_FACTOR_TOKEN="${RESULT_INTERACT_STRING}"
-  core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}" "${AUTH_FACTOR_TOKEN}"
-  STATUS=$?
-  case $STATUS in
+  auth_factor_token="${RESULT_INTERACT_STRING}"
+  core_create_session "${param_handle}" "${param_password}" "${auth_factor_token}"
+  status=$?
+  case $status in
     0)
       read_session_file
       _pn "login session of ${SESSION_HANDLE}"
@@ -738,7 +740,7 @@ interact_login_2FA()
 
   debug 'interact_login_2FA' 'END'
 
-  return $STATUS
+  return $status
 }
 
 command_login()
@@ -750,32 +752,36 @@ command_login()
     output_help_login
   else
     parse_parameters_login "$@"
-    if [ -z "${PARSED_PARAM_HANDLE}" ]
+    if [ -n "${PARSED_PARAM_HANDLE}" ]
     then
+      handle="${PARSED_PARAM_HANDLE}"
+    else
       interact_string 'input Bluesky handle' 'handle' 1
-      PARSED_PARAM_HANDLE="${RESULT_INTERACT_STRING}"
+      handle="${RESULT_INTERACT_STRING}"
     fi
 
-    if [ -z "${PARSED_PARAM_PASSWORD}" ]
+    if [ -n "${PARSED_PARAM_PASSWORD}" ]
     then
-      interact_string "input password of ${PARSED_PARAM_HANDLE} (no echo back)" 'password' 0
-      PARSED_PARAM_PASSWORD="${RESULT_INTERACT_STRING}"
+      password="${PARSED_PARAM_PASSWORD}"
+    else
+      interact_string "input password of ${handle} (no echo back)" 'password' 0
+      password="${RESULT_INTERACT_STRING}"
     fi
 
-    core_create_session "${PARSED_PARAM_HANDLE}" "${PARSED_PARAM_PASSWORD}"
-    STATUS=$?
-    case $STATUS in
+    core_create_session "${handle}" "${password}"
+    status=$?
+    case $status in
       0)
         read_session_file
         _pn "login session of ${SESSION_HANDLE}"
         ;;
       3)
         # 2FA token required
-        STATUS=1
-        until [ $STATUS -eq 0 ]
+        status=1
+        until [ $status -eq 0 ]
         do
-          interact_login_2FA
-          STATUS=$?
+          interact_login_2FA "${handle}" "${password}"
+          status=$?
         done
         ;;
     esac
@@ -783,7 +789,7 @@ command_login()
 
   debug 'command_login' 'END'
 
-  return 0
+  return $status
 }
 
 command_logout()
@@ -816,13 +822,13 @@ command_timeline()
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
-      LIMIT=$?
+      limit=$?
     else
-      LIMIT=''
+      limit=''
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_timeline '' "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_timeline '' "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
   fi
 
   debug 'command_timeline' 'END'
@@ -840,33 +846,35 @@ command_feed()
   else
     if core_is_feed_generator "$1"
     then
-      NAKED_FEED_GENERATOR="$1"
+      naked_feed_generator="$1"
       shift
     fi
 
     parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0' "$@"
 
-    if [ -n "${NAKED_FEED_GENERATOR}" ]
+    if [ -n "${naked_feed_generator}" ]
     then
       if [ -n "${PARSED_PARAM_KEYVALUE_url}" ]
       then
         error 'url parameter is specify only one'
       fi
-      PARSED_PARAM_KEYVALUE_url="${NAKED_FEED_GENERATOR}"
+      url="${naked_feed_generator}"
+    else
+      url="${PARSED_PARAM_KEYVALUE_url}"
     fi
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    verify_exclusive 0 '--actor --handle --did --url', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}" "${PARSED_PARAM_KEYVALUE_url}"
+    verify_exclusive 0 '--actor --handle --did --url', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}" "${url}"
 
-    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
-    STATUS=$?
-    if [ $STATUS -ne 0 ]
+    did=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    status=$?
+    if [ $status -ne 0 ]
     then
       error 'feed command error occured'
     fi
 
-    if [ -n "${DID}" ] && [ -z "${PARSED_PARAM_KEYVALUE_record_key}" ]
+    if [ -n "${did}" ] && [ -z "${PARSED_PARAM_KEYVALUE_record_key}" ]
     then
       error 'parameter --actor/--handle/--did must be specified --record-key'
     fi
@@ -874,12 +882,12 @@ command_feed()
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
-      LIMIT=$?
+      limit=$?
     else
-      LIMIT=''
+      limit=''
     fi
 
-    core_get_feed "${DID}" "${PARSED_PARAM_KEYVALUE_record_key}" "${PARSED_PARAM_KEYVALUE_url}" "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_feed "${did}" "${PARSED_PARAM_KEYVALUE_record_key}" "${url}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
   fi
 
   debug 'command_feed' 'END'
@@ -897,9 +905,9 @@ command_author_feed()
 
     verify_exclusive 0 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
 
-    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
-    STATUS=$?
-    if [ $STATUS -ne 0 ]
+    did=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    status=$?
+    if [ $status -ne 0 ]
     then
       error 'author-feed command error occured'
     fi
@@ -907,25 +915,27 @@ command_author_feed()
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
-      LIMIT=$?
+      limit=$?
     else
-      LIMIT=''
+      limit=''
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_filter}" ]
     then
       case $PARSED_PARAM_KEYVALUE_filter in
         posts-with-replies|posts-no-replies|posts-with-media|posts-and-author-threads)
-          PARSED_PARAM_KEYVALUE_filter=`_p "${PARSED_PARAM_KEYVALUE_filter}" | sed 's/-/_/g'`
+          filter=`_p "${PARSED_PARAM_KEYVALUE_filter}" | sed 's/-/_/g'`
           ;;
         *)
           error "--filter value ${PARSED_PARAM_KEYVALUE_filter} is not found. see 'bsky author-feed help'"
           ;;
       esac
+    else
+      filter=''
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_author_feed "${DID}" "${LIMIT}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYVALUE_filter}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_author_feed "${did}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${filter}" "${PARSED_PARAM_KEYONLY_output_id}"
   fi
 
   debug 'command_author_feed' 'END'
@@ -944,12 +954,12 @@ command_post()
     parse_parameters '--text:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
-    if [ -z "${POST_TEXT}" ]
+    post_text="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -z "${post_text}" ]
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_post "${POST_TEXT}"
+    core_post "${post_text}"
   fi
 
   debug 'command_post' 'END'
@@ -966,32 +976,32 @@ command_reply()
     parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
     # shellcheck disable=SC2154
-    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
-    CID="${PARSED_PARAM_KEYVALUE_cid}"
-    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
-    if [ -n "${VIEW_INDEX}" ]
+    cid="${PARSED_PARAM_KEYVALUE_cid}"
+    post_text="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -n "${view_index}" ]
     then
-      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ]
       then
         error "--index and --uri/--cid are exclusive"
       fi
-      core_get_feed_view_index "${VIEW_INDEX}"
-      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
-      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
     else
-      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    if [ -z "${POST_TEXT}" ]
+    if [ -z "${post_text}" ]
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_reply "${URI}" "${CID}" "${POST_TEXT}"
+    core_reply "${uri}" "${cid}" "${post_text}"
   fi
 
   debug 'command_reply' 'END'
@@ -1008,27 +1018,27 @@ command_repost()
     parse_parameters '--index:1 --uri:1 --cid:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
     # shellcheck disable=SC2154
-    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
-    CID="${PARSED_PARAM_KEYVALUE_cid}"
-    if [ -n "${VIEW_INDEX}" ]
+    cid="${PARSED_PARAM_KEYVALUE_cid}"
+    if [ -n "${view_index}" ]
     then
-      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ]
       then
         error "--index and --uri/--cid are exclusive"
       fi
-      core_get_feed_view_index "${VIEW_INDEX}"
-      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
-      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
     else
-      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    core_repost "${URI}" "${CID}"
+    core_repost "${uri}" "${cid}"
   fi
 
   debug 'command_repost' 'END'
@@ -1045,32 +1055,32 @@ command_quote()
     parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
     # shellcheck disable=SC2154
-    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
-    CID="${PARSED_PARAM_KEYVALUE_cid}"
-    POST_TEXT="${PARSED_PARAM_KEYVALUE_text}"
-    if [ -n "${VIEW_INDEX}" ]
+    cid="${PARSED_PARAM_KEYVALUE_cid}"
+    post_text="${PARSED_PARAM_KEYVALUE_text}"
+    if [ -n "${view_index}" ]
     then
-      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ]
       then
         error "--index and --uri/--cid are exclusive"
       fi
-      core_get_feed_view_index "${VIEW_INDEX}"
-      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
-      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
     else
-      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    if [ -z "${POST_TEXT}" ]
+    if [ -z "${post_text}" ]
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_quote "${URI}" "${CID}" "${POST_TEXT}"
+    core_quote "${uri}" "${cid}" "${post_text}"
   fi
 
   debug 'command_quote' 'END'
@@ -1087,27 +1097,27 @@ command_like()
     parse_parameters '--index:1 --uri:1 --cid:1' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
     # shellcheck disable=SC2154
-    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
-    CID="${PARSED_PARAM_KEYVALUE_cid}"
-    if [ -n "${VIEW_INDEX}" ]
+    cid="${PARSED_PARAM_KEYVALUE_cid}"
+    if [ -n "${view_index}" ]
     then
-      if [ -n "${URI}" ] || [ -n "${CID}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ]
       then
         error "--index and --uri/--cid are exclusive"
       fi
-      core_get_feed_view_index "${VIEW_INDEX}"
-      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
-      CID="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
     else
-      if [ -z "${URI}" ] || [ -z "${CID}" ]
+      if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    core_like "${URI}" "${CID}"
+    core_like "${uri}" "${cid}"
   fi
 
   debug 'command_like' 'END'
@@ -1124,46 +1134,46 @@ command_thread()
     parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    VIEW_INDEX="${PARSED_PARAM_KEYVALUE_index}"
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
     # shellcheck disable=SC2154
-    URI="${PARSED_PARAM_KEYVALUE_uri}"
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
-    DEPTH="${PARSED_PARAM_KEYVALUE_depth}"
+    depth="${PARSED_PARAM_KEYVALUE_depth}"
     # shellcheck disable=SC2154
-    PARENT_HEIGHT="${PARSED_PARAM_KEYVALUE_parent_height}"
-    if [ -n "${VIEW_INDEX}" ]
+    parent_height="${PARSED_PARAM_KEYVALUE_parent_height}"
+    if [ -n "${view_index}" ]
     then
-      if [ -n "${URI}" ]
+      if [ -n "${uri}" ]
       then
         error "--index and --uri are exclusive"
       fi
-      core_get_feed_view_index "${VIEW_INDEX}"
-      URI="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
     else
-      if [ -z "${URI}" ]
+      if [ -z "${uri}" ]
       then
         error "parameter must be specify --index or --uri"
       fi
     fi
-    if [ -n "${DEPTH}" ]
+    if [ -n "${depth}" ]
     then
-      _isnumeric "${DEPTH}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
+      _isnumeric "${depth}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
       then
-        error "--depth parameter must be numeric value: ${DEPTH}"
+        error "--depth parameter must be numeric value: ${depth}"
       fi
     fi
-    if [ -n "${PARENT_HEIGHT}" ]
+    if [ -n "${parent_height}" ]
     then
-      _isnumeric "${PARENT_HEIGHT}"
-      IS_NUMERIC=$?
-      if [ $IS_NUMERIC -ne 0 ]
+      _isnumeric "${parent_height}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
       then
-        error "--parent-height parameter must be numeric value: ${PARENT_HEIGHT}"
+        error "--parent-height parameter must be numeric value: ${parent_height}"
       fi
     fi
-    core_thread "${URI}" "${DEPTH}" "${PARENT_HEIGHT}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_thread "${uri}" "${depth}" "${parent_height}" "${PARSED_PARAM_KEYONLY_output_id}"
   fi
 
   debug 'command_thread' 'END'
@@ -1186,19 +1196,19 @@ command_profile()
       :
     else
       read_session_file
-      PARSED_PARAM_KEYVALUE_did=$SESSION_DID
+      PARSED_PARAM_KEYVALUE_did="${SESSION_DID}"
     fi
 
-    DID=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
-    STATUS=$?
-    if [ $STATUS -ne 0 ]
+    did=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    status=$?
+    if [ $status -ne 0 ]
     then
       error 'profile command error occured'
     fi
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_profile "${DID}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}"
+    core_get_profile "${did}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}"
   fi
 
   debug 'command_profile' 'END'
@@ -1231,11 +1241,11 @@ command_info_session()
     output_help_info_session
   else
     parse_parameters '--all:0 --which:0 --status:0 --login:0 --refresh:0 --handle:0 --did:0 --index:0 --cursor:0 --output-id:0' "$@"
-    COUNT_OPTIONS=$?
-    if [ $COUNT_OPTIONS -eq 0 ]
+    count_options=$?
+    if [ $count_options -eq 0 ]
     then
       PARSED_PARAM_KEYONLY_all='(defined)'
-    elif [ $COUNT_OPTIONS -eq 1 ] && [ -n "${PARSED_PARAM_KEYONLY_output_id}" ]
+    elif [ $count_options -eq 1 ] && [ -n "${PARSED_PARAM_KEYONLY_output_id}" ]
     then
       PARSED_PARAM_KEYONLY_all='(defined)'
     fi
@@ -1287,8 +1297,8 @@ command_info_meta()
     output_help_info_meta
   else
     parse_parameters '--all:0 --path:0 --config:0 --profile:0' "$@"
-    COUNT_OPTIONS=$?
-    if [ $COUNT_OPTIONS -eq 0 ]
+    count_options=$?
+    if [ $count_options -eq 0 ]
     then
       PARSED_PARAM_KEYONLY_all='(defined)'
     fi
@@ -1345,15 +1355,15 @@ debug 'bsky' 'START'
 
 # equal to if ! mkdir...; does not written for compatible with Solaris sh
 mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
-RESULT=$?
-if [ $RESULT -ne 0 ]
+result=$?
+if [ $result -ne 0 ]
 then
   error "cannot make work directory '${BSKYSHCLI_TOOLS_WORK_DIR}'"
 fi
 
 parse_global_option "$@"
-OPTIONS=$?
-for _ in `seq 1 ${OPTIONS}`
+options=$?
+for _ in `seq 1 ${options}`
 do
   shift
 done
