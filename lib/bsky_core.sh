@@ -79,33 +79,33 @@ FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\(
 
 core_canonicalize_handle()
 {
-  PARAM_CANONICALIZE_HANDLE=$1
+  param_handle=$1
 
   debug 'core_canonicalize_handle' 'START'
-  debug 'core_canonicalize_handle' "PARAM_CANONICALIZE_HANDLE:${PARAM_CANONICALIZE_HANDLE}"
+  debug 'core_canonicalize_handle' "param_handle:${param_handle}"
 
-  HANDLE_CHECK=`_p "${PARAM_CANONICALIZE_HANDLE}" | sed 's/[^.]//g'`
-  if [ -z "${HANDLE_CHECK}" ]
+  handle_check=`_p "${param_handle}" | sed 's/[^.]//g'`
+  if [ -z "${handle_check}" ]
   then
-    PARAM_CANONICALIZE_HANDLE="${PARAM_CANONICALIZE_HANDLE}${BSKYSHCLI_DEFAULT_DOMAIN}"
+    param_handle="${param_handle}${BSKYSHCLI_DEFAULT_DOMAIN}"
   fi
-  _p "${PARAM_CANONICALIZE_HANDLE}"
+  _p "${param_handle}"
 
   debug 'core_canonicalize_handle' 'END'
 }
 
 core_verify_did()
 {
-  PARAM_VERIFY_DID=$1
+  param_did=$1
 
   debug 'core_verify_did' 'START'
-  debug 'core_verify_did' "PARAM_VERIFY_DID:${PARAM_VERIFY_DID}"
+  debug 'core_verify_did' "param_did:${param_did}"
 
-  if _startswith "${PARAM_VERIFY_DID}" 'did:'
+  if _startswith "${param_did}" 'did:'
   then
     :
   else
-    error "specified did is invalid: ${PARAM_VERIFY_DID}"
+    error "specified did is invalid: ${param_did}"
   fi
 
   debug 'core_verify_did' 'END'
@@ -113,183 +113,183 @@ core_verify_did()
 
 core_handle_to_did()
 {
-  PARAM_TO_DID_HANDLE=$1
+  param_handle=$1
 
   debug 'core_handle_to_did' 'START'
-  debug 'core_handle_to_did' "PARAM_TO_DID_HANDLE:${PARAM_TO_DID_HANDLE}"
+  debug 'core_handle_to_did' "param_handle:${param_handle}"
 
-  PARAM_TO_DID_HANDLE=`core_canonicalize_handle "${PARAM_TO_DID_HANDLE}"`
-  RESULT=`api com.atproto.identity.resolveHandle "${PARAM_TO_DID_HANDLE}"`
-  STATUS=$?
-  if [ $STATUS -eq 0 ]
+  param_handle=`core_canonicalize_handle "${param_handle}"`
+  result=`api com.atproto.identity.resolveHandle "${param_handle}"`
+  status=$?
+  if [ $status -eq 0 ]
   then
-   _p "${RESULT}" | jq -r '.did'
+   _p "${result}" | jq -r '.did'
   fi
 
   debug 'core_handle_to_did' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_actor_to_did()
 {
-  PARAM_TO_DID_ACTOR=$1
+  param_actor=$1
 
   debug 'core_actor_to_did' 'START'
-  debug 'core_actor_to_did' "PARAM_TO_DID_ACTOR:${PARAM_TO_DID_ACTOR}"
+  debug 'core_actor_to_did' "param_actor:${param_actor}"
 
-  if _startswith "${PARAM_TO_DID_ACTOR}" 'did:'
+  if _startswith "${param_actor}" 'did:'
   then
-    _p "${PARAM_TO_DID_ACTOR}"
-    RESULT=0
+    _p "${param_actor}"
+    status=0
   else
-    core_handle_to_did "${PARAM_TO_DID_ACTOR}"
-    RESULT=$?
+    core_handle_to_did "${param_actor}"
+    status=$?
   fi
 
   debug 'core_actor_to_did' 'END'
 
-  return $RESULT
+  return $status
 }
 
 core_resolve_actor()
 {
-  PARAM_CORE_RESOLVE_ACTOR_ACTOR="$1"
-  PARAM_CORE_RESOLVE_ACTOR_HANDLE="$2"
-  PARAM_CORE_RESOLVE_ACTOR_DID="$3"
+  param_actor="$1"
+  param_handle="$2"
+  param_did="$3"
 
   debug 'core_resolve_actor' 'START'
 
-  if [ -n "${PARAM_CORE_RESOLVE_ACTOR_ACTOR}" ]
+  if [ -n "${param_actor}" ]
   then
-    DID=`core_actor_to_did "${PARAM_CORE_RESOLVE_ACTOR_ACTOR}"`
-    STATUS=$?
-  elif [ -n "${PARAM_CORE_RESOLVE_ACTOR_HANDLE}" ]
+    did=`core_actor_to_did "${param_actor}"`
+    status=$?
+  elif [ -n "${param_handle}" ]
   then
-    DID=`core_handle_to_did "${PARAM_CORE_RESOLVE_ACTOR_HANDLE}"`
-    STATUS=$?
-  elif [ -n "${PARAM_CORE_RESOLVE_ACTOR_DID}" ]
+    did=`core_handle_to_did "${param_handle}"`
+    status=$?
+  elif [ -n "${param_did}" ]
   then
-    core_verify_did "${PARAM_CORE_RESOLVE_ACTOR_DID}"
-    DID="${PARAM_CORE_RESOLVE_ACTOR_DID}"
-    STATUS=0
+    core_verify_did "${param_did}"
+    did="${param_did}"
+    status=0
   else
-    DID=''
-    STATUS=0
+    did=''
+    status=0
   fi
-  _p "${DID}"
+  _p "${did}"
 
   debug 'core_resolve_actor' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_is_actor_current_session()
 {
-  PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR=$1
+  param_actor=$1
 
   debug 'core_is_actor_current_session' 'START'
-  debug 'core_is_actor_current_session' "PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR:${PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR}"
+  debug 'core_is_actor_current_session' "param_actor:${param_actor}"
 
-  DID=`core_actor_to_did "${PARAM_CORE_IS_ACTOR_CURRENT_SESSION_ACTOR}"`
-  STATUS=$?
-  if [ $STATUS -eq 0 ]
+  did=`core_actor_to_did "${param_actor}"`
+  status=$?
+  if [ $status -eq 0 ]
   then
     read_session_file
-    if [ "${DID}" = "${SESSION_DID}" ]
+    if [ "${did}" = "${SESSION_DID}" ]
     then
-      STATUS=0
+      status=0
     else
-      STATUS=1
+      status=1
     fi
   fi
 
   debug 'core_is_actor_current_session' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_is_feed_generator()
 {
-  PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET=$1
+  param_verify_target=$1
 
   debug 'core_is_feed_generator' 'START'
-  debug 'core_is_feed_generator' "PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET:${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}"
+  debug 'core_is_feed_generator' "param_verify_target:${param_verify_target}"
 
-  VERIFY_RESULT=`_p "${PARAM_CORE_IS_FEED_GENERATOR_VERIFY_TARGET}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}__g"`
-  if [ -z "${VERIFY_RESULT}" ]
+  verify_result=`_p "${param_verify_target}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}__g"`
+  if [ -z "${verify_result}" ]
   then
-    IS_FEED_GENERATOR=0
+    is_feed_generator=0
   else
-    IS_FEED_GENERATOR=1
+    is_feed_generator=1
   fi
 
   debug 'core_is_feed_generator' 'END'
 
-  return "${IS_FEED_GENERATOR}"
+  return "${is_feed_generator}"
 }
 
 core_create_feed_at_uri_did_record_key()
 {
-  PARAM_CORE_CREATE_FEED_AT_URI_DID="$1"
-  PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY="$2"
+  param_did="$1"
+  param_record_key="$2"
 
   debug 'core_create_feed_at_uri_did_record_key' 'START'
-  debug 'core_create_feed_at_uri_did_record_key' "PARAM_CORE_CREATE_FEED_AT_URI_DID:${PARAM_CORE_CREATE_FEED_AT_URI_DID}"
-  debug 'core_create_feed_at_uri_did_record_key' "PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY:${PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY}"
+  debug 'core_create_feed_at_uri_did_record_key' "param_did:${param_did}"
+  debug 'core_create_feed_at_uri_did_record_key' "param_record_key:${param_record_key}"
 
-  _p "at://${PARAM_CORE_CREATE_FEED_AT_URI_DID}/app.bsky.feed.generator/${PARAM_CORE_CREATE_FEED_AT_URI_RECORD_KEY}"
+  _p "at://${param_did}/app.bsky.feed.generator/${param_record_key}"
 
   debug 'core_create_feed_at_uri_did_record_key' 'END'
 }
 
 core_create_feed_at_uri_bsky_app_url()
 {
-  PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL="$1"
+  param_url="$1"
 
   debug 'core_create_feed_at_uri_bsky_app_url' 'START'
-  debug 'core_create_feed_at_uri_bsky_app_url' "PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL:${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}"
+  debug 'core_create_feed_at_uri_bsky_app_url' "param_url:${param_url}"
 
-  ACTOR=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\1_g"`
-  RECORD_KEY=`_p "${PARAM_CORE_CREATE_FEED_AT_URI_BSKY_APP_URL}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\2_g"`
-  DID=`core_actor_to_did "${ACTOR}"`
-  STATUS=$?
-  if [ $STATUS -eq 0 ]
+  actor=`_p "${param_url}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\1_g"`
+  record_key=`_p "${param_url}" | sed "s_${FEED_GENERATOR_PATTERN_BSKYAPP_URL}_\2_g"`
+  did=`core_actor_to_did "${actor}"`
+  status=$?
+  if [ $status -eq 0 ]
   then
-    core_create_feed_at_uri_did_record_key "${DID}" "${RECORD_KEY}"
+    core_create_feed_at_uri_did_record_key "${did}" "${record_key}"
   fi
 
   debug 'core_create_feed_at_uri_bsky_app_url' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_get_feed_view_index()
 {
-  PARAM_FEED_VIEW_INDEX=$1
+  param_feed_view_index=$1
 
   debug 'core_get_feed_view_index' 'START'
-  debug 'core_get_feed_view_index' "PARAM_FEED_VIEW_INDEX:${PARAM_VIEW_INDEX}"
+  debug 'core_get_feed_view_index' "param_feed_view_index:${param_feed_view_index}"
 
   read_session_file
   _slice "${SESSION_FEED_VIEW_INDEX}" '"'
-  FEED_VIEW_INDEX_COUNT=$?
-  CHUNK_INDEX=1
-  while [ "${CHUNK_INDEX}" -le $FEED_VIEW_INDEX_COUNT ]
+  feed_view_index_count=$?
+  chunk_index=1
+  while [ "${chunk_index}" -le $feed_view_index_count ]
   do
-    SESSION_CHUNK=`eval _p \"\\$"RESULT_slice_${CHUNK_INDEX}"\"`
-    SESSION_CHUNK_INDEX=`_p "${SESSION_CHUNK}" | sed 's/^\([^|]*\)|.*/\1/g'`
-    if [ "${SESSION_CHUNK_INDEX}" = "${PARAM_FEED_VIEW_INDEX}" ]
+    session_chunk=`eval _p \"\\$"RESULT_slice_${chunk_index}"\"`
+    session_chunk_index=`_p "${session_chunk}" | sed 's/^\([^|]*\)|.*/\1/g'`
+    if [ "${session_chunk_index}" = "${param_feed_view_index}" ]
     then
       break
     fi
-    CHUNK_INDEX=`expr "${CHUNK_INDEX}" + 1`
+    chunk_index=`expr "${chunk_index}" + 1`
   done
-  if [ "${CHUNK_INDEX}" -gt $FEED_VIEW_INDEX_COUNT ]
+  if [ "${chunk_index}" -gt $feed_view_index_count ]
   then
-    error "specified index is not found in session: ${PARAM_FEED_VIEW_INDEX}"
+    error "specified index is not found in session: ${param_feed_view_index}"
   fi
-  _slice "${SESSION_CHUNK}" '|'
+  _slice "${session_chunk}" '|'
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   FEED_VIEW_INDEX_ELEMENT_INDEX="${RESULT_slice_1}"
@@ -299,9 +299,9 @@ core_get_feed_view_index()
   # dynamic assignment in parse_parameters, variable use at this file include(source) script
   # shellcheck disable=SC2154,SC2034
   FEED_VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
-  if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" != "${PARAM_FEED_VIEW_INDEX}" ]
+  if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" != "${param_feed_view_index}" ]
   then
-    error "internal error: specified index:${PARAM_FEED_VIEW_INDEX} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
+    error "internal error: specified index:${param_feed_view_index} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
   fi
 
   debug 'core_get_feed_view_index' 'END'
@@ -309,102 +309,103 @@ core_get_feed_view_index()
 
 core_parse_at_uri()
 {
-  PARAM_PARSE_AT_URI=$1
+  param_at_uri=$1
 
   debug 'core_parse_at_uri' 'START'
-  debug 'core_parse_at_uri' "PARAM_PARSE_AT_URI:${PARAM_PARSE_AT_URI}"
+  debug 'core_parse_at_uri' "param_at_uri:${param_at_uri}"
 
-  _slice "${PARAM_PARSE_AT_URI}" '/'
-  AT_URI_ELEMENT_COUNT=$?
-  AT_URI_ELEMENT_SCHEME="${RESULT_slice_1}/${RESULT_slice_2}/"
-  if [ "${AT_URI_ELEMENT_SCHEME}" != 'at://' ]
+  _slice "${param_at_uri}" '/'
+  at_uri_element_count=$?
+  at_uri_element_scheme="${RESULT_slice_1}/${RESULT_slice_2}/"
+  if [ "${at_uri_element_scheme}" != 'at://' ]
   then
-    error "specified uri (${PARAM_PARSE_AT_URI}) is not AT URI (at://)"
+    error "specified uri (${param_at_uri}) is not AT URI (at://)"
   fi
   AT_URI_ELEMENT_AUTHORITY="${RESULT_slice_3}"
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   AT_URI_ELEMENT_COLLECTION="${RESULT_slice_4}"
-  # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
   AT_URI_ELEMENT_RKEY="${RESULT_slice_5}"
 
   debug 'core_parse_at_uri' 'END'
 
-  return "${AT_URI_ELEMENT_COUNT}"
+  return "${at_uri_element_count}"
 }
 
 core_build_reply_fragment()
 {
-  PARAM_REPLY_TARGET_URI=$1
-  PARAM_REPLY_TARGET_CID=$2
+  param_reply_target_uri=$1
+  param_reply_target_cid=$2
 
   debug 'core_build_reply_fragment' 'START'
-  debug 'core_build_reply_fragment' "PARAM_REPLY_TARGET_URI:${PARAM_REPLY_TARGET_URI}"
-  debug 'core_build_reply_fragment' "PARAM_REPLY_TARGET_CID:${PARAM_REPLY_TARGET_CID}"
+  debug 'core_build_reply_fragment' "param_reply_target_uri:${param_reply_target_uri}"
+  debug 'core_build_reply_fragment' "param_reply_target_cid:${param_reply_target_cid}"
 
-  core_parse_at_uri "${PARAM_REPLY_TARGET_URI}"
+  core_parse_at_uri "${param_reply_target_uri}"
   if [ -z "${AT_URI_ELEMENT_AUTHORITY}" ] || [ -z "${AT_URI_ELEMENT_COLLECTION}" ] || [ -z "${AT_URI_ELEMENT_RKEY}" ]
   then
-    error "insufficiency in AT URI composition - URI:${PARAM_URI} AUTHORITY:${AT_URI_ELEMENT_AUTHORITY} COLLECTION:${AT_URI_ELEMENT_COLLECTION} RKEY:${AT_URI_ELEMENT_RKEY}"
+    error "insufficiency in AT URI composition - URI:${param_reply_target_uri} AUTHORITY:${AT_URI_ELEMENT_AUTHORITY} COLLECTION:${AT_URI_ELEMENT_COLLECTION} RKEY:${AT_URI_ELEMENT_RKEY}"
   fi
-  RESULT=`api com.atproto.repo.getRecord "${AT_URI_ELEMENT_AUTHORITY}" "${AT_URI_ELEMENT_COLLECTION}" "${AT_URI_ELEMENT_RKEY}"`
+  result=`api com.atproto.repo.getRecord "${AT_URI_ELEMENT_AUTHORITY}" "${AT_URI_ELEMENT_COLLECTION}" "${AT_URI_ELEMENT_RKEY}"`
   debug_single 'core_build_reply_fragment'
-  _p "${RESULT}" | jq -c 'if (.value|has("reply")) then .+ {root_uri:.value.reply.root.uri,root_cid:.value.reply.root.cid} else .+ {root_uri:.uri,root_cid:.cid} end | {reply:{root:{uri:.root_uri,cid:.root_cid},parent:{uri:.uri,cid:.cid}}}' | sed 's/^.\(.*\).$/\1/' | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  _p "${result}" | jq -c 'if (.value|has("reply")) then .+ {root_uri:.value.reply.root.uri,root_cid:.value.reply.root.cid} else .+ {root_uri:.uri,root_cid:.cid} end | {reply:{root:{uri:.root_uri,cid:.root_cid},parent:{uri:.uri,cid:.cid}}}' | sed 's/^.\(.*\).$/\1/' | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'core_build_reply_fragment' 'END'
 }
 
 core_build_subject_fragment()
 {
-  PARAM_SUBJECT_URI=$1
-  PARAM_SUBJECT_CID=$2
+  param_subject_uri=$1
+  param_subject_cid=$2
 
   debug 'core_build_subject_fragment' 'START'
-  debug 'core_build_subject_fragment' "PARAM_SUBJECT_URI:${PARAM_SUBJECT_URI}"
-  debug 'core_build_subject_fragment' "PARAM_SUBJECT_CID:${PARAM_SUBJECT_CID}"
-  _p "\"subject\":{\"uri\":\"${PARAM_SUBJECT_URI}\",\"cid\":\"${PARAM_SUBJECT_CID}\"}"
+  debug 'core_build_subject_fragment' "param_subject_uri:${param_subject_uri}"
+  debug 'core_build_subject_fragment' "param_subject_cid:${param_subject_cid}"
+
+  _p "\"subject\":{\"uri\":\"${param_subject_uri}\",\"cid\":\"${param_subject_cid}\"}"
 
   debug 'core_build_subject_fragment' 'END'
 }
 
 core_build_embed_fragment()
 {
-  PARAM_EMBED_URI=$1
-  PARAM_EMBED_CID=$2
+  param_embed_uri=$1
+  param_embed_cid=$2
 
   debug 'core_build_embed_fragment' 'START'
-  debug 'core_build_embed_fragment' "PARAM_EMBED_URI:${PARAM_EMBED_URI}"
-  debug 'core_build_embed_fragment' "PARAM_EMBED_CID:${PARAM_EMBED_CID}"
-  _p "\"embed\":{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${PARAM_EMBED_URI}\",\"cid\":\"${PARAM_EMBED_CID}\"}}"
+  debug 'core_build_embed_fragment' "param_embed_uri:${param_embed_uri}"
+  debug 'core_build_embed_fragment' "param_embed_cid:${param_embed_cid}"
+
+  _p "\"embed\":{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${param_embed_uri}\",\"cid\":\"${param_embed_cid}\"}}"
 
   debug 'core_build_embed_fragment' 'END'
 }
 
 core_create_post_chunk()
 {
-  PARAM_OUTPUT_ID="$1"
+  param_output_id="$1"
 
   debug 'core_create_post_chunk' 'START'
-  debug 'core_create_post_chunk' "PARAM_OUTPUT_ID:${PARAM_OUTPUT_ID}"
+  debug 'core_create_post_chunk' "param_output_id:${param_output_id}"
 
-  if [ -n "${PARAM_OUTPUT_ID}" ]
+  if [ -n "${param_output_id}" ]
   then
     # escape for substitution at placeholder replacement 
-    VIEW_POST_OUTPUT_ID=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+    view_post_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
   else
-    VIEW_POST_OUTPUT_ID=''
+    view_post_output_id=''
   fi
-  VIEW_TEMPLATE_POST_META=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_POST_TAIL=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_IMAGE=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_POST_SEPARATOR=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${VIEW_POST_OUTPUT_ID}"'/g'`
-  VIEW_TEMPLATE_QUOTED_POST_META=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  VIEW_TEMPLATE_QUOTED_POST_HEAD=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  VIEW_TEMPLATE_QUOTED_POST_BODY=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_POST_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  VIEW_TEMPLATE_QUOTED_IMAGE=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${VIEW_TEMPLATE_IMAGE}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
+  view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_post_meta}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_post_head}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_post_body}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_image}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image; sibling_index; index_str; is_quoted):
@@ -416,9 +417,9 @@ core_create_post_chunk()
         image.aspectRatio.width as $ASPECTRATIO_WIDTH |
         if is_quoted
         then
-          "'"${VIEW_TEMPLATE_QUOTED_IMAGE}"'"
+          "'"${view_template_quoted_image}"'"
         else
-          "'"${VIEW_TEMPLATE_IMAGE}"'"
+          "'"${view_template_image}"'"
         end
       ;
       def output_images(images; is_quoted):
@@ -441,9 +442,9 @@ core_create_post_chunk()
           (post_fragment.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
           if is_before_embed
           then
-            "'"${VIEW_TEMPLATE_QUOTED_POST_META}"'",
-            "'"${VIEW_TEMPLATE_QUOTED_POST_HEAD}"'",
-            "'"${VIEW_TEMPLATE_QUOTED_POST_BODY}"'"
+            "'"${view_template_quoted_post_meta}"'",
+            "'"${view_template_quoted_post_head}"'",
+            "'"${view_template_quoted_post_body}"'"
           else
             empty
           end
@@ -453,12 +454,12 @@ core_create_post_chunk()
           post_fragment.record.text as $TEXT |
           if is_before_embed
           then
-            "'"${VIEW_TEMPLATE_POST_META}"'",
-            "'"${VIEW_TEMPLATE_POST_HEAD}"'",
-            "'"${VIEW_TEMPLATE_POST_BODY}"'"
+            "'"${view_template_post_meta}"'",
+            "'"${view_template_post_head}"'",
+            "'"${view_template_post_body}"'"
           else
-            "'"${VIEW_TEMPLATE_POST_TAIL}"'",
-            "'"${VIEW_TEMPLATE_POST_SEPARATOR}"'"
+            "'"${view_template_post_tail}"'",
+            "'"${view_template_post_separator}"'"
           end
         end
       ;
@@ -513,13 +514,13 @@ core_create_session_chunk()
 
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  VIEW_SESSION_PLACEHOLDER='\($VIEW_INDEX)|\($URI)|\($CID)\"'
+  view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)\"'
   # shellcheck disable=SC2016
   _p 'def output_post(view_index; post_fragment):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
-        "'"${VIEW_SESSION_PLACEHOLDER}"'",
+        "'"${view_session_placeholder}"'",
         (
           post_fragment |
           if has("embed")
@@ -535,7 +536,7 @@ core_create_session_chunk()
                 ([view_index, "1"] | join("-")) as $VIEW_INDEX |
                 post_fragment.embed.record.record.uri as $URI |
                 post_fragment.embed.record.record.cid as $CID |
-                "'"${VIEW_SESSION_PLACEHOLDER}"'"
+                "'"${view_session_placeholder}"'"
               ),
               (
                 select(.embed.record.record.embeds) |
@@ -551,7 +552,7 @@ core_create_session_chunk()
               ([view_index, "1"] | join("-")) as $VIEW_INDEX |
               post_fragment.embed.record.uri as $URI |
               post_fragment.embed.record.cid as $CID |
-              "'"${VIEW_SESSION_PLACEHOLDER}"'"
+              "'"${view_session_placeholder}"'"
             )
           else
             empty
@@ -565,313 +566,311 @@ core_create_session_chunk()
 
 core_verify_pref_group_name()
 {
-  PARAM_CORE_VERIFY_PREF_GROUP_NAME="$1"
+  param_group="$1"
 
   debug 'core_verify_pref_group_name' 'START'
-  debug 'core_verify_pref_group_name' "CORE_VERIFY_PREF_GROUP_NAME:${CORE_VERIFY_PREF_GROUP_NAME}"
+  debug 'core_verify_pref_group_name' "param_group:${param_group}"
 
-  STATUS=0
-  case $PARAM_CORE_VERIFY_PREF_GROUP_NAME in
+  status=0
+  case $param_group in
     adult-content|content-label|saved-feeds|personal-details|feed-view|thread-view|interests|muted-words|hidden-posts)
       ;;
     *)
-      STATUS=1
+      status=1
       ;;
   esac
 
   debug 'core_verify_pref_group_name' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_verify_pref_item_name()
 {
-  PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP="$1"
-  PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM="$2"
+  param_group="$1"
+  param_item="$2"
 
   debug 'core_verify_pref_item_name' 'START'
-  debug 'core_verify_pref_item_name' "PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP:${PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP}"
-  debug 'core_verify_pref_item_name' "PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM:${PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM}"
+  debug 'core_verify_pref_item_name' "param_group:${param_group}"
+  debug 'core_verify_pref_item_name' "param_item:${param_item}"
 
-  STATUS=0
-  ERRORS=''
-  case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_GROUP in
+  status=0
+  case $param_group in
     adult-content)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         enabled)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     content-label)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         labeler-did|label|visibility)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     saved-feeds)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         pinned|saved|timeline-index)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     personal-details)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         birth-date)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     feed-view)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         feed|hide-replies|hide-replies-by-unfollowed|hide-replies-by-like-count|hide-reposts|hide-quote-posts)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     thread-view)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         sort|prioritize-followed-users)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     interests)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         tags)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     muted-words)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         items)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     hidden-posts)
-      case $PARAM_CORE_VERIFY_PREF_ITEM_NAME_ITEM in
+      case $param_item in
         items)
           ;;
         *)
-          STATUS=1
+          status=1
           ;;
       esac
       ;;
     *)
-      STATUS=1
+      status=1
       ;;
   esac
 
   debug 'core_verify_pref_item_name' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_verify_pref_group_parameter()
 {
-  PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP="$1"
+  param_group_parameter="$1"
 
   debug 'core_verify_pref_group_parameter' 'START'
-  debug 'core_verify_pref_group_parameter' "PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP:${PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP}"
+  debug 'core_verify_pref_group_parameter' "param_group_parameter:${param_group_parameter}"
 
-  EVACUATED_IFS=$IFS
+  evacuated_IFS=$IFS
   IFS=','
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  set -- $PARAM_CORE_VERIFY_PREF_GROUP_PARAMETER_GROUP
-  IFS=$EVACUATED_IFS
-  SPECIFIED_COUNT=$#
-  ERRORS=''
+  set -- $param_group_parameter
+  IFS=$evacuated_IFS
+  specified_count=$#
+  errors=''
   while [ $# -gt 0 ]
   do
-    GROUP_ELEMENT=$1
-    if core_verify_pref_group_name "${GROUP_ELEMENT}"
+    group_element=$1
+    if core_verify_pref_group_name "${group_element}"
     then
-      RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER="${GROUP_ELEMENT}"
-      GROUP_ELEMENT=`_p "${GROUP_ELEMENT}" | sed 's/-/_/g'`
-      eval "CORE_VERIFY_PREF_GROUP_${GROUP_ELEMENT}='defined'"
+      RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER="${group_element}"
+      group_element=`_p "${group_element}" | sed 's/-/_/g'`
+      eval "CORE_VERIFY_PREF_GROUP_${group_element}='defined'"
     else
-      ERRORS="${ERRORS} ${GROUP_ELEMENT}"
+      errors="${errors} ${group_element}"
     fi
     shift
   done
-  if [ -n "${ERRORS}" ]
+  if [ -n "${errors}" ]
   then
-    error "invalid preference group name:${ERRORS}"
+    error "invalid preference group name:${errors}"
   fi
 
   debug 'core_verify_pref_group_parameter' 'END'
 
-  return $SPECIFIED_COUNT
+  return $specified_count
 }
 
 core_verify_pref_item_parameter()
 {
-  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT="$1"
-  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE="$2"
-  PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM="$3"
+  param_group_count="$1"
+  param_group_single="$2"
+  param_item_parameter="$3"
 
   debug 'core_verify_pref_item_parameter' 'START'
-  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}"
-  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE}"
-  debug 'core_verify_pref_item_parameter' "PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM:${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM}"
+  debug 'core_verify_pref_item_parameter' "param_group_count:${param_group_count}"
+  debug 'core_verify_pref_item_parameter' "param_group_single:${param_group_single}"
+  debug 'core_verify_pref_item_parameter' "param_item_parameter:${param_item_parameter}"
 
-  STATUS=0
-  EVACUATED_IFS=$IFS
+  evacuated_IFS=$IFS
   IFS=','
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  set -- $PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_ITEM
-  IFS=$EVACUATED_IFS
-  SPECIFIED_COUNT=$#
-  ALL_STATUS=0
+  set -- $param_item_parameter
+  IFS=$evacuated_IFS
+  specified_count=$#
+  all_status=0
   while [ $# -gt 0 ]
   do
-    ITEM_ELEMENT=$1
-    ITEM_LHS=`_strleft "${ITEM_ELEMENT}" '='`
-    ITEM_MODIFIED=`_p "${ITEM_LHS}" | sed 's/[^.]//g'`
-    if [ -n "${ITEM_MODIFIED}" ]
+    item_element=$1
+    item_LHS=`_strleft "${item_element}" '='`
+    item_modified=`_p "${item_LHS}" | sed 's/[^.]//g'`
+    if [ -n "${item_modified}" ]
     then
-      ITEM_MODIFIER=`_strleft "${ITEM_LHS}" '\.'`
-      ITEM_CANONICAL=`_strright "${ITEM_LHS}" '\.'`
+      item_modifier=`_strleft "${item_LHS}" '\.'`
+      item_canonical=`_strright "${item_LHS}" '\.'`
     else
-      ITEM_MODIFIER=''
-      ITEM_CANONICAL="${ITEM_LHS}"
+      item_modifier=''
+      item_canonical="${item_LHS}"
     fi
-    ITEM_RHS=`_strright "${ITEM_ELEMENT}" '='`
+    item_RHS=`_strright "${item_element}" '='`
 
-    if [ "${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}" -eq 0 ]
+    if [ "${param_group_count}" -eq 0 ]
     then
-      if [ -n "${ITEM_MODIFIER}" ]
+      if [ -n "${item_modifier}" ]
       then
-        if core_verify_pref_group_name "${ITEM_MODIFIER}"
+        if core_verify_pref_group_name "${item_modifier}"
         then
-          ELEMENT_STATUS=0
-          GROUP_NAME="${ITEM_MODIFIER}"
+          element_status=0
+          group_name="${item_modifier}"
         else
-          ELEMENT_STATUS=1
-          error_msg "invalid preference item modifier: ${ITEM_LHS}"
+          element_status=1
+          error_msg "invalid preference item modifier: ${item_LHS}"
         fi
       else
-        ELEMENT_STATUS=1
-        error_msg "must be specified preference item modifier or --group: ${ITEM_LHS}"
+        element_status=1
+        error_msg "must be specified preference item modifier or --group: ${item_LHS}"
       fi
-    elif [ "${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_COUNT}" -eq 1 ]
+    elif [ "${param_group_count}" -eq 1 ]
     then
-      if [ -n "${ITEM_MODIFIER}" ]
+      if [ -n "${item_modifier}" ]
       then
-        ELEMENT_STATUS=1
-        error_msg "preference group and preference item modifier are exclusive: ${ITEM_LHS}"
+        element_status=1
+        error_msg "preference group and preference item modifier are exclusive: ${item_LHS}"
       else
-        ELEMENT_STATUS=0
-        GROUP_NAME="${PARAM_CORE_VERIFY_PREF_ITEM_PARAMETER_GROUP_SINGLE}"
+        element_status=0
+        group_name="${param_group_single}"
       fi
     else  # > 1
-      ELEMENT_STATUS=1
-      error_msg "multiple preference group and preference item are exclusive: ${ITEM_LHS}"
+      element_status=1
+      error_msg "multiple preference group and preference item are exclusive: ${item_LHS}"
     fi
 
-    core_verify_pref_item_name "${GROUP_NAME}" "${ITEM_CANONICAL}"
-    VERIFY_ITEM_STATUS=$?
-    if [ "${VERIFY_ITEM_STATUS}" -ne 0 ]
+    core_verify_pref_item_name "${group_name}" "${item_canonical}"
+    verify_item_status=$?
+    if [ "${verify_item_status}" -ne 0 ]
     then
-      ELEMENT_STATUS=1
-      error_msg "item not found in group: ${ITEM_LHS} in ${GROUP_NAME}"
+      element_status=1
+      error_msg "item not found in group: ${item_LHS} in ${group_name}"
     fi
 
-    if [ "${ELEMENT_STATUS}" -eq 0 ]
+    if [ "${element_status}" -eq 0 ]
     then
-      GROUP_SCORED=`_p "${GROUP_NAME}" | sed 's/-/_/g'`
-      ITEM_SCORED=`_p "${ITEM_LHS}" | sed 's/-/_/g'`
-      if [ -z "${ITEM_RHS}" ]
+      group_scored=`_p "${group_name}" | sed 's/-/_/g'`
+      item_scored=`_p "${item_LHS}" | sed 's/-/_/g'`
+      if [ -z "${item_RHS}" ]
       then
-        ITEM_RHS='defined'
+        item_RHS='defined'
       fi
-      eval "CORE_VERIFY_PREF_ITEM__${GROUP_SCORED}__${ITEM_SCORED}='${ITEM_RHS}'"
+      eval "CORE_VERIFY_PREF_ITEM__${group_scored}__${item_scored}='${item_RHS}'"
     else
-      ALL_STATUS=1
+      all_status=1
     fi
     shift
   done
-  if [ "${ALL_STATUS}" -ne 0 ]
+  if [ "${all_status}" -ne 0 ]
   then
     error 'preference item parameter error occured'
   fi
 
   debug 'core_verify_pref_item_parameter' 'END'
 
-  return $SPECIFIED_COUNT
+  return $specified_count
 }
 
 core_output_pref_item()
 {
-  PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK="$1"
-  PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE="$2"
-  PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION="$3"
-  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION="$4"
-  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY="$5"
-  PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE="$6"
+  param_pref_chunk="$1"
+  param_pref_type="$2"
+  param_group_description="$3"
+  param_item_description="$4"
+  param_item_key="$5"
+  param_item_type="$6"
 
   debug 'core_output_pref_item' 'START'
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK:${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}"
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE:${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION:${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}"
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}"
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"
-  debug 'core_output_pref_item' "PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE:${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE}"
+  debug 'core_output_pref_item' "param_pref_chunk:${param_pref_chunk}"
+  debug 'core_output_pref_item' "param_pref_type:${param_pref_type}"
+  debug 'core_output_pref_item' "param_group_description:${param_group_description}"
+  debug 'core_output_pref_item' "param_item_description:${param_item_description}"
+  debug 'core_output_pref_item' "param_item_key:${param_item_key}"
+  debug 'core_output_pref_item' "param_item_type:${param_item_type}"
 
   export STR_NO_CONF='(no configured)'
 
-  case $PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE in
+  case $param_item_type in
     string|boolean|number)
-      OUTPUT=`_p "${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}" | jq -r '
+      output=`_p "${param_pref_chunk}" | jq -r '
         .preferences as $pref |
         $pref[] |
-        select(."$type" == "'"${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"'") |
-        .'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"' // env.STR_NO_CONF
+        select(."$type" == "'"${param_pref_type}"'") |
+        .'"${param_item_key}"' // env.STR_NO_CONF
       '`
-      if [ -z "${OUTPUT}" ]
+      if [ -z "${output}" ]
       then
-        OUTPUT="${STR_NO_CONF}"
+        output="${STR_NO_CONF}"
       fi
-      _pn "${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}.${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}: ${OUTPUT}"
+      _pn "${param_group_description}.${param_item_description}: ${output}"
       ;;
     array)
-      OUTPUT=`_p "${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_CHUNK}" | jq -r '
-        "['"${PARAM_CORE_OUTPUT_PREF_ITEM_GROUP_DESCRIPTION}"'.'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_DESCRIPTION}"']",
+      output=`_p "${param_pref_chunk}" | jq -r '
+        "['"${param_group_description}"'.'"${param_item_description}"']",
         .preferences as $pref |
         $pref[] |
-        select(."$type" == "'"${PARAM_CORE_OUTPUT_PREF_ITEM_PREF_TYPE}"'") |
-        if has("'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"'") then .'"${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_KEY}"'[] else env.STR_NO_CONF end
+        select(."$type" == "'"${param_pref_type}"'") |
+        if has("'"${param_item_key}"'") then .'"${param_item_key}"'[] else env.STR_NO_CONF end
       '`
-      if [ -z "${OUTPUT}" ]
+      if [ -z "${output}" ]
       then
-        OUTPUT="${STR_NO_CONF}"
+        output="${STR_NO_CONF}"
       fi
-      _pn "${OUTPUT}"
+      _pn "${output}"
       ;;
     *)
-      error "internal error: ${PARAM_CORE_OUTPUT_PREF_ITEM_ITEM_TYPE}"
+      error "internal error: ${param_item_type}"
       ;;
   esac
 
@@ -880,34 +879,34 @@ core_output_pref_item()
 
 core_create_session()
 {
-  HANDLE="$1"
-  PASSWORD="$2"
-  AUTH_FACTOR_TOKEN="$3"
+  param_handle="$1"
+  param_password="$2"
+  param_auth_factor_token="$3"
 
   debug 'core_create_session' 'START'
-  debug 'core_create_session' "HANDLE:${HANDLE}"
-  if [ -n "${PASSWORD}" ]
+  debug 'core_create_session' "param_handle:${param_handle}"
+  if [ -n "${param_password}" ]
   then
-    MESSAGE='(defined)'
+    message='(defined)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'core_create_session' "PASSWORD:${MESSAGE}"
-  if [ -n "${AUTH_FACTOR_TOKEN}" ]
+  debug 'core_create_session' "param_password:${message}"
+  if [ -n "${param_auth_factor_token}" ]
   then
-    MESSAGE='(defined)'
+    message='(defined)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'core_create_session' "AUTH_FACTOR_TOKEN:${MESSAGE}"
+  debug 'core_create_session' "param_auth_factor_token:${message}"
 
-  HANDLE=`core_canonicalize_handle "${HANDLE}"`
-  api com.atproto.server.createSession "${HANDLE}" "${PASSWORD}" "${AUTH_FACTOR_TOKEN}" > /dev/null
-  API_STATUS=$?
+  canonical_handle=`core_canonicalize_handle "${param_handle}"`
+  api com.atproto.server.createSession "${canonical_handle}" "${param_password}" "${param_auth_factor_token}" > /dev/null
+  api_status=$?
 
   debug 'core_create_session' 'END'
 
-  return $API_STATUS
+  return $api_status
 }
 
 core_delete_session()
@@ -915,196 +914,196 @@ core_delete_session()
   debug 'core_delete_session' 'START'
 
   api com.atproto.server.deleteSession "${SESSION_REFRESH_JWT}" > /dev/null
-  API_STATUS=$?
+  api_status=$?
 
   debug 'core_delete_session' 'END'
 
-  return $API_STATUS
+  return $api_status
 }
 
 core_get_timeline()
 {
-  PARAM_GET_TIMELINE_ALGORITHM="$1"
-  PARAM_GET_TIMELINE_LIMIT="$2"
-  PARAM_GET_TIMELINE_NEXT="$3"
-  PARAM_GET_TIMELINE_OUTPUT_ID="$4"
+  param_algorithm="$1"
+  param_limit="$2"
+  param_next="$3"
+  param_output_id="$4"
 
   debug 'core_get_timeline' 'START'
-  debug 'core_get_timeline' "PARAM_GET_TIMELINE_ALGORITHM:${PARAM_GET_TIMELINE_ALGORITHM}"
-  debug 'core_get_timeline' "PARAM_GET_TIMELINE_LIMIT:${PARAM_GET_TIMELINE_LIMIT}"
-  debug 'core_get_timeline' "PARAM_GET_TIMELINE_NEXT:${PARAM_GET_TIMELINE_NEXT}"
-  debug 'core_get_timeline' "PARAM_GET_TIMELINE_OUTPUT_ID:${PARAM_GET_TIMELINE_OUTPUT_ID}"
+  debug 'core_get_timeline' "param_algorithm:${param_algorithm}"
+  debug 'core_get_timeline' "param_limit:${param_limit}"
+  debug 'core_get_timeline' "param_next:${param_next}"
+  debug 'core_get_timeline' "param_output_id:${param_output_id}"
 
   read_session_file
-  if [ -n "${PARAM_GET_TIMELINE_NEXT}" ]
+  if [ -n "${param_next}" ]
   then
-    CURSOR="${SESSION_GETTIMELINE_CURSOR}"
-    if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+    cursor="${SESSION_GETTIMELINE_CURSOR}"
+    if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
     then
         _p '[next feed not found]'
         exit 0
     fi
   else
-    CURSOR=''
+    cursor=''
   fi
 
-  RESULT=`api app.bsky.feed.getTimeline "${PARAM_GET_TIMELINE_ALGORITHM}" "${PARAM_GET_TIMELINE_LIMIT}" "${CURSOR}"`
-  STATUS=$?
+  result=`api app.bsky.feed.getTimeline "${param_algorithm}" "${param_limit}" "${cursor}"`
+  status=$?
   debug_single 'core_get_timeline'
-  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  _p "${result}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-  if [ $STATUS -eq 0 ]
+  if [ $status -eq 0 ]
   then
-    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_GET_TIMELINE_OUTPUT_ID}"`
-    _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
+    view_post_functions=`core_create_post_chunk "${param_output_id}"`
+    _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
 
-    CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
-    VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
-    FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+    cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+    view_session_functions=`core_create_session_chunk`
+    feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
-    update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+    update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
   fi
 
   debug 'core_get_timeline' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_get_feed()
 {
-  PARAM_CORE_GET_FEED_DID="$1"
-  PARAM_CORE_GET_FEED_RECORD_KEY="$2"
-  PARAM_CORE_GET_FEED_URL="$3"
-  PARAM_CORE_GET_FEED_LIMIT="$4"
-  PARAM_CORE_GET_FEED_NEXT="$5"
-  PARAM_CORE_GET_FEED_OUTPUT_ID="$6"
+  param_did="$1"
+  param_record_key="$2"
+  param_url="$3"
+  param_limit="$4"
+  param_next="$5"
+  param_output_id="$6"
 
   debug 'core_get_feed' 'START'
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_DID:${PARAM_CORE_GET_FEED_DID}"
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_RECORD_KEY:${PARAM_CORE_GET_FEED_RECORD_KEY}"
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_URL:${PARAM_CORE_GET_FEED_URL}"
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_LIMIT:${PARAM_CORE_GET_FEED_LIMIT}"
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_NEXT:${PARAM_CORE_GET_FEED_NEXT}"
-  debug 'core_get_feed' "PARAM_CORE_GET_FEED_OUTPUT_ID:${PARAM_CORE_GET_FEED_OUTPUT_ID}"
+  debug 'core_get_feed' "param_did:${param_did}"
+  debug 'core_get_feed' "param_record_key:${param_record_key}"
+  debug 'core_get_feed' "param_url:${param_url}"
+  debug 'core_get_feed' "param_limit:${param_limit}"
+  debug 'core_get_feed' "param_next:${param_next}"
+  debug 'core_get_feed' "param_output_id:${param_output_id}"
 
-  if [ -n "${PARAM_CORE_GET_FEED_DID}" ]
+  if [ -n "${param_did}" ]
   then
-    FEED=`core_create_feed_at_uri_did_record_key "${PARAM_CORE_GET_FEED_DID}" "${PARAM_CORE_GET_FEED_RECORD_KEY}"`
-    STATUS=$?
-  elif [ -n "${PARAM_CORE_GET_FEED_URL}" ]
+    feed=`core_create_feed_at_uri_did_record_key "${param_did}" "${param_record_key}"`
+    status=$?
+  elif [ -n "${param_url}" ]
   then
-    FEED=`core_create_feed_at_uri_bsky_app_url "${PARAM_CORE_GET_FEED_URL}"`
-    STATUS=$?
+    feed=`core_create_feed_at_uri_bsky_app_url "${param_url}"`
+    status=$?
   else
     error 'internal error: did and url are not specified'
   fi
 
-  if [ $STATUS -eq 0 ]
+  if [ $status -eq 0 ]
   then
     read_session_file
-    if [ -n "${PARAM_CORE_GET_FEED_NEXT}" ]
+    if [ -n "${param_next}" ]
     then
-      CURSOR="${SESSION_GETFEED_CURSOR}"
-      if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+      cursor="${SESSION_GETFEED_CURSOR}"
+      if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
       then
         _p '[next feed not found]'
         exit 0
       fi
     else
-      CURSOR=''
+      cursor=''
     fi
 
-    RESULT=`api app.bsky.feed.getFeed "${FEED}" "${PARAM_CORE_GET_FEED_LIMIT}" "${CURSOR}"`
-    STATUS=$?
+    result=`api app.bsky.feed.getFeed "${feed}" "${param_limit}" "${cursor}"`
+    status=$?
     debug_single 'core_get_feed'
-    _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+    _p "${result}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-    if [ $STATUS -eq 0 ]
+    if [ $status -eq 0 ]
     then
-      VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_CORE_GET_FEED_OUTPUT_ID}"`
-      _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
+      view_post_functions=`core_create_post_chunk "${param_output_id}"`
+      _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
 
-      CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
-      VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
-      FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+      cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+      view_session_functions=`core_create_session_chunk`
+      feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
       # CAUTION: key=value pairs are separated by tab characters
-      update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+      update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
     fi
   fi
 
   debug 'core_get_feed' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_get_author_feed()
 {
-  PARAM_CORE_GET_AUTHOR_FEED_DID="$1"
-  PARAM_CORE_GET_AUTHOR_FEED_LIMIT="$2"
-  PARAM_CORE_GET_AUTHOR_FEED_NEXT="$3"
-  PARAM_CORE_GET_AUTHOR_FEED_FILTER="$4"
-  PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID="$5"
+  param_did="$1"
+  param_limit="$2"
+  param_next="$3"
+  param_filter="$4"
+  param_output_id="$5"
 
   debug 'core_get_author_feed' 'START'
-  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_DID:${PARAM_CORE_GET_AUTHOR_FEED_DID}"
-  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_LIMIT:${PARAM_CORE_GET_AUTHOR_FEED_LIMIT}"
-  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_NEXT:${PARAM_CORE_GET_AUTHOR_FEED_NEXT}"
-  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_FILTER:${PARAM_CORE_GET_AUTHOR_FEED_FILTER}"
-  debug 'core_get_author_feed' "PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID:${PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID}"
+  debug 'core_get_author_feed' "param_did:${param_did}"
+  debug 'core_get_author_feed' "param_limit:${param_limit}"
+  debug 'core_get_author_feed' "param_next:${param_next}"
+  debug 'core_get_author_feed' "param_filter:${param_filter}"
+  debug 'core_get_author_feed' "param_output_id:${param_output_id}"
 
   read_session_file
-  if [ -n "${PARAM_CORE_GET_AUTHOR_FEED_NEXT}" ]
+  if [ -n "${param_next}" ]
   then
-    CURSOR="${SESSION_GETAUTHORFEED_CURSOR}"
-    if [ "${CURSOR}" = "${CURSOR_TERMINATE}" ]
+    cursor="${SESSION_GETAUTHORFEED_CURSOR}"
+    if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
     then
         _p '[next feed not found]'
         return 0
     fi
   else
-    CURSOR=''
+    cursor=''
   fi
 
-  RESULT=`api app.bsky.feed.getAuthorFeed "${PARAM_CORE_GET_AUTHOR_FEED_DID}" "${PARAM_CORE_GET_AUTHOR_FEED_LIMIT}" "${CURSOR}" "${PARAM_CORE_GET_AUTHOR_FEED_FILTER}"`
-  STATUS=$?
+  result=`api app.bsky.feed.getAuthorFeed "${param_did}" "${param_limit}" "${cursor}" "${param_filter}"`
+  status=$?
   debug_single 'core_get_author_feed'
-  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  _p "${result}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-  if [ $STATUS -eq 0 ]
+  if [ $status -eq 0 ]
   then
-    VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_CORE_GET_AUTHOR_FEED_OUTPUT_ID}"`
-    _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${FEED_PARSE_PROCEDURE}"
+    view_post_functions=`core_create_post_chunk "${param_output_id}"`
+    _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
 
-    CURSOR=`_p "${RESULT}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
-    VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
-    FEED_VIEW_INDEX=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+    cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+    view_session_functions=`core_create_session_chunk`
+    feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
-    update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${CURSOR}	${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+    update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
   fi
 
   debug 'core_get_author_feed' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_post()
 {
-  TEXT="$1"
+  param_text="$1"
 
   debug 'core_post' 'START'
-  debug 'core_post' "TEXT:${TEXT}"
+  debug 'core_post' "param_text:${param_text}"
 
   read_session_file
-  REPO="${SESSION_HANDLE}"
-  COLLECTION='app.bsky.feed.post'
-  CREATEDAT=`get_ISO8601UTCbs`
-  RECORD="{\"text\":\"${TEXT}\",\"createdAt\":\"${CREATEDAT}\"}"
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\"}"
 
   debug_single 'core_post'
-  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
-  _p "${RESULT}" | jq -r '"uri:\(.uri)
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+  _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
-text:'"${TEXT}"'"
+text:'"${param_text}"'"
 '
 
   debug 'core_post' 'END'
@@ -1112,28 +1111,28 @@ text:'"${TEXT}"'"
 
 core_reply()
 {
-  PARAM_REPLY_TARGET_URI="$1"
-  PARAM_REPLY_TARGET_CID="$2"
-  PARAM_REPLY_TEXT="$3"
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_text="$3"
 
   debug 'core_reply' 'START'
-  debug 'core_reply' "PARAM_REPLY_TARGET_URI:${PARAM_REPLY_TARGET_URI}"
-  debug 'core_reply' "PARAM_REPLY_TARGET_CID:${PARAM_REPLY_TARGET_CID}"
-  debug 'core_reply' "PARAM_REPLY_TEXT:${PARAM_REPLY_TEXT}"
+  debug 'core_reply' "param_target_uri:${param_target_uri}"
+  debug 'core_reply' "param_target_cid:${param_target_cid}"
+  debug 'core_reply' "param_text:${param_text}"
 
-  REPLY_FRAGMENT=`core_build_reply_fragment "${PARAM_REPLY_TARGET_URI}" "${PARAM_REPLY_TARGET_CID}"`
+  reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
 
   read_session_file
-  REPO="${SESSION_HANDLE}"
-  COLLECTION='app.bsky.feed.post'
-  CREATEDAT=`get_ISO8601UTCbs`
-  RECORD="{\"text\":\"${PARAM_REPLY_TEXT}\",\"createdAt\":\"${CREATEDAT}\",${REPLY_FRAGMENT}}"
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}}"
 
   debug_single 'core_reply'
-  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${RESULT}" | jq -r '"uri:\(.uri)
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
-text:'"${PARAM_REPLY_TEXT}"'"
+text:'"${param_text}"'"
 '
 
   debug 'core_reply' 'END'
@@ -1141,24 +1140,24 @@ text:'"${PARAM_REPLY_TEXT}"'"
 
 core_repost()
 {
-  PARAM_REPOST_TARGET_URI="$1"
-  PARAM_REPOST_TARGET_CID="$2"
+  param_target_uri="$1"
+  param_target_cid="$2"
 
   debug 'core_repost' 'START'
-  debug 'core_repost' "PARAM_REPOST_TARGET_URI:${PARAM_REPOST_TARGET_URI}"
-  debug 'core_repost' "PARAM_REPOST_TARGET_CID:${PARAM_REPOST_TARGET_CID}"
+  debug 'core_repost' "param_target_uri:${param_target_uri}"
+  debug 'core_repost' "param_target_cid:${param_target_cid}"
 
-  SUBJECT_FRAGMENT=`core_build_subject_fragment "${PARAM_REPOST_TARGET_URI}" "${PARAM_REPOST_TARGET_CID}"`
+  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
 
   read_session_file
-  REPO="${SESSION_HANDLE}"
-  COLLECTION='app.bsky.feed.repost'
-  CREATEDAT=`get_ISO8601UTCbs`
-  RECORD="{\"createdAt\":\"${CREATEDAT}\",${SUBJECT_FRAGMENT}}"
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.repost'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
 
   debug_single 'core_repost'
-  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${RESULT}" | jq -r '"uri:\(.uri)
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)"'
 
   debug 'core_repost' 'END'
@@ -1166,28 +1165,28 @@ cid:\(.cid)"'
 
 core_quote()
 {
-  PARAM_QUOTE_TARGET_URI="$1"
-  PARAM_QUOTE_TARGET_CID="$2"
-  PARAM_QUOTE_TEXT="$3"
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_text="$3"
 
   debug 'core_quote' 'START'
-  debug 'core_quote' "PARAM_QUOTE_TARGET_URI:${PARAM_QUOTE_TARGET_URI}"
-  debug 'core_quote' "PARAM_QUOTE_TARGET_CID:${PARAM_QUOTE_TARGET_CID}"
-  debug 'core_quote' "PARAM_QUOTE_TEXT:${PARAM_QUOTE_TEXT}"
+  debug 'core_quote' "param_target_uri:${param_target_uri}"
+  debug 'core_quote' "param_target_cid:${param_target_cid}"
+  debug 'core_quote' "param_text:${param_text}"
 
-  EMBED_FRAGMENT=`core_build_embed_fragment "${PARAM_QUOTE_TARGET_URI}" "${PARAM_QUOTE_TARGET_CID}"`
+  embed_fragment=`core_build_embed_fragment "${param_target_uri}" "${param_target_cid}"`
 
   read_session_file
-  REPO="${SESSION_HANDLE}"
-  COLLECTION='app.bsky.feed.post'
-  CREATEDAT=`get_ISO8601UTCbs`
-  RECORD="{\"text\":\"${PARAM_QUOTE_TEXT}\",\"createdAt\":\"${CREATEDAT}\",${EMBED_FRAGMENT}}"
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${embed_fragment}}"
 
   debug_single 'core_quote'
-  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${RESULT}" | jq -r '"uri:\(.uri)
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
-text:'"${PARAM_QUOTE_TEXT}"'"
+text:'"${param_text}"'"
 '
 
   debug 'core_quote' 'END'
@@ -1195,24 +1194,24 @@ text:'"${PARAM_QUOTE_TEXT}"'"
 
 core_like()
 {
-  PARAM_LIKE_TARGET_URI="$1"
-  PARAM_LIKE_TARGET_CID="$2"
+  param_target_uri="$1"
+  param_target_cid="$2"
 
   debug 'core_like' 'START'
-  debug 'core_like' "PARAM_LIKE_TARGET_URI:${PARAM_LIKE_TARGET_URI}"
-  debug 'core_like' "PARAM_LIKE_TARGET_CID:${PARAM_LIKE_TARGET_CID}"
+  debug 'core_like' "param_target_uri:${param_target_uri}"
+  debug 'core_like' "param_target_cid:${param_target_cid}"
 
-  SUBJECT_FRAGMENT=`core_build_subject_fragment "${PARAM_LIKE_TARGET_URI}" "${PARAM_LIKE_TARGET_CID}"`
+  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
 
   read_session_file
-  REPO="${SESSION_HANDLE}"
-  COLLECTION='app.bsky.feed.like'
-  CREATEDAT=`get_ISO8601UTCbs`
-  RECORD="{\"createdAt\":\"${CREATEDAT}\",${SUBJECT_FRAGMENT}}"
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.like'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
 
   debug_single 'core_like'
-  RESULT=`api com.atproto.repo.createRecord "${REPO}" "${COLLECTION}" '' '' "${RECORD}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${RESULT}" | jq -r '"uri:\(.uri)
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)"'
 
   debug 'core_like' 'END'
@@ -1220,23 +1219,23 @@ cid:\(.cid)"'
 
 core_thread()
 {
-  PARAM_THREAD_TARGET_URI="$1"
-  PARAM_THREAD_DEPTH="$2"
-  PARAM_THREAD_PARENT_HEIGHT="$3"
-  PARAM_THREAD_OUTPUT_ID="$4"
+  param_target_uri="$1"
+  param_depth="$2"
+  param_parent_height="$3"
+  param_output_id="$4"
 
   debug 'core_thread' 'START'
-  debug 'core_thread' "PARAM_THREAD_TARGET_URI:${PARAM_THREAD_TARGET_URI}"
-  debug 'core_thread' "PARAM_THREAD_DEPTH:${PARAM_THREAD_DEPTH}"
-  debug 'core_thread' "PARAM_THREAD_PARENT_HEIGHT:${PARAM_THREAD_PARENT_HEIGHT}"
+  debug 'core_thread' "param_target_uri:${param_target_uri}"
+  debug 'core_thread' "param_depth:${param_depth}"
+  debug 'core_thread' "param_parent_height:${param_parent_height}"
 
   debug_single 'core_thread'
-  RESULT=`api app.bsky.feed.getPostThread "${PARAM_THREAD_TARGET_URI}" "${PARAM_THREAD_DEPTH}" "${PARAM_THREAD_PARENT_HEIGHT}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-  VIEW_POST_FUNCTIONS=`core_create_post_chunk "${PARAM_THREAD_OUTPUT_ID}"`
+  view_post_functions=`core_create_post_chunk "${param_output_id}"`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_PARENTS='
+  thread_parse_procedure_parents='
     def output_parents:
       .parent |
       [recurse(.parent; . != null)] |
@@ -1256,13 +1255,13 @@ core_thread()
     end
   '
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_TARGET='
+  thread_parse_procedure_target='
     0 as $view_index |
     .thread.post as $post_fragment |
     output_post($view_index; $post_fragment)
   '
   # shellcheck disable=SC2016
-  THREAD_PARSE_PROCEDURE_REPLIES='
+  thread_parse_prodecure_replies='
     def output_replies(node; sibling_index; index_str):
       node as $node |
       sibling_index as $sibling_index |
@@ -1283,55 +1282,55 @@ core_thread()
     ;
     output_replies(.thread; 0; "")
   '
-  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_PARENTS}"
-  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_TARGET}"
-  _p "${RESULT}" | jq -r "${VIEW_POST_FUNCTIONS}${THREAD_PARSE_PROCEDURE_REPLIES}"
+  _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
+  _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
+  _p "${result}" | jq -r "${view_post_functions}${thread_parse_prodecure_replies}"
 
-  VIEW_SESSION_FUNCTIONS=`core_create_session_chunk`
-  FEED_VIEW_INDEX_PARENTS=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_PARENTS}"`
-  FEED_VIEW_INDEX_TARGET=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_TARGET}"`
-  FEED_VIEW_INDEX_REPLIES=`_p "${RESULT}" | jq -r -j "${VIEW_SESSION_FUNCTIONS}${THREAD_PARSE_PROCEDURE_REPLIES}" | sed 's/.$//'`
-  FEED_VIEW_INDEX="${FEED_VIEW_INDEX_PARENTS}${FEED_VIEW_INDEX_TARGET}${FEED_VIEW_INDEX_REPLIES}"
+  view_session_functions=`core_create_session_chunk`
+  feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
+  feed_view_index_target=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_target}"`
+  feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_prodecure_replies}" | sed 's/.$//'`
+  feed_view_index="${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}"
   # CAUTION: key=value pairs are separated by tab characters
-  update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${FEED_VIEW_INDEX}"
+  update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
 
   debug 'core_thread' 'END'
 }
 
 core_get_profile()
 {
-  PARAM_CORE_GET_PROFILE_DID="$1"
-  PARAM_CORE_GET_PROFILE_OUTPUT_ID="$2"
-  PARAM_CORE_GET_PROFILE_DUMP="$3"
+  param_did="$1"
+  param_output_id="$2"
+  param_dump="$3"
 
   debug 'core_get_profile' 'START'
-  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_DID:${PARAM_CORE_GET_PROFILE_DID}"
-  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_OUTPUT_ID:${PARAM_CORE_GET_PROFILE_OUTPUT_ID}"
-  debug 'core_get_profile' "PARAM_CORE_GET_PROFILE_DUMP:${PARAM_CORE_GET_PROFILE_DUMP}"
+  debug 'core_get_profile' "param_did:${param_did}"
+  debug 'core_get_profile' "param_output_id:${param_output_id}"
+  debug 'core_get_profile' "param_dump:${param_dump}"
 
-  RESULT=`api app.bsky.actor.getProfile "${PARAM_CORE_GET_PROFILE_DID}"`
-  STATUS=$?
+  result=`api app.bsky.actor.getProfile "${param_did}"`
+  status=$?
   debug_single 'core_get_profile'
-  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  _p "${result}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-  if [ $STATUS -eq 0 ]
+  if [ $status -eq 0 ]
   then
-    if [ -n "${PARAM_CORE_GET_PROFILE_DUMP}" ]
+    if [ -n "${param_dump}" ]
     then
-      _p "${RESULT}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+      _p "${result}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
     else
-      if [ -n "${PARAM_CORE_GET_PROFILE_OUTPUT_ID}" ]
+      if [ -n "${param_output_id}" ]
       then
-        PROFILE_OUTPUT="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}"
+        profile_output="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}"
       else
-        PROFILE_OUTPUT="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}"
+        profile_output="${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}"
       fi
-      PROFILE_OUTPUT="${PROFILE_OUTPUT}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}"
-      if core_is_actor_current_session "${PARAM_CORE_GET_PROFILE_DID}"
+      profile_output="${profile_output}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}"
+      if core_is_actor_current_session "${param_did}"
       then
-        PROFILE_OUTPUT="${PROFILE_OUTPUT}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}"
+        profile_output="${profile_output}\n${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}"
       fi
-      _p "${RESULT}" | jq -r '
+      _p "${result}" | jq -r '
         .did as $DID |
         .handle as $HANDLE |
         .displayName as $DISPLAYNAME |
@@ -1352,45 +1351,45 @@ core_get_profile()
         .viewer.following as $VIEWER_FOLLOWING |
         .viewer.followedBy as $VIEWER_FOLLOWEDBY |
         .labels as $LABELS |
-        "'"${PROFILE_OUTPUT}"'"
+        "'"${profile_output}"'"
       '
     fi
   fi
 
   debug 'core_get_profile' 'END'
 
-  return $STATUS
+  return $status
 }
 
 core_get_pref()
 {
-  PARAM_CORE_GET_PREF_GROUP="$1"
-  PARAM_CORE_GET_PREF_ITEM="$2"
-  PARAM_CORE_GET_PREF_DUMP="$3"
+  param_group="$1"
+  param_item="$2"
+  param_dump="$3"
 
   debug 'core_get_pref' 'START'
 
-  RESULT=`api app.bsky.actor.getPreferences`
-  STATUS=$?
+  result=`api app.bsky.actor.getPreferences`
+  status=$?
   debug_single 'core_get_preferences'
-  _p "${RESULT}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  _p "${result}" > "$BSKYSHCLI_DEBUG_SINGLE"
 
-  if [ $STATUS -eq 0 ]
+  if [ $status -eq 0 ]
   then
-    if [ -n "${PARAM_CORE_GET_PREF_DUMP}" ]
+    if [ -n "${param_dump}" ]
     then
-      _p "${RESULT}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+      _p "${result}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
     else
-      core_verify_pref_group_parameter "${PARAM_CORE_GET_PREF_GROUP}"
-      GROUP_COUNT=$?
-      core_verify_pref_item_parameter "${GROUP_COUNT}" "${RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER}" "${PARAM_CORE_GET_PREF_ITEM}"
-      ITEM_COUNT=$?
+      core_verify_pref_group_parameter "${param_group}"
+      group_count=$?
+      core_verify_pref_item_parameter "${group_count}" "${RESULT_CORE_VERIFY_PREF_GROUP_PARAMETER}" "${param_item}"
+      item_count=$?
       export STR_NO_CONF='(no configured)'
-      if [ "${ITEM_COUNT}" -eq 0 ]
+      if [ "${item_count}" -eq 0 ]
       then
-        if [ -n "${CORE_VERIFY_PREF_GROUP_adult_content}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_adult_content}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> adult contents",
             .preferences as $pref |
             $pref[] |
@@ -1399,9 +1398,9 @@ core_get_pref()
             "enabled: \($adultContents_enabled)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_content_label}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_content_label}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> content label",
             .preferences as $pref |
             $pref[] |
@@ -1414,9 +1413,9 @@ core_get_pref()
             "visibility: \($contentLabel_visibility)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_saved_feeds}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_saved_feeds}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> saved feeds",
             .preferences as $pref |
             $pref[] |
@@ -1431,9 +1430,9 @@ core_get_pref()
             "timeline index: \($savedFeeds_timelineIndex)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_personal_details}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_personal_details}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> personal details",
             .preferences as $pref |
             $pref[] |
@@ -1442,9 +1441,9 @@ core_get_pref()
             "birth date: \($personalDetails_birthDate)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_feed_view}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_feed_view}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> feed view",
             .preferences as $pref |
             $pref[] |
@@ -1463,9 +1462,9 @@ core_get_pref()
             "hide quote posts: \($feedView_hideQuotePosts)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_thread_view}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_thread_view}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> thread view",
             .preferences as $pref |
             $pref[] |
@@ -1476,9 +1475,9 @@ core_get_pref()
             "prioritize followed users: \($threadView_prioritizeFollowedUsers)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_interests}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_interests}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> interests",
             .preferences as $pref |
             $pref[] |
@@ -1488,9 +1487,9 @@ core_get_pref()
             "\($interests_tags)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_muted_words}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_muted_words}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> muted words",
             .preferences as $pref |
             $pref[] |
@@ -1500,9 +1499,9 @@ core_get_pref()
             "\($mutedWords_items)"
           '
         fi
-        if [ -n "${CORE_VERIFY_PREF_GROUP_hidden_posts}" ] || [ "${GROUP_COUNT}" -eq 0 ]
+        if [ -n "${CORE_VERIFY_PREF_GROUP_hidden_posts}" ] || [ "${group_count}" -eq 0 ]
         then
-          _p "${RESULT}" | jq -r '
+          _p "${result}" | jq -r '
             ">>>> hidden posts",
             .preferences as $pref |
             $pref[] |
@@ -1512,92 +1511,92 @@ core_get_pref()
             "\($hiddenPosts_items)"
           '
         fi
-      else  # ITEM_COUNT > 0
+      else  # item_count > 0
         if [ -n "${CORE_VERIFY_PREF_ITEM__adult_content__enabled}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#adultContentPref' 'adult-content' 'enabled' 'enabled' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#adultContentPref' 'adult-content' 'enabled' 'enabled' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__labeler_did}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'labeler-did' 'labelerDid' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'labeler-did' 'labelerDid' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__label}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'label' 'label' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'label' 'label' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__content_label__visibility}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'visibility' 'visibility' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#contentLabelPref' 'content-label' 'visibility' 'visibility' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__pinned}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'pinned' 'pinned' 'array'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'pinned' 'pinned' 'array'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__saved}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'saved' 'saved' 'array'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'saved' 'saved' 'array'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__saved_feeds__timeline_index}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'timeline-index' 'timelineIndex' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#savedFeedsPref' 'saved-feeds' 'timeline-index' 'timelineIndex' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__personal_details__birth_date}" ]
         then
-          OUTPUT=`_p "${RESULT}" | jq -r '
+          output=`_p "${result}" | jq -r '
             .preferences as $pref |
             $pref[] |
             select(."$type" == "app.bsky.actor.defs#personalDetailsPref") |
             if has ("birthDate") then .birthDate | split("T")[0] else env.STR_NO_CONF end
           '`
-          if [ -z "${OUTPUT}" ]
+          if [ -z "${output}" ]
           then
-            OUTPUT="${STR_NO_CONF}"
+            output="${STR_NO_CONF}"
           fi
-          _pn "personal-details.birth-date: ${OUTPUT}"
+          _pn "personal-details.birth-date: ${output}"
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__feed}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'feed' 'feed' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'feed' 'feed' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies' 'hideReplies' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies' 'hideReplies' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies_by_unfollowed}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-unfollowed' 'hideRepliesByUnfollowed' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-unfollowed' 'hideRepliesByUnfollowed' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_replies_by_like_count}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-like-count' 'hideRepliesByLikeCount' 'number'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-replies-by-like-count' 'hideRepliesByLikeCount' 'number'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_reposts}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-reposts' 'hideReposts' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-reposts' 'hideReposts' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__feed_view__hide_quote_posts}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-quote-posts' 'hideQuotePosts' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#feedViewPref' 'feed-view' 'hide-quote-posts' 'hideQuotePosts' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__thread_view__sort}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'sort' 'sort' 'string'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'sort' 'sort' 'string'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__thread_view__prioritize_followed_users}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'prioritize-followed-users' 'prioritizeFollowedUsers' 'boolean'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#threadViewPref' 'thread-view' 'prioritize-followed-users' 'prioritizeFollowedUsers' 'boolean'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__interests__tags}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#interestsPref' 'interests' 'tags' 'tags' 'array'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#interestsPref' 'interests' 'tags' 'tags' 'array'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__muted_words__items}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#mutedWordsPref' 'muted-words' 'items' 'items' 'array'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#mutedWordsPref' 'muted-words' 'items' 'items' 'array'
         fi
         if [ -n "${CORE_VERIFY_PREF_ITEM__hidden_posts__items}" ]
         then
-          core_output_pref_item "${RESULT}" 'app.bsky.actor.defs#hiddenPostsPref' 'hidden-posts' 'items' 'items' 'array'
+          core_output_pref_item "${result}" 'app.bsky.actor.defs#hiddenPostsPref' 'hidden-posts' 'items' 'items' 'array'
         fi
       fi
     fi
@@ -1621,8 +1620,6 @@ core_info_session_status()
   debug 'core_info_session_status' 'START'
 
   _p "login status: "
-#  SESSION_FILEPATH=`get_session_filepath`
-#  if [ -e "${SESSION_FILEPATH}" ]
   if is_session_exist
   then
     _pn "login"
@@ -1671,13 +1668,13 @@ core_info_session_did()
 
 core_info_session_index()
 {
-  PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID="$1"
+  param_output_id="$1"
 
   debug 'core_info_session_index' 'START'
-  debug 'core_info_session_index' "PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID:${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}"
+  debug 'core_info_session_index' "param_output_id:${param_output_id}"
 
   _pn '[index]'
-  if [ -n "${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}" ]
+  if [ -n "${param_output_id}" ]
   then
     _pn '[[view indexes: <index> <uri> <cid>]]'
   else
@@ -1687,31 +1684,31 @@ core_info_session_index()
   if [ -n "${SESSION_FEED_VIEW_INDEX}" ]
   then
     _slice "${SESSION_FEED_VIEW_INDEX}" '"'
-    FEED_VIEW_INDEX_COUNT=$?
-    CHUNK_INDEX=1
-    while [ "${CHUNK_INDEX}" -le $FEED_VIEW_INDEX_COUNT ]
+    feed_view_index_count=$?
+    chunk_index=1
+    while [ "${chunk_index}" -le $feed_view_index_count ]
     do
-      SESSION_CHUNK=`eval _p \"\\$"RESULT_slice_${CHUNK_INDEX}"\"`
+      session_chunk=`eval _p \"\\$"RESULT_slice_${chunk_index}"\"`
       (
-        _slice "${SESSION_CHUNK}" '|'
+        _slice "${session_chunk}" '|'
         # dynamic assignment in parse_parameters
         # shellcheck disable=SC2154
-        CORE_INFO_SESSION_INDEX_INDEX="${RESULT_slice_1}"
+        session_index="${RESULT_slice_1}"
         # dynamic assignment in parse_parameters, variable use at this file include(source) script
         # shellcheck disable=SC2154,SC2034
-        CORE_INFO_SESSION_INDEX_URI="${RESULT_slice_2}"
+        session_uri="${RESULT_slice_2}"
         # dynamic assignment in parse_parameters, variable use at this file include(source) script
         # shellcheck disable=SC2154,SC2034
-        CORE_INFO_SESSION_INDEX_CID="${RESULT_slice_3}"
+        session_cid="${RESULT_slice_3}"
         
-        if [ -n "${PARAM_CORE_INFO_SESSION_INDEX_OUTPUT_ID}" ]
+        if [ -n "${param_output_id}" ]
         then
-          printf "%s\t%s\t%s\n" "${CORE_INFO_SESSION_INDEX_INDEX}" "${CORE_INFO_SESSION_INDEX_URI}" "${CORE_INFO_SESSION_INDEX_CID}"
+          printf "%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}"
         else
-          _pn "${CORE_INFO_SESSION_INDEX_INDEX}"
+          _pn "${session_index}"
         fi
       )
-      CHUNK_INDEX=`expr "${CHUNK_INDEX}" + 1`
+      chunk_index=`expr "${chunk_index}" + 1`
     done
   fi
 
@@ -1765,14 +1762,14 @@ core_info_meta_profile()
   debug 'core_info_meta_profile' 'START'
 
   _pn '[profile (active session)]'
-  SESSION_FILES=`(cd "${SESSION_DIR}" && ls -- *"${SESSION_FILENAME_SUFFIX}" 2>/dev/null)`
-  for SESSION_FILE in $SESSION_FILES
+  session_files=`(cd "${SESSION_DIR}" && ls -- *"${SESSION_FILENAME_SUFFIX}" 2>/dev/null)`
+  for session_file in $session_files
   do
-    if [ "${SESSION_FILE}" = "${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}" ]
+    if [ "${session_file}" = "${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}" ]
     then
       _pn '(default)'
     else
-      _pn "${SESSION_FILE}" | sed "s/${SESSION_FILENAME_SUFFIX}$//g"
+      _pn "${session_file}" | sed "s/${SESSION_FILENAME_SUFFIX}$//g"
     fi
   done
 
