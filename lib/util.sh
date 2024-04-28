@@ -6,8 +6,8 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
-FILE_DIR=`dirname "$0"`
-FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+file_dir=`dirname "$0"`
+file_dir=`(cd "${file_dir}" && pwd)`
 
 if [ -z "${BSKYSHCLI_DEFINE_UTIL}" ]; then  # ifndef BSKYSCHCLI_DEFINE_UTIL
 BSKYSHCLI_DEFINE_UTIL='defined'
@@ -54,93 +54,93 @@ _pn()
 
 _strlen()
 {
-  STRING=$1
+  param_string=$1
 
-  RESULT=`_p "${STRING}" | wc -c`
-  return "${RESULT}"
+  result=`_p "${param_string}" | wc -c`
+  return "${result}"
 }
 
 _strleft()
 {
-  STRING=$1
-  SEPARATOR=$2
+  param_string=$1
+  param_separator=$2
 
-  _p "${STRING}" | sed "s/\(^[^${SEPARATOR}]*\)${SEPARATOR}.*$/\1/"
+  _p "${param_string}" | sed "s/\(^[^${param_separator}]*\)${param_separator}.*$/\1/"
 }
 
 _strright()
 {
-  STRING=$1
-  SEPARATOR=$2
+  param_string=$1
+  param_separator=$2
 
-  SEPARATOR_IN_STRING=`_p "${STRING}" | sed "s/[^${SEPARATOR}]//g"`
-  if [ -z "${SEPARATOR_IN_STRING}" ]
+  separator_in_string=`_p "${param_string}" | sed "s/[^${param_separator}]//g"`
+  if [ -z "${separator_in_string}" ]
   then
     _p ''
   else
-    _p "${STRING}" | sed "s/^.*${SEPARATOR}\([^${SEPARATOR}]*$\)/\1/"
+    _p "${param_string}" | sed "s/^.*${param_separator}\([^${param_separator}]*$\)/\1/"
   fi
 }
 
 _isnumeric()
 {
-  STRING=$1
+  param_string=$1
 
-  NOT_NUMERIC=`_p "${STRING}" | sed 's/[0-9]//g'`
-  if [ -z "${NOT_NUMERIC}" ]
+  not_numeric=`_p "${param_string}" | sed 's/[0-9]//g'`
+  if [ -z "${not_numeric}" ]
   then
-    RESULT=0
+    status=0
   else
-    RESULT=1
+    status=1
   fi
 
-  return "${RESULT}"
+  return "${status}"
 }
 
 _cut()
 {
-  STRING=$1
+  param_string=$1
   shift
 
-  _p "`_p "${STRING}" | cut "$@" | tr -d '\n'`"
+  _p "`_p "${param_string}" | cut "$@" | tr -d '\n'`"
 }
 
 _slice()
 {
-  SLICE_STRING=$1
-  SLICE_SEPARATOR=$2
+  param_string=$1
+  param_separator=$2
 
-  SLICE_SEPARATOR_IN_STRING=`_p "${SLICE_STRING}" | sed "s/[^${SLICE_SEPARATOR}]//g"`
-  _strlen "${SLICE_SEPARATOR_IN_STRING}"
-  SLICE_SEPARATOR_COUNT=$?
-  SLICE_ELEMENT_COUNT=`expr "${SLICE_SEPARATOR_COUNT}" + 1`
-  SLICE_ELEMENT_INDEX=1
-  while [ "${SLICE_ELEMENT_INDEX}" -le "${SLICE_ELEMENT_COUNT}" ]
+  separator_in_string=`_p "${param_string}" | sed "s/[^${param_separator}]//g"`
+  _strlen "${separator_in_string}"
+  separator_count=$?
+  element_count=`expr "${separator_count}" + 1`
+  element_index=1
+  while [ "${element_index}" -le "${element_count}" ]
   do
-    SLICE_STRING_ELEMENT=`_cut "${SLICE_STRING}" -d "${SLICE_SEPARATOR}" -f "${SLICE_ELEMENT_INDEX}"`
-    eval "RESULT_slice_${SLICE_ELEMENT_INDEX}='${SLICE_STRING_ELEMENT}'"
-    SLICE_ELEMENT_INDEX=`expr "${SLICE_ELEMENT_INDEX}" + 1`
+    string_element=`_cut "${param_string}" -d "${param_separator}" -f "${element_index}"`
+    eval "RESULT_slice_${element_index}='${string_element}'"
+    element_index=`expr "${element_index}" + 1`
   done
 
-  return "${SLICE_ELEMENT_COUNT}"
+  return "${element_count}"
 }
 
 _startswith()
 {
-  PARAM_STARTS_WITH_STRING=$1
-  PARAM_STARTS_WITH_SUBSTRING=$2
+  param_string=$1
+  param_substring=$2
 
-  _strlen "${PARAM_STARTS_WITH_SUBSTRING}"
-  SUBSTRING_LEN=$?
-  COMPARE_STRING=`_cut "${PARAM_STARTS_WITH_STRING}" -c "1-${SUBSTRING_LEN}"`
-  if [ "${COMPARE_STRING}" = "${PARAM_STARTS_WITH_SUBSTRING}" ]
+  _strlen "${param_substring}"
+  substring_len=$?
+  compare_string=`_cut "${param_string}" -c "1-${substring_len}"`
+  if [ "${compare_string}" = "${param_substring}" ]
   then
-    STARTS_WITH_RESULT=0
+    status=0
   else
-    STARTS_WITH_RESULT=1
+    status=1
   fi
 
-  return $STARTS_WITH_RESULT
+  return $status
 }
 
 set_timezone()
@@ -179,23 +179,23 @@ debug_mode_restore()
 
 debug()
 {
-  ID="$1"
-  MESSAGE="$2"
+  param_id="$1"
+  param_message="$2"
 
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
-    TIMESTAMP=`get_timestamp`
-    _pn "${TIMESTAMP} ${ID}: ${MESSAGE}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
+    timestamp=`get_timestamp`
+    _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
   fi
 }
 
 debug_single()
 {
-  FILE="$1"
+  param_file="$1"
 
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
-    BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_ROOT_PATH}/${FILE}"
+    BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_ROOT_PATH}/${param_file}"
   else
     BSKYSHCLI_DEBUG_SINGLE='/dev/null'
   fi
@@ -203,49 +203,49 @@ debug_single()
 
 debug_json()
 {
-  ID="$1"
-  JSON="$2"
+  param_id="$1"
+  param_json="$2"
 
   if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
   then
-    MESSAGE=`_p "${JSON}" | jq`
-    debug "${ID}" "${MESSAGE}"
+    message=`_p "${param_json}" | jq`
+    debug "${param_id}" "${message}"
   fi
 }
 
 error_msg()
 {
-  MESSAGE="$1"
-  _pn "ERROR: ${MESSAGE}" 1>&2
+  param_message="$1"
+  _pn "ERROR: ${param_message}" 1>&2
 }
 
 error()
 {
-  MESSAGE="$1"
+  param_message="$1"
 
-  error_msg "${MESSAGE}"
+  error_msg "${param_message}"
   exit 1
 }
 
 decode_keyvalue_list()
 {
-  PARAM_KEYVALUE_LIST="$1"
-  PARAM_DECODED_PREFIX="$2"
-  PARAM_ENCODED_SEPARATOR="$3"
+  param_keyvalue_list="$1"
+  param_decoded_prefix="$2"
+  param_encoded_separator="$3"
 
   debug 'decode_keyvalue_list' 'START'
 
-  EVACUATED_IFS=$IFS
+  evaluated_IFS=$IFS
   IFS=`printf '\t\n'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  set -- $PARAM_KEYVALUE_LIST
-  IFS=$EVACUATED_IFS
+  set -- $param_keyvalue_list
+  IFS=$evaluated_IFS
   while [ $# -gt 0 ]
   do
-    TARGET_LHS=`_strleft "$1" "${PARAM_ENCODED_SEPARATOR}"`
-    TARGET_RHS=`_strright "$1" "${PARAM_ENCODED_SEPARATOR}"`
-    eval "${PARAM_DECODED_PREFIX}${TARGET_LHS}='${TARGET_RHS}'"
+    target_LHS=`_strleft "$1" "${param_encoded_separator}"`
+    target_RHS=`_strright "$1" "${param_encoded_separator}"`
+    eval "${param_decoded_prefix}${target_LHS}='${target_RHS}'"
     shift
   done
 
@@ -254,83 +254,83 @@ decode_keyvalue_list()
 
 verify_numeric_range()
 {
-  PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME="$1"
-  PARAM_VERIFY_NUMERIC_RANGE_NUMBER="$2"
-  PARAM_VERIFY_NUMERIC_RANGE_MIN="$3"
-  PARAM_VERIFY_NUMERIC_RANGE_MAX="$4"
+  param_error_message_name="$1"
+  param_number="$2"
+  param_min="$3"
+  param_max="$4"
 
   debug 'verify_numeric_range' 'START'
 
-  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_MIN}"
-  IS_NUMERIC_MIN=$?
-  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_MIN}"
-  IS_NUMERIC_MAX=$?
-  if [ $IS_NUMERIC_MIN -ne 0 ] || [ $IS_NUMERIC_MAX -ne 0 ]
+  _isnumeric "${param_min}"
+  is_numeric_min=$?
+  _isnumeric "${param_max}"
+  is_numeric_max=$?
+  if [ $is_numeric_min -ne 0 ] || [ $is_numeric_max -ne 0 ]
   then
-    error "internal error: specified min(${PARAM_VERIFY_NUMERIC_RANGE_MIN}) and/or max(${PARAM_VERIFY_NUMERIC_RANGE_MAX}) is not numeric"
+    error "internal error: specified min(${param_min}) and/or max(${param_max}) is not numeric"
   fi
 
-  _isnumeric "${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
-  IS_NUMERIC=$?
-  if [ $IS_NUMERIC -ne 0 ]
+  _isnumeric "${param_number}"
+  is_numeric=$?
+  if [ $is_numeric -ne 0 ]
   then
-    error "${PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME} parameter must be numeric value: ${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+    error "${param_error_message_name} parameter must be numeric value: ${param_number}"
   fi
-  VERIFY_NUMBER="${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
-  if [ "${VERIFY_NUMBER}" -lt "${PARAM_VERIFY_NUMERIC_RANGE_MIN}" ] || [ "${VERIFY_NUMBER}" -gt "${PARAM_VERIFY_NUMERIC_RANGE_MAX}" ]
+  verify_number="${param_number}"
+  if [ "${verify_number}" -lt "${param_min}" ] || [ "${verify_number}" -gt "${param_max}" ]
   then
-    error "${PARAM_VERIFY_NUMERIC_RANGE_MESSAGE_NAME} parameter must be specify from 1 to 100: ${PARAM_VERIFY_NUMERIC_RANGE_NUMBER}"
+    error "${param_error_message_name} parameter must be specify from 1 to 100: ${param_number}"
   fi
 
   debug 'verify_numeric_range' 'END'
 
-  return "${VERIFY_NUMBER}"
+  return "${verify_number}"
 }
 
 verify_exclusive()
 {
-  PARAM_VERIFY_EXCLUSIVE_MANDATORY="$1"
-  PARAM_VERIFY_EXCLUSIVE_STRING="$2"
+  param_is_mandatory="$1"
+  param_error_message_name="$2"
   shift
   shift
-  PARAM_VERIFY_EXCLUSIVE_TARGETS="$@"
+  param_targets="$@"
 
   debug 'verify_exclusive' 'START'
-  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_MANDATORY:${PARAM_VERIFY_EXCLUSIVE_MANDATORY}"
-  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_STRING:${PARAM_VERIFY_EXCLUSIVE_STRING}"
-  debug 'verify_exclusive' "PARAM_VERIFY_EXCLUSIVE_TARGETS:${PARAM_VERIFY_EXCLUSIVE_TARGETS}"
+  debug 'verify_exclusive' "param_is_mandatory:${param_is_mandatory}"
+  debug 'verify_exclusive' "param_error_message_name:${param_error_message_name}"
+  debug 'verify_exclusive' "param_targets:${param_targets}"
 
-  SPECIFIED=1
-  for TARGET in $PARAM_VERIFY_EXCLUSIVE_TARGETS
+  specified=1
+  for target in $param_targets
   do
-    if [ -n "${TARGET}" ]
+    if [ -n "${target}" ]
     then
-      if [ "${SPECIFIED}" -eq 0 ]
+      if [ "${specified}" -eq 0 ]
       then
-        error "these are exclusive: ${PARAM_VERIFY_EXCLUSIVE_STRING}"
+        error "these are exclusive: ${param_error_message_name}"
       fi
-      SPECIFIED=0
+      specified=0
     fi
   done
-  if [ "${PARAM_VERIFY_EXCLUSIVE_MANDATORY}" -eq 0 ] && [ "${SPECIFIED}" -eq 1 ]
+  if [ "${param_is_mandatory}" -eq 0 ] && [ "${specified}" -eq 1 ]
   then
-    error "must be specified one: ${PARAM_VERIFY_EXCLUSIVE_STRING}"
+    error "must be specified one: ${param_error_message_name}"
   fi
 
   debug 'verify_exclusive' 'end'
 
-  return $SPECIFIED
+  return $specified
 }
 
 get_option_type()
 {
-  OPTION_TYPE_TARGET=$1
+  param_option_type_target=$1
 
-  case `_cut "${OPTION_TYPE_TARGET}" -c 1` in
+  case `_cut "${param_option_type_target}" -c 1` in
     -)  # '-...'
-      case `_cut "${OPTION_TYPE_TARGET}" -c 2` in
+      case `_cut "${param_option_type_target}" -c 2` in
         -)
-          _strlen "${OPTION_TYPE_TARGET}"
+          _strlen "${param_option_type_target}"
           if [ $? -eq 2 ]
           then  # '--'
             return 255
@@ -338,13 +338,13 @@ get_option_type()
           return 2
           ;;
         *)  # '-<any>'
-          OPTION_REMAIN=`_strright "${OPTION_TYPE_TARGET}" '-'`
-          if _strlen "${OPTION_REMAIN}"
+          option_remain=`_strright "${param_option_type_target}" '-'`
+          if _strlen "${option_remain}"
           then
             :
           else
-            OPTION_REMAIN=`_p "${OPTION_REMAIN}" | sed 's/[0-9]*//g'`
-            if [ -z "${OPTION_REMAIN}" ]
+            option_remain=`_p "${option_remain}" | sed 's/[0-9]*//g'`
+            if [ -z "${option_remain}" ]
             then  # '-[0-9]+' negative number
               return 0
             fi
@@ -361,137 +361,139 @@ get_option_type()
 
 parse_parameter_element()
 {
-  VALUE_VARNAME=$1
-  EFFECTIVE_LIST=$2
-  TARGET=$3
-  TARGET_NEXT=$4
+  param_value_varname=$1
+  param_effective_list=$2
+  param_target=$3
+  param_target_next=$4
 
   debug 'parse_parameter_element' 'START'
-  debug 'parse_parameter_element' "VALUE_VARNAME:${VALUE_VARNAME}"
-  debug 'parse_parameter_element' "EFFECTIVE_LIST:${EFFECTIVE_LIST}"
-  debug 'parse_parameter_element' "TARGET:${TARGET}"
-  debug 'parse_parameter_element' "TARGET_NEXT:${TARGET_NEXT}"
+  debug 'parse_parameter_element' "param_value_varname:${param_value_varname}"
+  debug 'parse_parameter_element' "param_effective_list:${param_effective_list}"
+  debug 'parse_parameter_element' "param_target:${param_target}"
+  debug 'parse_parameter_element' "param_target_next:${param_target_next}"
 
-  TARGET_LHS=`_strleft "${TARGET}" '='`
-  TARGET_RHS=`_strright "${TARGET}" '='`
+  target_LHS=`_strleft "${param_target}" '='`
+  target_RHS=`_strright "${param_target}" '='`
 
-  debug 'parse_parameter_element' "TARGET_LHS:${TARGET_LHS}"
-  debug 'parse_parameter_element' "TARGET_RHS:${TARGET_RHS}"
+  debug 'parse_parameter_element' "target_LHS:${target_LHS}"
+  debug 'parse_parameter_element' "target_RHS:${target_RHS}"
 
-  VALUE=''
-  SKIP_COUNT=''
-  for LISTITEM in $EFFECTIVE_LIST
+  value=''
+  skip_count=''
+  for listitem in $param_effective_list
   do
-    EFFECTIVE_NAME=`_strleft "${LISTITEM}" ':'`
-    EFFECTIVE_VALUE=`_strright "${LISTITEM}" ':'`
-    if [ "${EFFECTIVE_NAME}" = "${TARGET_LHS}" ]
+    effective_name=`_strleft "${listitem}" ':'`
+    effective_value=`_strright "${listitem}" ':'`
+    if [ "${effective_name}" = "${target_LHS}" ]
     then  # target is effective option
-      if [ "${EFFECTIVE_VALUE}" -eq 0 ]
+      if [ "${effective_value}" -eq 0 ]
       then  # target is no value required
-        if [ -n "${TARGET_RHS}" ]
+        if [ -n "${target_RHS}" ]
         then  # but value specified 'target=...'
-          error "parameter must not specify a value: ${TARGET}"
+          error "parameter must not specify a value: ${param_target}"
         else  # no value specified by 'target=...'
           # next parameter is not check and delegate to next
-          SKIP_COUNT=0
+          skip_count=0
         fi
       else  # target is value required
-        if [ -n "${TARGET_RHS}" ]
+        if [ -n "${target_RHS}" ]
         then  # value specified 'target=...'
-          VALUE="${TARGET_RHS}"
-          SKIP_COUNT=0
+          value="${target_RHS}"
+          skip_count=0
         else  # value not specified by 'target=...'
-          if [ -n "${TARGET_NEXT}" ]
+          if [ -n "${param_target_next}" ]
           then  # check next parameter
-            get_option_type "${TARGET_NEXT}"
-            NEXT_OPTION_TYPE=$?
-            case $NEXT_OPTION_TYPE in
+            get_option_type "${param_target_next}"
+            next_option_type=$?
+            case $next_option_type in
               0)  # next parameter is not option ('<any>'), maybe value
-                VALUE="${TARGET_NEXT}"
-                SKIP_COUNT=1
+                # variable use at eval
+                # shellcheck disable=SC2034
+                value="${param_target_next}"
+                skip_count=1
                 ;;
               1|2|255)  # next parameter is option ('-...' or '--...')  or '--'
-                error "parameter must specify value: ${TARGET}"
+                error "parameter must specify value: ${param_target}"
                 ;;
               *)
                 error 'internal error: parse_parameter_element'
                 ;;
             esac
           else  # next parameter is not exist
-            error "parameter must spcify value: ${TARGET}"
+            error "parameter must spcify value: ${param_target}"
           fi
         fi
       fi
       break
     fi
   done
-  if [ -z "${SKIP_COUNT}" ]
+  if [ -z "${skip_count}" ]
   then
-    error "invalid parameter: ${TARGET}"
+    error "invalid parameter: ${param_target}"
   fi
 
-  eval "${VALUE_VARNAME}=\${VALUE}"
+  eval "${param_value_varname}=\${value}"
 
   debug 'parse_parameter_element' 'END'
 
-  return $SKIP_COUNT
+  return $skip_count
 }
 
 parse_parameters()
 {
-  EFFECTIVE_LIST=$1
+  effective_list=$1
   shift
 
   debug 'parse_parameters' 'START'
-  debug 'parse_parameters' "EFFECTIVE_LIST:${EFFECTIVE_LIST}"
-  debug 'parse_parameters' "PARAMETERS:$*"
+  debug 'parse_parameters' "effective_list:${effective_list}"
+  debug 'parse_parameters' "parameters:$*"
 
-  COUNT_OPTIONS=0
+  count_options=0
   while [ $# -gt 0 ]
   do
-    debug 'parse_parameters' "TARGET:$1"
+    debug 'parse_parameters' "target:$1"
     get_option_type "$1"
-    OPTION_TYPE=$?
-    debug 'parse_parameters' "OPTION_TYPE:${OPTION_TYPE}"
-    case $OPTION_TYPE in
+    option_type=$?
+    debug 'parse_parameters' "option_type:${option_type}"
+    case $option_type in
       0)  # maybe command or non optional value
         break
         ;;
       1|2)  # option '-...' or '--...'
-        parse_parameter_element VALUE "${EFFECTIVE_LIST}" "$1" "$2"
-        SKIP_COUNT=$?
-        debug 'parse_parameters' "SKIP_COUNT:${SKIP_COUNT}"
-        if [ $SKIP_COUNT -eq 255 ]
+        parse_parameter_element PARSED_VALUE "${effective_list}" "$1" "$2"
+        skip_count=$?
+        debug 'parse_parameters' "skip_count:${skip_count}"
+        if [ $skip_count -eq 255 ]
         then
-          error "${VALUE}"
+          error "${PARSED_VALUE}"
         fi
         # -O or --opt -> O or opt
-        CUT_START=`expr "${OPTION_TYPE}" + 1`
-        CANONICAL_KEY=`_cut "$1" -c "${CUT_START}"-`
+        cut_start=`expr "${option_type}" + 1`
+        canonical_key=`_cut "$1" -c "${cut_start}"-`
         # O or opt=value -> O or opt
-        CANONICAL_KEY=`_strleft "${CANONICAL_KEY}" '='`
+        canonical_key=`_strleft "${canonical_key}" '='`
         # opt-foo -> opt_foo
-        CANONICAL_KEY=`_p "${CANONICAL_KEY}" | sed 's/-/_/g'`
+        canonical_key=`_p "${canonical_key}" | sed 's/-/_/g'`
         # options value requirement is checked at parse_parameter_lement
-        if [ -z "${VALUE}" ]
+        if [ -z "${PARSED_VALUE}" ]
         then  # this parameter is single option
-          EVALUATE="PARSED_PARAM_KEYONLY_${CANONICAL_KEY}='defined'"
+          evaluate="PARSED_PARAM_KEYONLY_${canonical_key}='defined'"
         else  # this parameter is value specified option
           # escape \ -> \\, ' -> '\'', " -> \", (newline) -> \n
           # using GNU sed -z option
-          VALUE=`_p "${VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
-          EVALUATE="PARSED_PARAM_KEYVALUE_${CANONICAL_KEY}='${VALUE}'"
+          escaped_value=`_p "${PARSED_VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
+          evaluate="PARSED_PARAM_KEYVALUE_${canonical_key}='${escaped_value}'"
         fi
-        if [ $SKIP_COUNT -eq 1 ]
+        if [ $skip_count -eq 1 ]
         then  # next parameter is current parameters value (non single option)
-          COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+          count_options=`expr "${count_options}" + 1`
           shift
         fi
-        eval "${EVALUATE}"
-        debug 'parse_parameters' "EVALUATE:${EVALUATE}"
+        eval "${evaluate}"
+        debug 'parse_parameters' "evaluate:${evaluate}"
         ;;
       255)  # '--'
-        COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+        count_options=`expr "${count_options}" + 1`
         shift
         break
         ;;
@@ -499,110 +501,110 @@ parse_parameters()
         error 'internal error: parse_parameters'
         ;;
     esac
-    COUNT_OPTIONS=`expr "${COUNT_OPTIONS}" + 1`
+    count_options=`expr "${count_options}" + 1`
     shift
   done
-  return "${COUNT_OPTIONS}"
+  return "${count_options}"
 }
 
 create_json_keyvalue()
 {
-  KEY=$1
-  VALUE=$2
-  QUOTE=$3
+  param_key=$1
+  param_value=$2
+  param_quote=$3
 
   debug 'create_json_keyvalue' 'START'
-  debug 'create_json_keyvalue' "KEY:${KEY} VALUE:${VALUE} QUOTE:${QUOTE}"
+  debug 'create_json_keyvalue' "param_key:${param_key} param_value:${param_value} param_quote:${param_quote}"
 
-  if [ -z "${KEY}" ]
+  if [ -z "${param_key}" ]
   then
     error 'key must be specified'
   fi
 
-  if [ "${QUOTE:=0}" -eq 0 ]
+  if [ "${param_quote:=0}" -eq 0 ]
   then
-    QUOTE='"'
+    quote='"'
   else
-    QUOTE=''
+    quote=''
   fi
 
-  _p "\"${KEY}\":${QUOTE}${VALUE}${QUOTE}"
+  _p "\"${param_key}\":${quote}${param_value}${quote}"
 
   debug 'create_json_keyvalue' 'END'
 }
 
 api_core()
 {
-  API="$1"
+  param_api="$1"
   # various API params continue
 
   debug 'api_core' 'START'
-  debug 'api_core' "API:${API}"
+  debug 'api_core' "param_api:${param_api}"
 
   shift
-  API_CORE_STATUS=0
+  api_core_status=0
   debug_single 'api_core-1'
-  RESULT=`/bin/sh "${BSKYSHCLI_API_PATH}/${API}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  ERROR=`_p "${RESULT}" | jq -r '.error // empty'`
-  if [ -n "$ERROR" ]
+  result=`/bin/sh "${BSKYSHCLI_API_PATH}/${param_api}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  error_element=`_p "${result}" | jq -r '.error // empty'`
+  if [ -n "${error_element}" ]
   then
-    debug 'api_core' "ERROR:${ERROR}"
-    case "${ERROR}" in
+    debug 'api_core' "error_element:${error_element}"
+    case "${error_element}" in
       ExpiredToken)
-        API_CORE_STATUS=2
+        api_core_status=2
         ;;
       AuthFactorTokenRequired)
-        API_CORE_STATUS=3
+        api_core_status=3
         ;;
       *)
-        API_ERROR="${ERROR}"
-        API_ERROR_MESSAGE=`_p "${RESULT}" | jq -r '.message // empty'`
-        debug 'api_core' "${API_ERROR} / ${API_ERROR_MESSAGE}"
-        error_msg "${API_ERROR} / ${API_ERROR_MESSAGE}"
-        API_CORE_STATUS=1
+        api_error="${error_element}"
+        api_error_message=`_p "${result}" | jq -r '.message // empty'`
+        debug 'api_core' "${api_error} / ${api_error_message}"
+        error_msg "${api_error} / ${api_error_message}"
+        api_core_status=1
         ;;
     esac
   fi
 
-  if [ -n "${RESULT}" ]
+  if [ -n "${result}" ]
   then
     debug_single 'api_core-2'
-    _p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+    _p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
   fi
 
   debug 'api_core' 'END'
 
-  return $API_CORE_STATUS
+  return $api_core_status
 }
 
 api()
 {
   # TODO: retry any time for api_core error
-  API="$1"
+  param_api="$1"
   # various API params continue
 
   debug 'api' 'START'
-  debug 'api' "API:${API}"
+  debug 'api' "param_api:${param_api}"
 
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_SESSION_REFRESH}" ]
   then
     # force session refresh
-    API_CORE_STATUS=2
+    api_core_status=2
   else
-    RESULT=`api_core "$@"`
-    API_CORE_STATUS=$?
+    result=`api_core "$@"`
+    api_core_status=$?
     debug_single 'api-1'
-    RESULT=`_p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-    debug 'api' "api_core status: ${API_CORE_STATUS}"
+    result=`_p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+    debug 'api' "api_core status: ${api_core_status}"
   fi
-  case $API_CORE_STATUS in
+  case $api_core_status in
     0)
       debug_single 'api-2'
-      _p "${RESULT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
-      API_STATUS=0
+      _p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+      api_status=0
       ;;
     1)
-      API_STATUS=1
+      api_status=1
       ;;
     2)
       # session expired
@@ -612,30 +614,30 @@ api()
       read_session_file
       debug_single 'api-3'
       api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
-      API_STATUS=$?
+      api_status=$?
       ;;
     3)
       # 2FA token required
-      API_STATUS=3
+      api_status=3
       ;;
   esac
 
   debug 'api' 'END'
 
-  return $API_STATUS
+  return $api_status
 }
 
 verify_profile_name()
 {
-  PROFILE="$1"
+  param_profile="$1"
 
   debug 'verify_profile_name' 'START'
-  debug 'verify_profile_name' "PROFILE:${PROFILE}"
+  debug 'verify_profile_name' "param_profile:${param_profile}"
 
-  VERIFY=`_p "${PROFILE}" | sed 's/^[A-Za-z0-9][A-Za-z0-9._-]*//g'`
-  if [ -n "${VERIFY}" ]
+  verify=`_p "${param_profile}" | sed 's/^[A-Za-z0-9][A-Za-z0-9._-]*//g'`
+  if [ -n "${verify}" ]
   then
-    error "invalid profile name '${PROFILE}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
+    error "invalid profile name '${param_profile}' : must be start with alphanumeric and continue alphanumeric or underscore or hyphen or period"
   fi
 
   debug 'verify_profile_name' 'END'
@@ -646,103 +648,102 @@ get_session_filepath()
   debug 'get_session_filepath' 'START'
   if [ -n "${BSKYSHCLI_PROFILE}" ]
   then
-    SESSION_FILENAME="${BSKYSHCLI_PROFILE}${SESSION_FILENAME_SUFFIX}"
+    session_filename="${BSKYSHCLI_PROFILE}${SESSION_FILENAME_SUFFIX}"
   else
-    SESSION_FILENAME="${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}"
+    session_filename="${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}"
   fi
   # overwrite with global profile option
   if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
   then
-    SESSION_FILENAME="${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${SESSION_FILENAME_SUFFIX}"
+    session_filename="${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${SESSION_FILENAME_SUFFIX}"
   fi
 
-  SESSION_FILEPATH="${SESSION_DIR}/${SESSION_FILENAME}"
+  session_filepath="${SESSION_DIR}/${session_filename}"
 
-  debug 'get_session_filepath' "SESSION_FILEPATH:${SESSION_FILEPATH}"
+  debug 'get_session_filepath' "session_filepath:${session_filepath}"
   debug 'get_session_filepath' 'END'
 
-  _p "${SESSION_FILEPATH}"
+  _p "${session_filepath}"
 }
 
 init_session_info()
 {
-  OPS="$1"
-  HANDLE="$2"
-  ACCESS_JWT="$3"
-  REFRESH_JWT="$4"
-  DID="$5"
+  param_ops="$1"
+  param_handle="$2"
+  param_access_JWT="$3"
+  param_refresh_JWT="$4"
+  param_did="$5"
 
   debug 'init_session_info' 'START'
 
-  debug 'init_session_info' "PROFILE: ${PROFILE}"
-  debug 'init_session_info' "UPDATE_MODE: ${UPDATE_MODE}"
-  debug 'init_session_info' "HANDLE: ${HANDLE}"
-  if [ -n "${ACCESS_JWT}" ]
+  debug 'init_session_info' "param_ops: ${param_ops}"
+  debug 'init_session_info' "param_handle: ${param_handle}"
+  if [ -n "${param_access_JWT}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'init_session_info' "ACCESS_JWT: ${MESSAGE}"
-  if [ -n "${REFRESH_JWT}" ]
+  debug 'init_session_info' "param_access_JWT: ${message}"
+  if [ -n "${param_refresh_JWT}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'init_session_info' "REFRESH_JWT: ${MESSAGE}"
-  if [ -n "${DID}" ]
+  debug 'init_session_info' "param_refresh_JWT: ${message}"
+  if [ -n "${param_did}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'init_session_info' "DID: ${MESSAGE}"
+  debug 'init_session_info' "param_did: ${message}"
 
-  TIMESTAMP=`get_timestamp_timezone`
-  _pn "# session ${OPS} at ${TIMESTAMP}"
-  _pn "${SESSION_KEY_LOGIN_TIMESTAMP}='${TIMESTAMP}'"
-  _pn "${SESSION_KEY_HANDLE}='${HANDLE}'"
-  _pn "${SESSION_KEY_DID}='${DID}'"
-  _pn "${SESSION_KEY_ACCESS_JWT}='${ACCESS_JWT}'"
-  _pn "${SESSION_KEY_REFRESH_JWT}='${REFRESH_JWT}'"
+  timestamp=`get_timestamp_timezone`
+  _pn "# session ${param_ops} at ${timestamp}"
+  _pn "${SESSION_KEY_LOGIN_TIMESTAMP}='${timestamp}'"
+  _pn "${SESSION_KEY_HANDLE}='${param_handle}'"
+  _pn "${SESSION_KEY_DID}='${param_did}'"
+  _pn "${SESSION_KEY_ACCESS_JWT}='${param_access_JWT}'"
+  _pn "${SESSION_KEY_REFRESH_JWT}='${param_refresh_JWT}'"
 
   debug 'init_session_info' 'END'
 }
 
 create_session_file()
 {
-  HANDLE="$1"
-  ACCESS_JWT="$2"
-  REFRESH_JWT="$3"
-  DID="$4"
+  param_handle="$1"
+  param_access_JWT="$2"
+  param_refresh_JWT="$3"
+  param_did="$4"
 
   debug 'create_session_file' 'START'
-  debug 'create_session_file' "HANDLE:${HANDLE}"
-  if [ -n "${ACCESS_JWT}" ]
+  debug 'create_session_file' "param_handle:${param_handle}"
+  if [ -n "${param_access_JWT}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'create_session_file' "ACCESS_JWT: ${MESSAGE}"
-  if [ -n "${REFRESH_JWT}" ]
+  debug 'create_session_file' "param_access_JWT: ${message}"
+  if [ -n "${param_refresh_JWT}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'create_session_file' "REFRESH_JWT: ${MESSAGE}"
-  if [ -n "${DID}" ]
+  debug 'create_session_file' "param_refresh_JWT: ${message}"
+  if [ -n "${param_did}" ]
   then
-    MESSAGE='(specified)'
+    message='(specified)'
   else
-    MESSAGE='(empty)'
+    message='(empty)'
   fi
-  debug 'create_session_file' "DID: ${MESSAGE}"
+  debug 'create_session_file' "param_did: ${message}"
 
-  SESSION_FILEPATH=`get_session_filepath`
-  init_session_info 'create' "${HANDLE}" "${ACCESS_JWT}" "${REFRESH_JWT}" "${DID}" > "${SESSION_FILEPATH}"
+  session_filepath=`get_session_filepath`
+  init_session_info 'create' "${param_handle}" "${param_access_JWT}" "${param_refresh_JWT}" "${param_did}" > "${session_filepath}"
 
   debug 'create_session_file' 'END'
 }
@@ -751,46 +752,48 @@ read_session_file()
 {
   debug 'read_session_file' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath`
-  if [ -e "${SESSION_FILEPATH}" ]
+  session_filepath=`get_session_filepath`
+  if [ -e "${session_filepath}" ]
   then
     # SC1090 disable for dynamical(variable) path source(.) using and generize on runtime
     # shellcheck source=/dev/null
-    . "${SESSION_FILEPATH}"
-    STATUS=0
+    . "${session_filepath}"
+    status=0
   else
-    STATUS=1
+    status=1
   fi
 
   debug 'read_session_file' 'END'
+
+  return $status
 }
 
 create_session_info()
 {
-  PARAM_OPS="$1"
+  param_ops="$1"
   # CAUTION: key=value pairs are separated by tab characters
-  PARAM_SESSION_KEYVALUE_LIST="$2"
+  param_session_keyvalue_list="$2"
 
   debug 'create_session_info' 'START'
 
   read_session_file
-  TIMESTAMP=`get_timestamp_timezone`
-  _pn "# session ${PARAM_OPS} at ${TIMESTAMP}"
-  DECODED_PREFIX='DECODED_'
-  decode_keyvalue_list "${PARAM_SESSION_KEYVALUE_LIST}" "${DECODED_PREFIX}" '='
+  timestamp=`get_timestamp_timezone`
+  _pn "# session ${param_ops} at ${timestamp}"
+  decoded_prefix='DECODED_'
+  decode_keyvalue_list "${param_session_keyvalue_list}" "${decoded_prefix}" '='
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $BSKYSHCLI_SESSION_LIST
   while [ $# -gt 0 ]
   do
-    SESSION_KEY="$1"
-    CURRENT_SESSION_VALUE=`eval _p \"\\$"${SESSION_KEY}"\"`
-    SPECIFIED_SESSION_VALUE=`eval _p \"\\$"${DECODED_PREFIX}${SESSION_KEY}"\"`
-    if [ -n "${SPECIFIED_SESSION_VALUE}" ]
+    session_key="$1"
+    current_session_value=`eval _p \"\\$"${session_key}"\"`
+    specified_session_value=`eval _p \"\\$"${decoded_prefix}${session_key}"\"`
+    if [ -n "${specified_session_value}" ]
     then
-      _pn "${SESSION_KEY}='${SPECIFIED_SESSION_VALUE}'"
+      _pn "${session_key}='${specified_session_value}'"
     else
-      _pn "${SESSION_KEY}='${CURRENT_SESSION_VALUE}'"
+      _pn "${session_key}='${current_session_value}'"
     fi
     shift
   done
@@ -801,17 +804,17 @@ create_session_info()
 update_session_file()
 {
   # CAUTION: key=value pairs are separated by tab characters
-  PARAM_SESSION_KEYVALUE_LIST="$1"
+  param_session_keyvalue_list="$1"
 
   debug 'update_session_file' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath`
+  session_filepath=`get_session_filepath`
   case $BSKYSHCLI_SESSION_FILE_UPDATE in
     append)
-      create_session_info 'update' "${PARAM_SESSION_KEYVALUE_LIST}" >> "${SESSION_FILEPATH}"
+      create_session_info 'update' "${param_session_keyvalue_list}" >> "${session_filepath}"
       ;;
     overwrite|*)
-      create_session_info 'update' "${PARAM_SESSION_KEYVALUE_LIST}" > "${SESSION_FILEPATH}"
+      create_session_info 'update' "${param_session_keyvalue_list}" > "${session_filepath}"
       ;;
   esac
 
@@ -822,10 +825,10 @@ clear_session_file()
 {
   debug 'clear_session_file' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath`
-  if [ -e "${SESSION_FILEPATH}" ]
+  session_filepath=`get_session_filepath`
+  if [ -e "${session_filepath}" ]
   then
-    rm -f "${SESSION_FILEPATH}"
+    rm -f "${session_filepath}"
   fi
 
   debug 'clear_session_file' 'END'
@@ -835,17 +838,17 @@ is_session_exist()
 {
   debug 'is_session_exist' 'START'
 
-  SESSION_FILEPATH=`get_session_filepath`
-  if [ -e "${SESSION_FILEPATH}" ]
+  session_filepath=`get_session_filepath`
+  if [ -e "${session_filepath}" ]
   then
-    STATUS=0
+    status=0
   else
-    STATUS=1
+    status=1
   fi
 
   debug 'is_session_exist' 'END'
 
-  return $STATUS
+  return $status
 }
 
 # ifndef BSKYSHCLI_DEFINE_UTIL
