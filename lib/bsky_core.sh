@@ -965,7 +965,7 @@ core_get_timeline()
     cursor="${SESSION_GETTIMELINE_CURSOR}"
     if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
     then
-        _p '[next feed not found]'
+        _pn '[next feed not found]'
         exit 0
     fi
   else
@@ -1031,7 +1031,7 @@ core_get_feed()
       cursor="${SESSION_GETFEED_CURSOR}"
       if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
       then
-        _p '[next feed not found]'
+        _pn '[next feed not found]'
         exit 0
       fi
     else
@@ -1082,7 +1082,7 @@ core_get_author_feed()
     cursor="${SESSION_GETAUTHORFEED_CURSOR}"
     if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
     then
-        _p '[next feed not found]'
+        _pn '[next feed not found]'
         return 0
     fi
   else
