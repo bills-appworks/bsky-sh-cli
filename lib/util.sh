@@ -82,6 +82,14 @@ _strright()
   fi
 }
 
+_strchompleft()
+{
+  param_strchompleft_string=$1
+  param_strchompleft_chomp=$2
+
+  _p "${param_strchompleft_string}" | sed "s/^${param_strchompleft_chomp}\(.*$\)/\1/"
+}
+
 _isnumeric()
 {
   param_isnumeric_string=$1
@@ -244,7 +252,7 @@ decode_keyvalue_list()
   while [ $# -gt 0 ]
   do
     target_LHS=`_strleft "$1" "${param_encoded_separator}"`
-    target_RHS=`_strright "$1" "${param_encoded_separator}"`
+    target_RHS=`_strchompleft "$1" "${target_LHS}${param_encoded_separator}"`
     eval "${param_decoded_prefix}${target_LHS}='${target_RHS}'"
     shift
   done
