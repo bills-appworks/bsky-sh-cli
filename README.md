@@ -4,9 +4,9 @@ Bluesky CLI (Command Line Interface) implementation in shell script
 <img src="https://github.com/bills-appworks/bsky-sh-cli/wiki/images/README-sample.png" width="100%">
 
 ## Summary
-This is a tool for using Bluesky (bsky.social/bsky.app) on the command line from a shell (known as sh) in a UNIX-like environment.
+This is a tool for using Bluesky (bsky.social/bsky.app) from the command line in a Unix-like environment shell.
 
-This tool aims to be runnable by an sh-compatible shell script operating environment and some dependent tools.
+The goal of this tool is to be able to run it using a shell script execution environment similar to the sh:Bourne Shell family and some dependent tools.
 
 It is currently under development and will be enriched with functionality in the future.
 
@@ -67,7 +67,7 @@ The general command line format for this tool is as follows:
 
 ```bsky <options> <command> <parameters>```
 
-In the tutorials so far, we have not specified `<options>`, but have specified `<command>` such as login/timeline/post and some `<parameters>`.
+In the tutorials so far, we have not specified `<options>`, but have specified `<command>` such as `login`/`timeline`/`post` and some `<parameters>`.
 
 You can display help for the `<command>` list using the command line below.
 
@@ -77,7 +77,7 @@ Help for each `<command>` can be displayed with the command line below.
 
 ```bsky <command> help```
 
-For example, to get help for the post command, run it as follows:
+For example, to get help for the `post` command, run it as follows:
 
 ```bsky post help```
 
@@ -114,7 +114,7 @@ In addition to the provided files to be deployed, generate and use the following
   - In the future, we plan to use the /tmp/ directory as a temporary file creation directory for attaching image files, etc.
 
 ## Required tools
-This tool uses the following tools in addition to general UNIX tools used in shell scripts.
+This tool uses the following tools in addition to general Unix-like tools used in shell scripts.
 
 We would like to thank everyone who provides and maintains the execution environment and tools.
 
