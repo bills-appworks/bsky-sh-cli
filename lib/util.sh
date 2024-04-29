@@ -327,7 +327,8 @@ get_option_type()
   param_option_type_target=$1
 
   case `_cut "${param_option_type_target}" -c 1` in
-    -)  # '-...'
+    -)
+      # '-...'
       case `_cut "${param_option_type_target}" -c 2` in
         -)
           _strlen "${param_option_type_target}"
@@ -337,7 +338,8 @@ get_option_type()
           fi
           return 2
           ;;
-        *)  # '-<any>'
+        *)
+          # '-<any>'
           option_remain=`_strright "${param_option_type_target}" '-'`
           if _strlen "${option_remain}"
           then
@@ -353,7 +355,8 @@ get_option_type()
           ;;
       esac
       ;;
-    *)  # '<any>'
+    *)
+      # '<any>'
       return 0
       ;;
   esac
@@ -406,13 +409,15 @@ parse_parameter_element()
             get_option_type "${param_target_next}"
             next_option_type=$?
             case $next_option_type in
-              0)  # next parameter is not option ('<any>'), maybe value
+              0)
+                # next parameter is not option ('<any>'), maybe value
                 # variable use at eval
                 # shellcheck disable=SC2034
                 value="${param_target_next}"
                 skip_count=1
                 ;;
-              1|2|255)  # next parameter is option ('-...' or '--...')  or '--'
+              1|2|255)
+                # next parameter is option ('-...' or '--...')  or '--'
                 error "parameter must specify value: ${param_target}"
                 ;;
               *)
@@ -456,10 +461,12 @@ parse_parameters()
     option_type=$?
     debug 'parse_parameters' "option_type:${option_type}"
     case $option_type in
-      0)  # maybe command or non optional value
+      0)
+        # maybe command or non optional value
         break
         ;;
-      1|2)  # option '-...' or '--...'
+      1|2)
+        # option '-...' or '--...'
         parse_parameter_element PARSED_VALUE "${effective_list}" "$1" "$2"
         skip_count=$?
         debug 'parse_parameters' "skip_count:${skip_count}"
@@ -492,7 +499,8 @@ parse_parameters()
         eval "${evaluate}"
         debug 'parse_parameters' "evaluate:${evaluate}"
         ;;
-      255)  # '--'
+      255)
+        # '--'
         count_options=`expr "${count_options}" + 1`
         shift
         break
