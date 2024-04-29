@@ -1388,6 +1388,23 @@ debug 'bsky' 'START'
 # CAUTION: command parameters may contain sensitive information such as passwords 
 #debug 'bsky' "command parameters: $*"
 
+which curl > /dev/null
+CHECK_CURL=$?
+which jq > /dev/null
+CHECK_JQ=$?
+if [ "${CHECK_CURL}" -ne 0 ] || [ "${CHECK_JQ}" -ne 0 ]
+then
+  if [ "${CHECK_CURL}" -ne 0 ]
+  then
+    error_msg 'this command requires curl' 
+  fi
+  if [ "${CHECK_JQ}" -ne 0 ]
+  then
+    error_msg 'this command requires jq'
+  fi
+  exit 1
+fi
+
 # equal to if ! mkdir...; does not written for compatible with Solaris sh
 mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
 result=$?
