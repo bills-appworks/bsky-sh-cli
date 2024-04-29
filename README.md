@@ -1,7 +1,7 @@
 # Bluesky in the shell
 Bluesky CLI (Command Line Interface) implementation in shell script
 
-<img src="https://github.com/bills-appworks/bsky-sh-cli/wiki/images/README-sample.png" width="50%">
+<img src="https://github.com/bills-appworks/bsky-sh-cli/wiki/images/README-sample.png" width="100%">
 
 ## Summary
 This is a tool for using Bluesky (bsky.social/bsky.app) on the command line from a shell (known as sh) in a UNIX-like environment.
@@ -44,7 +44,7 @@ One post will be displayed in the following format.
 <Post content>
 Reply:<Number of replies> Repost:<Number of reposts> Like:<Number of Likes>
 ```
-The number displayed in the first "ViewIndex" is used to specify the target post as a parameter for commands that like or reply to posts.
+The number displayed in the first `ViewIndex` is used to specify the target post as a parameter for commands that like or reply to posts.
 
 ### Post
 You can post by running the command line below.
@@ -84,6 +84,7 @@ For example, to get help for the post command, run it as follows:
 ## Summary of what you can (and cannot) do at the moment
 - What you can do
   - Login/logout (creation/deletion of session information (login connection information))
+    - It supports 2FA
   - Display of timeline and custom feed (feed generator)
   - Post
   - Reply to post/Reost/Quoted Repost/Like
@@ -108,7 +109,7 @@ In addition to the provided files to be deployed, generate and use the following
 - `$HOME/.bsky_sh_cli/` directory
   - When you run this tool, it will generate this directory and some files under it. Files such as the session information management file and debug information file (when the debug function is enabled) are stored.
 - `$HOME/.bsky_sh_cli_rc` file
-  - A file that describes settings to customize this tool. Not created by default. The ".bsky_sh_cli_rc.sample" file included in the provided files is a sample. If you want to customize this tool, rename this file, deploy it to your $HOME directory, and configure it.
+  - A file that describes settings to customize this tool. Not created by default. The `.bsky_sh_cli_rc.sample` file included in the provided files is a sample. If you want to customize this tool, rename this file, deploy it to your `$HOME` directory, and configure it.
 - Create a file under the `/tmp/` directory
   - In the future, we plan to use the /tmp/ directory as a temporary file creation directory for attaching image files, etc.
 
