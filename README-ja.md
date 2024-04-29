@@ -4,7 +4,7 @@ Bluesky CLI（コマンドラインインタフェース）シェルスクリプ
 <img src="https://github.com/bills-appworks/bsky-sh-cli/wiki/images/README-sample.png" width="100%">
 
 ## 概要
-Bluesky (bsky.social/bsky.app)をUnix系環境のシェルからコマンドラインで利用するためのツールです。
+Bluesky (bsky.social/bsky.app)をUnix系環境のシェルでコマンドラインから利用するためのツールです。
 
 このツールは、sh:Bourne Shell系統のシェルスクリプト動作環境と、いくつかの依存ツールによって実行できることを目標としています。
 
