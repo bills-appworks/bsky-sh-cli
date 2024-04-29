@@ -136,7 +136,7 @@ It is currently under development, and we will expand the compatible API in the 
 > [!NOTE]
 > - The API file `com.atproto.server.createSession` saves the JWT returned after successful authentication in the session management file, and most other APIs retrieve the JWT from the session management file and use it for authentication. The session management file is `$HOME/.bsky_sh_cli/_bsky_sh_cli_session` by default, and `$HOME/.bsky_sh_cli/\<profile name>_session` when a profile is specified.
 > - Session will not be updated automatically. If the API execution result output is an `ExpiredToken` error, please update the session using the following method.
->   - Specify the value of SESSION_REFRESH_JWT in the session management file as a parameter of the API file `com.atproto.server.refreshSession` and execute.
+>   - Specify the value of `SESSION_REFRESH_JWT` in the session management file as a parameter of the API file `com.atproto.server.refreshSession` and execute.
 >   - Execute any bsky command
 > - There is no API file parameter that specifies the profile. Please specify it using the shell variable `BSKYSHCLI_PROFILE` during execution.
 >    - ```BSKYSHCLI_PROFILE=<profile name> sh <API file name>```
