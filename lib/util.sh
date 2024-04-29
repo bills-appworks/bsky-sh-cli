@@ -169,7 +169,7 @@ get_ISO8601UTCbs()
 debug_mode_suppress()
 {
   EVACUATED_BSKYSHCLI_DEBUG="${BSKYSHCLI_DEBUG}"
-  BSKYSHCLI_DEBUG=0
+  BSKYSHCLI_DEBUG=''
 }
 
 debug_mode_restore()
@@ -182,7 +182,7 @@ debug()
   param_id="$1"
   param_message="$2"
 
-  if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
+  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
   then
     timestamp=`get_timestamp`
     _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
@@ -193,7 +193,7 @@ debug_single()
 {
   param_file="$1"
 
-  if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
+  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
   then
     BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_ROOT_PATH}/${param_file}"
   else
@@ -206,7 +206,7 @@ debug_json()
   param_id="$1"
   param_json="$2"
 
-  if [ "${BSKYSHCLI_DEBUG:=0}" -eq 1 ]
+  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
   then
     message=`_p "${param_json}" | jq`
     debug "${param_id}" "${message}"
