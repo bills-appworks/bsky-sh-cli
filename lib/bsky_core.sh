@@ -1775,6 +1775,8 @@ core_info_session_cursor()
 
   _pn '[cursor]'
   _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
+  _pn "feed cursor: ${SESSION_GETFEED_CURSOR}"
+  _pn "author-feed cursor: ${SESSION_GETAUTHORFEED_CURSOR}"
 
   debug 'core_info_session_cursor' 'END'
 }
