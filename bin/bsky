@@ -448,9 +448,9 @@ output_help_thread()
   cat << 'EOS'
 bsky thread help
 
-usage: bsky thread --index <view index>
+usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id]
        or
-       bsky thread --uri <uri>
+       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id]
 
 parameters:
   --index <view index>
@@ -460,6 +460,15 @@ parameters:
   --uri <uri>
     Specify the AT URI pointing to the feed to be show thread to.
     The AT URI will be output by specifying the "--output-id" option with te feed output command.
+
+  --depth <number>
+    Specify show levels (default 6) of reply depth (from 1 to 1000).
+
+  --parent-height <number>
+    Specify show levels (default 80) of parent post to include (from 1 to 1000).
+
+  --output-id
+    Output identifier of AT protocol (uri, cid).
 
 note:
   you must have started a Bluesky session with the login command.
