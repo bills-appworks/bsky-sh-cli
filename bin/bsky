@@ -824,13 +824,18 @@ command_logout()
 {
   debug 'command_logout' 'START'
 
-  read_session_file
-  if [ -n "${SESSION_HANDLE}" ]
+  if [ "$1" = 'help' ]
   then
-    core_delete_session
-    _pn "logout session of ${SESSION_HANDLE}"
+    output_help_logout
   else
-    error 'session not found'
+    read_session_file
+    if [ -n "${SESSION_HANDLE}" ]
+    then
+      core_delete_session
+      _pn "logout session of ${SESSION_HANDLE}"
+    else
+      error 'session not found'
+    fi
   fi
 
   debug 'command_logout' 'END'
