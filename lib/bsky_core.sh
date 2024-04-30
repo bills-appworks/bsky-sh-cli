@@ -542,7 +542,7 @@ core_create_post_chunk()
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |
               (
-                select(.embed.record."$type" == "app.bsky.embed.record#view") |
+                select(.embed.record."$type" == "app.bsky.embed.record#viewRecord") |
                 output_post_part(true; view_index; post_fragment.embed.record; true)
               ),
               (
