@@ -42,7 +42,7 @@
 # template for tail field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='Liked by \($LIKECOUNT) users'
 # template for embedded image in post
-#BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT) \($FULLSIZE)'
+#BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
 # sleep interval for following support commands (timeline, feed, etc.)
 #BSKYSHCLI_SLEEP_INTERVAL='5s'
 # template for profile
