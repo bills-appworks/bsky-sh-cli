@@ -418,8 +418,10 @@ core_create_post_chunk()
   then
     # escape for substitution at placeholder replacement 
     view_post_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+    view_post_feed_generator_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
   else
     view_post_output_id=''
+    view_post_feed_generator_output_id=''
   fi
   view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
   view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
@@ -431,6 +433,9 @@ core_create_post_chunk()
   view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_post_head}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_post_body}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${view_template_image}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image; sibling_index; index_str; is_quoted):
@@ -488,6 +493,23 @@ core_create_post_chunk()
           end
         end
       ;
+      def output_post_feed_generator(view_index; post_fragment):
+        post_fragment.uri as $URI |
+        post_fragment.cid as $CID |
+        post_fragment.did as $DID |
+        post_fragment.creator_did as $CREATOR_DID |
+        post_fragment.creator.handle as $CREATOR_HANDLE |
+        post_fragment.creator.displayName as $CREATOR_DISPLAYNAME |
+        post_fragment.creator.avatar as $CREATOR_AVATAR |
+        post_fragment.creator.description as $CREATOR_DESCRIPTION |
+        post_fragment.displayName as $DISPLAYNAME |
+        post_fragment.description as $DESCRIPTION |
+        post_fragment.avatar as $AVATAR |
+        post_fragment.likeCount as $LIKECOUNT |
+        "'"${view_template_post_feed_generator_meta}"'",
+        "'"${view_template_post_feed_generator_head}"'",
+        "'"${view_template_post_feed_generator_tail}"'"
+      ;
       def output_post(view_index; post_fragment):
         output_post_part(true; view_index; post_fragment; false),
         (
@@ -519,7 +541,14 @@ core_create_post_chunk()
             ),
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |
-              output_post_part(true; view_index; post_fragment.embed.record; true)
+              (
+                select(.embed.record."$type" == "app.bsky.embed.record#view") |
+                output_post_part(true; view_index; post_fragment.embed.record; true)
+              ),
+              (
+                select(.embed.record."$type" == "app.bsky.feed.defs#generatorView") |
+                output_post_feed_generator(view_index; post_fragment.embed.record)
+              )
             )
           else
             empty
