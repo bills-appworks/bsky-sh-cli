@@ -478,10 +478,10 @@ parameters:
     The AT URI will be output by specifying the "--output-id" option with te feed output command.
 
   --depth <number>
-    Specify show levels (default 6) of reply depth (from 1 to 1000).
+    Specify show levels (default 6) of reply depth (from 0 to 1000).
 
   --parent-height <number>
-    Specify show levels (default 80) of parent post to include (from 1 to 1000).
+    Specify show levels (default 80) of parent post to include (from 0 to 1000).
 
   --output-id
     Output identifier of AT protocol (uri, cid).
