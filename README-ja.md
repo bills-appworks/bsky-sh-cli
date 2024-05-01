@@ -81,6 +81,8 @@ Reply:<リプライ件数> Repost:<リポスト件数> Like:<いいね件数>
 
 ```bsky post help```
 
+[Wiki](https://github.com/bills-appworks/bsky-sh-cli/wiki/Home%E2%80%90ja)の[コマンドラインリファレンス](https://github.com/bills-appworks/bsky-sh-cli/wiki/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3%E3%83%AA%E3%83%95%E3%82%A1%E3%83%AC%E3%83%B3%E3%82%B9)も参考にしてください。
+
 ## 現時点でできること（できないこと）の概要
 - できること
   - ログイン・ログアウト（セション情報（ログイン接続情報）の作成・削除）
