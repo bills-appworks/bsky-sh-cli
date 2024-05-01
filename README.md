@@ -81,6 +81,8 @@ For example, to get help for the `post` command, run it as follows:
 
 ```bsky post help```
 
+Please also refer to the [Command Line Reference](https://github.com/bills-appworks/bsky-sh-cli/wiki/Command-Line-Reference) on [Wiki](https://github.com/bills-appworks/bsky-sh-cli/wiki).
+
 ## Summary of what you can (and cannot) do at the moment
 - What you can do
   - Login/logout (creation/deletion of session information (login connection information))

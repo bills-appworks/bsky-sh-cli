@@ -168,6 +168,7 @@ usage: bsky login --handle <handle> --password <password>
 parameters:
   --handle <handle>
     Specify Bluesky handle. Default domain (.bsky.social) can be omitted.
+
   --password <password>
     Specify the password corresponding to the handle.
 
@@ -210,8 +211,10 @@ usage: bsky timeline [--limit <number>] [--next]
 parameters:
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
+
   --next
     Output next feeds from previous timeline command.
+
   --output-id
     Output identifier of AT protocol (uri, cid)
 
@@ -240,18 +243,25 @@ usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <num
 parameters:
   --actor <handle or did>
     Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --record-key <record key>
     Specify record key for part of custom feed (feed generator) 
+
   --handle <handle>
     Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --did <did>
     Specify DID of account for custom feed (feed generator) creator.
+
   --url <bsky.app feed URL>
     Specify URL of custom feed (feed generator) handled by bsky.app (https://bsky.app/profile/<handle or did>/feed/<record key>).
+
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
+
   --next
     Output next feeds from previous feed command.
+
   --output-id
     Output identifier of AT protocol (uri, cid)
 
@@ -278,14 +288,19 @@ usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--f
 parameters:
   --actor <handle or did>
     Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --handle <handle>
     Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --did <did>
     Specify DID of account for custom feed (feed generator) creator.
+
   --limit <number>
     Specify limit number (default 50) of output feeds (from 1 to 100).
+
   --next
     Output next feeds from previous author-feed command.
+
   --filter <filter>
     Specify type of filter for output posts.
     filter:
@@ -293,6 +308,7 @@ parameters:
       posts-no-replies
       posts-with-media
       posts-and-author-threads
+
   --output-id
     Output identifier of AT protocol (uri, cid)
 
@@ -448,9 +464,9 @@ output_help_thread()
   cat << 'EOS'
 bsky thread help
 
-usage: bsky thread --index <view index>
+usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id]
        or
-       bsky thread --uri <uri>
+       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id]
 
 parameters:
   --index <view index>
@@ -460,6 +476,15 @@ parameters:
   --uri <uri>
     Specify the AT URI pointing to the feed to be show thread to.
     The AT URI will be output by specifying the "--output-id" option with te feed output command.
+
+  --depth <number>
+    Specify show levels (default 6) of reply depth (from 0 to 1000).
+
+  --parent-height <number>
+    Specify show levels (default 80) of parent post to include (from 0 to 1000).
+
+  --output-id
+    Output identifier of AT protocol (uri, cid).
 
 note:
   you must have started a Bluesky session with the login command.
@@ -486,10 +511,13 @@ usage: bsky profile --actor <handle or did> [--output-id]
 parameters:
   --actor <handle or did>
     Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --handle <handle>
     Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
   --did <did>
     Specify DID of account for custom feed (feed generator) creator.
+
   --output-id
     Output identifier of AT protocol (uri, cid)
 
@@ -824,13 +852,18 @@ command_logout()
 {
   debug 'command_logout' 'START'
 
-  read_session_file
-  if [ -n "${SESSION_HANDLE}" ]
+  if [ "$1" = 'help' ]
   then
-    core_delete_session
-    _pn "logout session of ${SESSION_HANDLE}"
+    output_help_logout
   else
-    error 'session not found'
+    read_session_file
+    if [ -n "${SESSION_HANDLE}" ]
+    then
+      core_delete_session
+      _pn "logout session of ${SESSION_HANDLE}"
+    else
+      error 'session not found'
+    fi
   fi
 
   debug 'command_logout' 'END'
