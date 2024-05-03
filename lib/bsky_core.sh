@@ -439,6 +439,7 @@ core_create_post_chunk()
   view_template_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image; sibling_index; index_str; is_quoted):
@@ -459,6 +460,11 @@ core_create_post_chunk()
         foreach images[] as $image (0; . + 1;
           output_image($image; .; "image"; is_quoted)
         )
+      ;
+      def output_facets_features_link(link_index; uri):
+        link_index as $LINK_INDEX |
+        uri as $URI |
+        "'"${view_template_link}"'"
       ;
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
         post_fragment.uri as $URI |
@@ -489,7 +495,27 @@ core_create_post_chunk()
           then
             "'"${view_template_post_meta}"'",
             "'"${view_template_post_head}"'",
-            "'"${view_template_post_body}"'"
+            "'"${view_template_post_body}"'",
+            (
+              post_fragment.record |
+              if has("facets")
+              then
+                post_fragment.record.facets |
+                map(
+                  if .features[]."$type" == "app.bsky.richtext.facet#link"
+                  then
+                    .
+                  else
+                    empty
+                  end
+                ) |
+                foreach .[] as $facet (0; . + 1;
+                  output_facets_features_link(.; $facet.features[].uri)
+                )
+              else
+                empty
+              end
+            )
           else
             "'"${view_template_post_tail}"'",
             "'"${view_template_post_separator}"'"
