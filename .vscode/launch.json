@@ -340,6 +340,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "com.atproto.repo.uploadBlob (<any> [<content-type>])",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.uploadBlob",
+            "terminalKind": "integrated",
+            "argsString": "'${input:any}' '${input:content-type}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.server.createSession (<handle> <password>) CAUTION:password display on terminal",
             "program": "${workspaceFolder}/lib/api/com.atproto.server.createSession",
             "terminalKind": "integrated",
@@ -574,11 +582,23 @@
             "options": ["", "--group adult-content", "--group content-label", "--group saved-feeds", "--group personal-details", "--group feed-view", "--group thread-view", "--group interests", "--group muted-words", "--group hidden-posts"],
             "default": ""
         },
-          {
+        {
             "type": "promptString",
             "id": "pref-item",
             "description": "input preference item (delete if unnecessary)",
             "default": "--item "
+        },
+        {
+            "type": "promptString",
+            "id": "any",
+            "description": "input any data",
+            "default": ""
+        }
+        {
+            "type": "promptString",
+            "id": "content-type",
+            "description": "input content type",
+            "default": ""
         }
     ]
 }

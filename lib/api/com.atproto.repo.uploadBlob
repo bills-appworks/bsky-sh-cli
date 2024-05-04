@@ -1,0 +1,51 @@
+#!/bin/sh
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implementation in shell script
+# Author Bluesky:@billsbs.bills-appworks.net
+# 
+# Copyright (c) 2024 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
+FILENAME='com.atproto.repo.uploadBlob'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
+
+param_any=$1
+param_content_type=$2
+
+debug "${FILENAME}" 'START'
+# omit log for big data
+#debug "${FILENAME}" "any:${param_any}"
+
+if [ -n "${param_any}" ]
+then
+  body="${param_any}"
+else
+  error 'parameter any must be specified'
+fi
+if [ -n "${param_content_type}" ]
+then
+  content_type="${param_content_type}"
+else
+  content_type='*/*'
+fi
+# omit log for big data
+#debug "${FILENAME}" "body:${body}"
+
+debug_single "${FILENAME}"
+api_post_content_type 'com.atproto.repo.uploadBlob' "${content_type}" "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+debug "${FILENAME}" 'END'
