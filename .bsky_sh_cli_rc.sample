@@ -48,7 +48,7 @@
 # template for body field in post external
 #BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY='\($EXTERNAL_DESCRIPTION)'
 # template for embedded image in post
-#BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
+#BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
 # template for link in post
 #BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
 # sleep interval for following support commands (timeline, feed, etc.)
