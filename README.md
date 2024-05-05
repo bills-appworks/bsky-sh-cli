@@ -51,7 +51,7 @@ You can post by running the command line below.
 
 ```bsky post --text '<Post content text>'```
 
-At this time, it is not possible to specify images, etc., only text.
+The image can be specified as a local file using the `--image` option. Only the URL of the image will be displayed on the timeline etc.
 
 ### Reply
 You can reply to the displayed post by executing the command line below.
@@ -92,7 +92,7 @@ Please also refer to the [Command Line Reference](https://github.com/bills-appwo
   - Reply to post/Reost/Quoted Repost/Like
   - Specified user profile display and feed display
 - Things impossible
-  - Attach and display image files (only display URL)
+  - Displaying images (only display URL)
   - Hide mute and block targets
   - Execution of commands and APIs that do not require authentication when not logged in
   - Many other functions
