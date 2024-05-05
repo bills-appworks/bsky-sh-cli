@@ -433,7 +433,7 @@ parse_parameter_element()
                 ;;
             esac
           else  # next parameter is not exist
-            error "parameter must spcify value: ${param_target}"
+            error "parameter must specify value: ${param_target}"
           fi
         fi
       fi
