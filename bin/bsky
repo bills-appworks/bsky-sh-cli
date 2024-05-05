@@ -1464,20 +1464,11 @@ debug 'bsky' 'START'
 # CAUTION: command parameters may contain sensitive information such as passwords 
 #debug 'bsky' "command parameters: $*"
 
-which curl > /dev/null
-CHECK_CURL=$?
-which jq > /dev/null
-CHECK_JQ=$?
-if [ "${CHECK_CURL}" -ne 0 ] || [ "${CHECK_JQ}" -ne 0 ]
+check_required_command 'curl' 'jq'
+check_result=$?
+if [ $check_result -ne 0 ]
 then
-  if [ "${CHECK_CURL}" -ne 0 ]
-  then
-    error_msg 'this command requires curl' 
-  fi
-  if [ "${CHECK_JQ}" -ne 0 ]
-  then
-    error_msg 'this command requires jq'
-  fi
+  command_version
   exit 1
 fi
 

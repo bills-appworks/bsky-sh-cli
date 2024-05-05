@@ -342,21 +342,28 @@ core_build_images_fragment_precheck_single()
 
   if [ -r "${param_image}" ]
   then
-    RESULT_precheck_file_mime_type=`file --mime-type --brief "${param_image}"`
-    _startswith "${RESULT_precheck_file_mime_type}" 'image/'
-    mime_type_check_status=$?
-    if [ "${mime_type_check_status}" -eq 0 ]
+    check_required_command 'file'
+    check_result=$?
+    if [ $check_result -eq 0 ]
     then
-      file_result=`file "${param_image}"`
-      # CAUTION: these image size processing depend on file command output
-      # variable used by dynamic assignment
-      # shellcheck disable=SC2034
-      RESULT_precheck_image_width=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\1/'`
-      # shellcheck disable=SC2034
-      RESULT_precheck_image_height=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\2/'`
-      status=0
+      RESULT_precheck_file_mime_type=`file --mime-type --brief "${param_image}"`
+      _startswith "${RESULT_precheck_file_mime_type}" 'image/'
+      mime_type_check_status=$?
+      if [ "${mime_type_check_status}" -eq 0 ]
+      then
+        file_result=`file "${param_image}"`
+        # CAUTION: these image size processing depend on file command output
+        # variable used by dynamic assignment
+        # shellcheck disable=SC2034
+        RESULT_precheck_image_width=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\1/'`
+        # shellcheck disable=SC2034
+        RESULT_precheck_image_height=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\2/'`
+        status=0
+      else
+        error_msg "specified image file is not image: ${param_image} -> detect mime type: ${RESULT_precheck_file_mime_type}"
+        status=1
+      fi
     else
-      error_msg "specified image file is not image: ${param_image} -> detect mime type: ${RESULT_precheck_file_mime_type}"
       status=1
     fi
   else

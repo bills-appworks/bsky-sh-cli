@@ -235,6 +235,28 @@ error()
   exit 1
 }
 
+check_required_command()
+{
+  status=0
+  while [ $# -gt 0 ]
+  do
+    which "$1" > /dev/null
+    which_result=$?
+    if [ $which_result -ne 0 ]
+    then
+      error_msg "required command not found: $1"
+      status=1
+    fi
+    shift
+  done
+  if [ $status -ne 0 ]
+  then
+    error_msg 'unable to start due to above reason'
+  fi
+
+  return $status
+}
+
 decode_keyvalue_list()
 {
   param_keyvalue_list="$1"
