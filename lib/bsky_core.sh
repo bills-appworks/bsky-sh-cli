@@ -342,21 +342,28 @@ core_build_images_fragment_precheck_single()
 
   if [ -r "${param_image}" ]
   then
-    RESULT_precheck_file_mime_type=`file --mime-type --brief "${param_image}"`
-    _startswith "${RESULT_precheck_file_mime_type}" 'image/'
-    mime_type_check_status=$?
-    if [ "${mime_type_check_status}" -eq 0 ]
+    check_required_command 'file'
+    check_result=$?
+    if [ $check_result -eq 0 ]
     then
-      file_result=`file "${param_image}"`
-      # CAUTION: these image size processing depend on file command output
-      # variable used by dynamic assignment
-      # shellcheck disable=SC2034
-      RESULT_precheck_image_width=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\1/'`
-      # shellcheck disable=SC2034
-      RESULT_precheck_image_height=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\2/'`
-      status=0
+      RESULT_precheck_file_mime_type=`file --mime-type --brief "${param_image}"`
+      _startswith "${RESULT_precheck_file_mime_type}" 'image/'
+      mime_type_check_status=$?
+      if [ "${mime_type_check_status}" -eq 0 ]
+      then
+        file_result=`file "${param_image}"`
+        # CAUTION: these image size processing depend on file command output
+        # variable used by dynamic assignment
+        # shellcheck disable=SC2034
+        RESULT_precheck_image_width=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\1/'`
+        # shellcheck disable=SC2034
+        RESULT_precheck_image_height=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\2/'`
+        status=0
+      else
+        error_msg "specified image file is not image: ${param_image} -> detect mime type: ${RESULT_precheck_file_mime_type}"
+        status=1
+      fi
     else
-      error_msg "specified image file is not image: ${param_image} -> detect mime type: ${RESULT_precheck_file_mime_type}"
       status=1
     fi
   else
@@ -371,16 +378,11 @@ core_build_images_fragment_precheck_single()
 
 core_build_images_fragment_precheck()
 {
-  param_image_alt="$@"
-
   debug 'core_build_images_fragment_precheck' 'START'
-  debug 'core_build_images_fragment_precheck' "param_image_alt:${param_image_alt}"
+  debug 'core_build_images_fragment_precheck' "param_image_alt:$*"
 
   actual_image_count=0
   worst_status=0
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $param_image_alt
   while [ $# -gt 0 ]
   do
     image=$1
@@ -400,11 +402,11 @@ core_build_images_fragment_precheck()
       else
         worst_status=1
       fi
+    fi
+    shift
+    if [ $# -gt 0 ]
+    then
       shift
-      if [ $# -gt 0 ]
-      then
-        shift
-      fi
     fi
   done
 
@@ -459,14 +461,10 @@ core_build_images_fragment_single()
 
 core_build_images_fragment()
 {
-  param_image_alt="$@"
-
   debug 'core_build_images_fragment' 'START'
-  debug 'core_build_images_fragment' "param_image_alt:${param_image_alt}"
+  debug 'core_build_images_fragment' "param_image_alt:$*"
 
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  core_build_images_fragment_precheck $param_image_alt
+  core_build_images_fragment_precheck "$@"
   precheck_result=$?
   case $precheck_result in
     0|1|2|3|4)
@@ -643,8 +641,8 @@ core_create_post_chunk()
   view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  _p 'def output_image(image; sibling_index; index_str; is_quoted):
-        ([index_str, sibling_index] | join("-")) as $IMAGE_INDEX |
+  _p 'def output_image(image_index; image; is_quoted):
+        image_index as $IMAGE_INDEX |
         image.alt as $ALT |
         image.thumb as $THUMB |
         image.fullsize as $FULLSIZE |
@@ -659,7 +657,7 @@ core_create_post_chunk()
       ;
       def output_images(images; is_quoted):
         foreach images[] as $image (0; . + 1;
-          output_image($image; .; "image"; is_quoted)
+          output_image(.; $image; is_quoted)
         )
       ;
       def output_facets_features_link(link_index; uri):
@@ -1389,9 +1387,6 @@ core_post()
   if [ $# -gt 1 ]
   then
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_post' 'START'
@@ -1402,9 +1397,7 @@ core_post()
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)
@@ -1436,15 +1429,13 @@ core_reply()
     shift
     shift
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_reply' 'START'
   debug 'core_reply' "param_target_uri:${param_target_uri}"
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
+  debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
   repo="${SESSION_HANDLE}"
@@ -1453,7 +1444,7 @@ core_reply()
   reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)
@@ -1509,15 +1500,13 @@ core_quote()
     shift
     shift
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_quote' 'START'
   debug 'core_quote' "param_target_uri:${param_target_uri}"
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
+  debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
   repo="${SESSION_HANDLE}"
@@ -1526,7 +1515,7 @@ core_quote()
   quote_record_fragment=`core_build_quote_record_fragment "${param_target_uri}" "${param_target_cid}"`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)

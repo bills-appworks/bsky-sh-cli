@@ -235,6 +235,28 @@ error()
   exit 1
 }
 
+check_required_command()
+{
+  status=0
+  while [ $# -gt 0 ]
+  do
+    which "$1" > /dev/null
+    which_result=$?
+    if [ $which_result -ne 0 ]
+    then
+      error_msg "required command not found: $1"
+      status=1
+    fi
+    shift
+  done
+  if [ $status -ne 0 ]
+  then
+    error_msg 'unable to start due to above reason'
+  fi
+
+  return $status
+}
+
 decode_keyvalue_list()
 {
   param_keyvalue_list="$1"
@@ -301,16 +323,16 @@ verify_exclusive()
   param_error_message_name="$2"
   shift
   shift
-  param_targets="$@"
 
   debug 'verify_exclusive' 'START'
   debug 'verify_exclusive' "param_is_mandatory:${param_is_mandatory}"
   debug 'verify_exclusive' "param_error_message_name:${param_error_message_name}"
-  debug 'verify_exclusive' "param_targets:${param_targets}"
+  debug 'verify_exclusive' "param_targets:$*"
 
   specified=1
-  for target in $param_targets
+  while [ $# -gt 0 ]
   do
+    target="$1"
     if [ -n "${target}" ]
     then
       if [ "${specified}" -eq 0 ]
@@ -319,6 +341,7 @@ verify_exclusive()
       fi
       specified=0
     fi
+    shift
   done
   if [ "${param_is_mandatory}" -eq 0 ] && [ "${specified}" -eq 1 ]
   then
