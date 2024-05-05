@@ -9,7 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.1.0'
+BSKYSHCLI_CLI_VERSION='0.2.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -41,7 +41,7 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='\($DISPLAYNAME)\n  Feed by @\(
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='Liked by \($LIKECOUNT) users'
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
+BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n[banner] \($BANNER)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
 # shellcheck disable=SC2016
@@ -326,11 +326,19 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post --text '<text>'
+usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
 
 parameters:
   --text '<text>'
     Specify text for post.
+
+  --image<N> <image file path>
+    Specify image file path.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
+
+  --alt<N> '<alt text>'
+    Specify alternate text for image.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
 note:
   you must have started a Bluesky session with the login command.
@@ -346,9 +354,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> --text '<text>'
+usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
        or
-       bsky reply --uri <uri> --cid <cid> --text '<text>'
+       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
 
 parameters:
   --index <index>
@@ -362,6 +370,14 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+
+  --image<N> <image file path>
+    Specify image file path.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
+
+  --alt<N> '<alt text>'
+    Specify alternate text for image.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
 note:
   you must have started a Bluesky session with the login command.
@@ -405,9 +421,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> --text '<text>'
+usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
        or
-       bsky quote --uri <uri> --cid <cid> --text '<text>'
+       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
 
 parameters:
   --index <view index>
@@ -421,6 +437,14 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+
+  --image<N> <image file path>
+    Specify image file path.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
+
+  --alt<N> '<alt text>'
+    Specify alternate text for image.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
 note:
   you must have started a Bluesky session with the login command.
@@ -1012,7 +1036,14 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1' "$@"
+    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    # shellcheck disable=SC2154
+    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     post_text="${PARSED_PARAM_KEYVALUE_text}"
@@ -1020,7 +1051,9 @@ command_post()
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_post "${post_text}"
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_post "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'
@@ -1034,7 +1067,11 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+
+    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1062,7 +1099,7 @@ command_reply()
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_reply "${uri}" "${cid}" "${post_text}"
+    core_reply "${uri}" "${cid}" "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_reply' 'END'
@@ -1113,7 +1150,11 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+
+    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1141,7 +1182,7 @@ command_quote()
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_quote "${uri}" "${cid}" "${post_text}"
+    core_quote "${uri}" "${cid}" "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_quote' 'END'
@@ -1423,20 +1464,11 @@ debug 'bsky' 'START'
 # CAUTION: command parameters may contain sensitive information such as passwords 
 #debug 'bsky' "command parameters: $*"
 
-which curl > /dev/null
-CHECK_CURL=$?
-which jq > /dev/null
-CHECK_JQ=$?
-if [ "${CHECK_CURL}" -ne 0 ] || [ "${CHECK_JQ}" -ne 0 ]
+check_required_command 'curl' 'jq'
+check_result=$?
+if [ $check_result -ne 0 ]
 then
-  if [ "${CHECK_CURL}" -ne 0 ]
-  then
-    error_msg 'this command requires curl' 
-  fi
-  if [ "${CHECK_JQ}" -ne 0 ]
-  then
-    error_msg 'this command requires jq'
-  fi
+  command_version
   exit 1
 fi
 
