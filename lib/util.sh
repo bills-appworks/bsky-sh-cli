@@ -301,16 +301,16 @@ verify_exclusive()
   param_error_message_name="$2"
   shift
   shift
-  param_targets="$@"
 
   debug 'verify_exclusive' 'START'
   debug 'verify_exclusive' "param_is_mandatory:${param_is_mandatory}"
   debug 'verify_exclusive' "param_error_message_name:${param_error_message_name}"
-  debug 'verify_exclusive' "param_targets:${param_targets}"
+  debug 'verify_exclusive' "param_targets:$*"
 
   specified=1
-  for target in $param_targets
+  while [ $# -gt 0 ]
   do
+    target="$1"
     if [ -n "${target}" ]
     then
       if [ "${specified}" -eq 0 ]
@@ -319,6 +319,7 @@ verify_exclusive()
       fi
       specified=0
     fi
+    shift
   done
   if [ "${param_is_mandatory}" -eq 0 ] && [ "${specified}" -eq 1 ]
   then

@@ -371,16 +371,11 @@ core_build_images_fragment_precheck_single()
 
 core_build_images_fragment_precheck()
 {
-  param_image_alt="$@"
-
   debug 'core_build_images_fragment_precheck' 'START'
-  debug 'core_build_images_fragment_precheck' "param_image_alt:${param_image_alt}"
+  debug 'core_build_images_fragment_precheck' "param_image_alt:$*"
 
   actual_image_count=0
   worst_status=0
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $param_image_alt
   while [ $# -gt 0 ]
   do
     image=$1
@@ -400,11 +395,11 @@ core_build_images_fragment_precheck()
       else
         worst_status=1
       fi
+    fi
+    shift
+    if [ $# -gt 0 ]
+    then
       shift
-      if [ $# -gt 0 ]
-      then
-        shift
-      fi
     fi
   done
 
@@ -459,14 +454,10 @@ core_build_images_fragment_single()
 
 core_build_images_fragment()
 {
-  param_image_alt="$@"
-
   debug 'core_build_images_fragment' 'START'
-  debug 'core_build_images_fragment' "param_image_alt:${param_image_alt}"
+  debug 'core_build_images_fragment' "param_image_alt:$*"
 
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  core_build_images_fragment_precheck $param_image_alt
+  core_build_images_fragment_precheck "$@"
   precheck_result=$?
   case $precheck_result in
     0|1|2|3|4)
@@ -1347,9 +1338,6 @@ core_post()
   if [ $# -gt 1 ]
   then
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_post' 'START'
@@ -1360,9 +1348,7 @@ core_post()
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)
@@ -1394,15 +1380,13 @@ core_reply()
     shift
     shift
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_reply' 'START'
   debug 'core_reply' "param_target_uri:${param_target_uri}"
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
+  debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
   repo="${SESSION_HANDLE}"
@@ -1411,7 +1395,7 @@ core_reply()
   reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)
@@ -1467,15 +1451,13 @@ core_quote()
     shift
     shift
     shift
-    param_image_alt=$@
-  else
-    param_image_alt=''
   fi
 
   debug 'core_quote' 'START'
   debug 'core_quote' "param_target_uri:${param_target_uri}"
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
+  debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
   repo="${SESSION_HANDLE}"
@@ -1484,7 +1466,7 @@ core_quote()
   quote_record_fragment=`core_build_quote_record_fragment "${param_target_uri}" "${param_target_cid}"`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment $param_image_alt`
+  images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   case $actual_image_count in
     0|1|2|3|4)
