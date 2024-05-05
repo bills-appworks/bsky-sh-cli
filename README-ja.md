@@ -121,6 +121,8 @@ Reply:<リプライ件数> Repost:<リポスト件数> Like:<いいね件数>
 実行環境やツールを提供・維持している皆様に感謝いたします。
 
 - curl
+- file (libmagic)
+  - 画像利用時のみ
 - jq
 - sed (GNU sed)
 

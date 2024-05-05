@@ -121,6 +121,8 @@ This tool uses the following tools in addition to general Unix-like tools used i
 We would like to thank everyone who provides and maintains the execution environment and tools.
 
 - curl
+- file (libmagic)
+  - Only when using images
 - jq
 - sed (GNU sed)
 
