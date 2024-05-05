@@ -23,18 +23,16 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-param_any=$1
+param_filename=$1
 param_content_type=$2
 
 debug "${FILENAME}" 'START'
-# omit log for big data
-#debug "${FILENAME}" "any:${param_any}"
+debug "${FILENAME}" "filename:${param_filename}"
+debug "${FILENAME}" "content_type:${param_content_type}"
 
-if [ -n "${param_any}" ]
+if [ -z "${param_filename}" ]
 then
-  body="${param_any}"
-else
-  error 'parameter any must be specified'
+  error 'parameter filename must be specified'
 fi
 if [ -n "${param_content_type}" ]
 then
@@ -46,6 +44,6 @@ fi
 #debug "${FILENAME}" "body:${body}"
 
 debug_single "${FILENAME}"
-api_post_content_type 'com.atproto.repo.uploadBlob' "${content_type}" "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_post_content_type_binary_file 'com.atproto.repo.uploadBlob' "${content_type}" "${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'

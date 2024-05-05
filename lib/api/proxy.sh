@@ -245,5 +245,26 @@ api_post_content_type()
   debug 'api_post_content_type' 'END'
 }
 
+api_post_content_type_binary_file()
+{
+  param_endpoint="$1"
+  param_content_type="$2"
+  param_filename="$3"
+
+  debug 'api_post_content_type_binary_file' 'START'
+  debug 'api_post_content_type_binary_file' "param_endpoint:${param_endpoint}"
+  debug 'api_post_content_type_binary_file' "param_content_type:${param_content_type}"
+  debug 'api_post_content_type_binary_file' "param_filename:${param_filename}"
+
+  read_session_file
+  bearer="${SESSION_ACCESS_JWT}"
+  header_authorization=`create_authorization_header "${bearer}"`
+  header_content_type="${HEADER_CONTENT_TYPE_KEY}: ${param_content_type}"
+  debug_single 'api_post_content_type_binary_file'
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" --data-binary "@${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+  debug 'api_post_content_type_binary_file' 'END'
+}
+
 # ifndef BSKYSCHCLI_DEFINE_PROXY
 fi
