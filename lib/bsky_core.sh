@@ -333,6 +333,207 @@ core_parse_at_uri()
   return "${at_uri_element_count}"
 }
 
+core_build_images_fragment_precheck_single()
+{
+  param_image="$1"
+
+  debug 'core_build_images_fragment_precheck_single' 'START'
+  debug 'core_build_images_fragment_precheck_single' "param_image:${param_image}"
+
+  if [ -r "${param_image}" ]
+  then
+    RESULT_precheck_file_mime_type=`file --mime-type --brief "${param_image}"`
+    _startswith "${RESULT_precheck_file_mime_type}" 'image/'
+    mime_type_check_status=$?
+    if [ "${mime_type_check_status}" -eq 0 ]
+    then
+      file_result=`file "${param_image}"`
+      # CAUTION: these image size processing depend on file command output
+      # variable used by dynamic assignment
+      # shellcheck disable=SC2034
+      RESULT_precheck_image_width=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\1/'`
+      # shellcheck disable=SC2034
+      RESULT_precheck_image_height=`_p "${file_result}" | grep -o -E ', *[0-9]+ *x *[0-9]+ *(,|$)' | sed -E 's/, *([0-9]+) *x *([0-9]+)[ ,]*/\2/'`
+      status=0
+    else
+      error_msg "specified image file is not image: ${param_image} -> detect mime type: ${RESULT_precheck_file_mime_type}"
+      status=1
+    fi
+  else
+    error_msg "specified image file is not readable: ${param_image}"
+    status=1
+  fi
+
+  debug 'core_build_images_fragment_precheck_single' 'END'
+
+  return $status
+}
+
+core_build_images_fragment_precheck()
+{
+  param_image_alt="$@"
+
+  debug 'core_build_images_fragment_precheck' 'START'
+  debug 'core_build_images_fragment_precheck' "param_image_alt:${param_image_alt}"
+
+  actual_image_count=0
+  worst_status=0
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_image_alt
+  while [ $# -gt 0 ]
+  do
+    image=$1
+    alt=$2
+    if [ -n "${image}" ]
+    then
+      core_build_images_fragment_precheck_single "${image}"
+      status=$?
+      if [ $status -eq 0 ]
+      then
+        actual_image_count=`expr "${actual_image_count}" + 1`
+        eval "RESULT_precheck_alt_${actual_image_count}=\${alt}"
+        eval "RESULT_precheck_image_filename_${actual_image_count}=\${image}"
+        eval "RESULT_precheck_file_mime_type_${actual_image_count}=\${RESULT_precheck_file_mime_type}"
+        eval "RESULT_precheck_image_width_${actual_image_count}=\${RESULT_precheck_image_width}"
+        eval "RESULT_precheck_image_height_${actual_image_count}=\${RESULT_precheck_image_height}"
+      else
+        worst_status=1
+      fi
+      shift
+      if [ $# -gt 0 ]
+      then
+        shift
+      fi
+    fi
+  done
+
+  if [ $worst_status -ne 0 ]
+  then
+    actual_image_count=255
+  fi
+
+  debug 'core_build_images_fragment_precheck' 'END'
+
+  return $actual_image_count
+}
+
+core_build_images_fragment_single()
+{
+  param_alt="$1"
+  param_image_filename="$2"
+  param_file_mime_type="$3"
+  param_image_width="$4"
+  param_image_height="$5"
+
+  debug 'core_build_images_fragment_single' 'START'
+  debug 'core_build_images_fragment_single' "param_alt:${param_alt}"
+  debug 'core_build_images_fragment_single' "param_image_filename:${param_image_filename}"
+  debug 'core_build_images_fragment_single' "param_file_mime_type:${param_file_mime_type}"
+  debug 'core_build_images_fragment_single' "param_image_width:${param_image_width}"
+  debug 'core_build_images_fragment_single' "param_image_height:${param_image_height}"
+
+  upload_blob=`api com.atproto.repo.uploadBlob "${param_image_filename}" "${param_file_mime_type}"`
+  api_status=$?
+  debug_single 'core_build_images_fragment_single'
+  _p "${upload_blob}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  if [ $api_status -eq 0 ]
+  then
+    image_blob_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
+    _p '{"alt":"'"${param_alt}"'",'
+    if [ -n "${param_image_width}" ] && [ -n "${param_image_height}" ]
+    then
+      _p '"aspectRatio":{"height":'"${param_image_height}"',"width":'"${param_image_width}"'},'
+    fi
+    _p '"image":'"${image_blob_fragment}"'}'
+    status=0
+  else
+    error_msg "uploadBlob API failed"
+    status=1
+  fi
+
+  debug 'core_build_images_fragment_single' 'END'
+
+  return $status
+}
+
+core_build_images_fragment()
+{
+  param_image_alt="$@"
+
+  debug 'core_build_images_fragment' 'START'
+  debug 'core_build_images_fragment' "param_image_alt:${param_image_alt}"
+
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  core_build_images_fragment_precheck $param_image_alt
+  precheck_result=$?
+  case $precheck_result in
+    0|1|2|3|4)
+      # image actual specified 0 - 4
+      precheck_status=0
+      actual_image_count=$precheck_result
+      ;;
+    255)
+      # error occured
+      precheck_status=1
+      ;;
+    *)
+      error_msg "core_buid_images_fragment internal error: ${precheck_result}"
+      precheck_status=1
+      ;;
+  esac
+
+  if [ $precheck_status -eq 0 ]
+  then
+    # "$type" necessary based on AT Protocol requirements
+    # shellcheck disable=SC2016
+    fragment_stack='{"$type":"app.bsky.embed.images","images":['
+    single_status=0
+    image_index=1
+    while [ $image_index -le $actual_image_count ]
+    do
+      alt=`eval _p \"\\$"RESULT_precheck_alt_${image_index}"\"`
+      image_filename=`eval _p \"\\$"RESULT_precheck_image_filename_${image_index}"\"`
+      file_mime_type=`eval _p \"\\$"RESULT_precheck_file_mime_type_${image_index}"\"`
+      image_width=`eval _p \"\\$"RESULT_precheck_image_width_${image_index}"\"`
+      image_height=`eval _p \"\\$"RESULT_precheck_image_height_${image_index}"\"`
+      result_single=`core_build_images_fragment_single "${alt}" "${image_filename}" "${file_mime_type}" "${image_width}" "${image_height}"`
+      single_status=$?
+      if [ $single_status -eq 0 ]
+      then
+        if [ $image_index -gt 1 ]
+        then
+          fragment_stack="${fragment_stack},"
+        fi
+        fragment_stack="${fragment_stack}${result_single}"
+      else
+        break
+      fi
+      image_index=`expr "${image_index}" + 1`
+    done
+    if [ $single_status -eq 0 ]
+    then
+      fragment_stack="${fragment_stack}]}"
+      _p "${fragment_stack}"
+      status=0
+    else
+      status=1
+    fi
+  else
+    status=1
+  fi
+
+  if [ $status -ne 0 ]
+  then
+    actual_image_count=255
+  fi
+
+  debug 'core_build_images_fragment' 'END'
+
+  return $actual_image_count
+}
+
 core_build_reply_fragment()
 {
   param_reply_target_uri=$1
@@ -393,18 +594,18 @@ core_build_subject_fragment()
   debug 'core_build_subject_fragment' 'END'
 }
 
-core_build_embed_fragment()
+core_build_quote_record_fragment()
 {
-  param_embed_uri=$1
-  param_embed_cid=$2
+  param_quote_uri=$1
+  param_quote_cid=$2
 
-  debug 'core_build_embed_fragment' 'START'
-  debug 'core_build_embed_fragment' "param_embed_uri:${param_embed_uri}"
-  debug 'core_build_embed_fragment' "param_embed_cid:${param_embed_cid}"
+  debug 'core_build_quote_record_fragment' 'START'
+  debug 'core_build_quote_record_fragment' "param_quote_uri:${param_quote_uri}"
+  debug 'core_build_quote_record_fragment' "param_quote_cid:${param_quote_cid}"
 
-  _p "\"embed\":{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${param_embed_uri}\",\"cid\":\"${param_embed_cid}\"}}"
+  _p "{\"\$type\":\"app.bsky.embed.record\",\"record\":{\"uri\":\"${param_quote_uri}\",\"cid\":\"${param_quote_cid}\"}}"
 
-  debug 'core_build_embed_fragment' 'END'
+  debug 'core_build_quote_record_fragment' 'END'
 }
 
 core_create_post_chunk()
@@ -1185,22 +1386,42 @@ core_get_author_feed()
 core_post()
 {
   param_text="$1"
+  if [ $# -gt 1 ]
+  then
+    shift
+    param_image_alt=$@
+  else
+    param_image_alt=''
+  fi
 
   debug 'core_post' 'START'
   debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_image_alt:$*"
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\"}"
-
-  debug_single 'core_post'
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
-  _p "${result}" | jq -r '"uri:\(.uri)
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  images_fragment=`core_build_images_fragment $param_image_alt`
+  actual_image_count=$?
+  case $actual_image_count in
+    0|1|2|3|4)
+      if [ $actual_image_count -eq 0 ]
+      then
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\"}"
+      else
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":${images_fragment}}"
+      fi
+        debug_single 'core_post'
+        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+        _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
 text:'"${param_text}"'"
 '
+      ;;
+  esac
 
   debug 'core_post' 'END'
 }
@@ -1210,26 +1431,46 @@ core_reply()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
+  if [ $# -gt 3 ]
+  then
+    shift
+    shift
+    shift
+    param_image_alt=$@
+  else
+    param_image_alt=''
+  fi
 
   debug 'core_reply' 'START'
   debug 'core_reply' "param_target_uri:${param_target_uri}"
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
 
-  reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
-
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}}"
-
-  debug_single 'core_reply'
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${result}" | jq -r '"uri:\(.uri)
+  reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  images_fragment=`core_build_images_fragment $param_image_alt`
+  actual_image_count=$?
+  case $actual_image_count in
+    0|1|2|3|4)
+      if [ $actual_image_count -eq 0 ]
+      then
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}}"
+      else
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment},\"embed\":${images_fragment}}"
+      fi
+      debug_single 'core_reply'
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+      _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
 text:'"${param_text}"'"
 '
+      ;;
+  esac
 
   debug 'core_reply' 'END'
 }
@@ -1243,12 +1484,11 @@ core_repost()
   debug 'core_repost' "param_target_uri:${param_target_uri}"
   debug 'core_repost' "param_target_cid:${param_target_cid}"
 
-  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
-
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.repost'
   created_at=`get_ISO8601UTCbs`
+  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
   record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
 
   debug_single 'core_repost'
@@ -1264,26 +1504,46 @@ core_quote()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
+  if [ $# -gt 3 ]
+  then
+    shift
+    shift
+    shift
+    param_image_alt=$@
+  else
+    param_image_alt=''
+  fi
 
   debug 'core_quote' 'START'
   debug 'core_quote' "param_target_uri:${param_target_uri}"
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
 
-  embed_fragment=`core_build_embed_fragment "${param_target_uri}" "${param_target_cid}"`
-
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${embed_fragment}}"
-
-  debug_single 'core_quote'
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
-  _p "${result}" | jq -r '"uri:\(.uri)
+  quote_record_fragment=`core_build_quote_record_fragment "${param_target_uri}" "${param_target_cid}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  images_fragment=`core_build_images_fragment $param_image_alt`
+  actual_image_count=$?
+  case $actual_image_count in
+    0|1|2|3|4)
+      if [ $actual_image_count -eq 0 ]
+      then
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":${quote_record_fragment}}"
+      else
+        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}}"
+      fi
+      debug_single 'core_quote'
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+      _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
 text:'"${param_text}"'"
 '
+      ;;
+  esac
 
   debug 'core_quote' 'END'
 }

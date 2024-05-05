@@ -108,6 +108,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post --text '<text>' --image <image file path> --alt '<alt text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text '${input:post_text}' --image ${input:post_image} --alt '${input:post_alt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (post --text '<text>' --image1 <image file path> --alt1 '<alt text>' --image2 <image file path> --alt2 '<alt text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text '${input:post_text}' --image1 ${input:post_image} --alt1 '${input:post_alt}' --image2 ${input:post_image} --alt2 '${input:post_alt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (reply --index <index> --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -336,6 +352,14 @@
             "program": "${workspaceFolder}/lib/api/com.atproto.repo.getRecord",
             "terminalKind": "integrated",
             "argsString": "'${input:repo}' '${input:collection}' '${input:rkey}' '${input:cid}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "com.atproto.repo.uploadBlob (<filename> [<content-type>])",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.uploadBlob",
+            "terminalKind": "integrated",
+            "argsString": "'${input:filename}' '${input:content-type}'"
         },
         {
             "type": "bashdb",
@@ -574,11 +598,35 @@
             "options": ["", "--group adult-content", "--group content-label", "--group saved-feeds", "--group personal-details", "--group feed-view", "--group thread-view", "--group interests", "--group muted-words", "--group hidden-posts"],
             "default": ""
         },
-          {
+        {
             "type": "promptString",
             "id": "pref-item",
             "description": "input preference item (delete if unnecessary)",
             "default": "--item "
+        },
+        {
+            "type": "promptString",
+            "id": "filename",
+            "description": "input filename",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "content-type",
+            "description": "input content type",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "post_image",
+            "description": "input image file path",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "post_alt",
+            "description": "input alternate text for image",
+            "default": ""
         }
     ]
 }
