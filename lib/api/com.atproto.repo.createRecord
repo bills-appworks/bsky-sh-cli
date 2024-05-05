@@ -8,7 +8,7 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-create-record
-FILENAME='com.atproto.repo.createrecord'
+FILENAME='com.atproto.repo.createRecord'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -85,7 +85,7 @@ body="${body}}"
 debug "${FILENAME}" "body:${body}"
 
 debug_single "${FILENAME}"
-api_post 'com.atproto.repo.createrecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_post 'com.atproto.repo.createRecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'
 
