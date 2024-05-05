@@ -639,8 +639,8 @@ core_create_post_chunk()
   view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  _p 'def output_image(image; sibling_index; index_str; is_quoted):
-        ([index_str, sibling_index] | join("-")) as $IMAGE_INDEX |
+  _p 'def output_image(image_index; image; is_quoted):
+        image_index as $IMAGE_INDEX |
         image.alt as $ALT |
         image.thumb as $THUMB |
         image.fullsize as $FULLSIZE |
@@ -655,7 +655,7 @@ core_create_post_chunk()
       ;
       def output_images(images; is_quoted):
         foreach images[] as $image (0; . + 1;
-          output_image($image; .; "image"; is_quoted)
+          output_image(.; $image; is_quoted)
         )
       ;
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
