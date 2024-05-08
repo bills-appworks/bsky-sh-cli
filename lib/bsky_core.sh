@@ -76,6 +76,8 @@ GENERAL_DUMP_PROCEDURE='
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 #FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
+# reffered to https://qiita.com/shimataro999/items/fced9665fa970c009c1e
+PATTERN_URL='https?:\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'\''()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=])*)(:\d*)?(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@]))*)*(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?'
 
 core_canonicalize_handle()
 {
@@ -532,6 +534,227 @@ core_build_images_fragment()
   return $actual_image_count
 }
 
+core_extract_link_url()
+{
+  param_text="$1"
+  param_extract_linkcard_index="$2"
+
+  debug 'core_extract_link_url' 'START'
+  debug 'core_extract_link_url' "param_text:${param_text}"
+  debug 'core_extract_link_url' "param_extract_linkcard_index:${param_extract_linkcard_index}"
+
+  # TODO: URL shortening processing
+
+  # unescape (e.g. '\n', '"' : escaped at parse_parameters()) for adjust index
+#  expanded_text=`echo "${param_text}" | sed 's/\\\\"/"/g'`
+  # in the after loop, "expr length" and "expr match" change to "expr :" and self implemetation by platrom porability reason
+  # '\n' handling difficult in self implementation, escape to convert from '\n' to '\t'
+  # using GNU sed -z option
+  # 
+  # however, since using jq (cheat) now, may not need to handle '\n'
+  expanded_text=`echo "${param_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
+  accum_cut_length=0
+  extract_link_count=0
+
+  while [ -n "${expanded_text}" ]
+  do
+    url=`echo "${expanded_text}" | grep -o -i -E "${PATTERN_URL}"`
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $url
+    url=$1
+    if [ -z "${url}" ]
+    then
+      break
+    fi
+    # match "ABCDE http://..." "\(.*\)http://..." -> "ABCDE "
+    # length "ABCDE " -> url previous string length = url index (0 start)
+#    url_index=`expr length \( match "${expanded_text}" "\(.*\)${url}" \)`
+    # "expr length" and "expr match" is not compatible for macOS(?), FreeBSD : https://www.shellcheck.net/wiki/SC2308
+    # "${#var}" is not compatible for Solaris sh.
+    # implement by "expr :" and self length function.
+#    url_before=`expr "${expanded_text}" : "\(.*\)${url}"`
+#    _strlen "${url_before}"
+#    url_index=$?
+    # cheat (use jq) for shortest match (countermeasure to same URL string in text)
+    url_index=`_p "${expanded_text}" | jq -R 'index("'"${url}"'")'`
+    _strlen "${url}"
+    url_length=$?
+    # until end of url
+    cut_length=`expr "${url_index}" + "${url_length}"`
+    # cut command is 1 start index
+    cut_index=`expr "${cut_length}" + 1`
+    # actual (original expanded text) index of url start
+    actual_url_start=`expr "${accum_cut_length}" + "${url_index}"`
+    # actual (original expanded text) index of url end
+    actual_url_end=`expr "${actual_url_start}" + "${url_length}"`
+    # stack on result set (url, actual index of url start, actual index of url end)
+    link_facets_element="${link_facets_element} ${url} ${actual_url_start} ${actual_url_end}"
+    # accumulate cut length in original expand text
+    accum_cut_length=`expr "${accum_cut_length}" + "${cut_length}"`
+    # cut until target url
+    #   '\n' -> '\t' : prevent cut command targets all lines
+    #   cut -c (cut_index)- : cut until url and leave after
+    #   '\t' -> '\n' : restore prevent conversion
+#    expanded_text=`_p "${expanded_text}" | tr '\n' '\t' | cut -c "${cut_index}"- | tr '\t' '\n'`
+    # at before loop, already convert from '\n' to '\t' by expr platform portability reason
+    expanded_text=`_p "${expanded_text}" | cut -c "${cut_index}"-`
+    # extract link card target url
+    if [ -n "${param_extract_linkcard_index}" ]
+    then
+      extract_link_count=`expr "${extract_link_count}" + 1`
+      if [ "${extract_link_count}" -eq "${param_extract_linkcard_index}" ]
+      then
+        extract_linkcard_url="${url}"
+      fi
+    fi
+  done
+  if [ -z "${param_extract_linkcard_index}" ]
+  then
+    # output facets element: <url #1> <url start index #1> <url end index #1> <url #2> <url start index #2> <url end index #2>...
+    _p "${link_facets_element}"
+    # TODO: URL shortening processing
+#    RESULT_extract_link_url_processed_text="<URL shortening processing text>"
+  else
+    # output specified target index link URL
+    _p "${extract_linkcard_url}"
+  fi  
+
+  debug 'core_extract_link_url' 'END'
+}
+
+core_build_link_facets_fragment()
+{
+  param_text="$1"
+
+  debug 'core_build_link_facets_fragment' 'START'
+  debug 'core_buidl_link_facets_fragment' "param_text:${param_text}"
+
+  link_facets_fragment='['
+  element_count=0
+  link_facets_element=`core_extract_link_url "${param_text}" ''`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $link_facets_element
+  while [ $# -gt 0 ]
+  do
+    url=$1
+    url_start=$2
+    url_end=$3
+    if [ $element_count -gt 0 ]
+    then
+      link_facets_fragment="${link_facets_fragment},"
+    fi
+    link_facets_fragment="${link_facets_fragment}{\"features\":[{\"\$type\":\"app.bsky.richtext.facet#link\",\"uri\":\"${url}\"}],\"index\":{\"byteEnd\":${url_end},\"byteStart\":${url_start}}}"
+    shift
+    shift
+    shift
+    element_count=`expr "${element_count}" + 1`
+  done
+  link_facets_fragment="${link_facets_fragment}]"
+  if [ "${element_count}" -gt 0 ]
+  then
+    _p "${link_facets_fragment}"
+  fi
+
+  debug 'core_build_link_facets_fragment' 'END'
+}
+
+core_build_external_fragment()
+{
+  param_text="$1"
+  param_linkcard_index="$2"
+
+  debug 'core_build_external_fragment' 'START'
+  debug 'core_build_external_fragment' "param_text:${param_text}"
+  debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
+
+  if [ "${param_linkcard_index}" -gt 0 ]
+  then
+    url=`core_extract_link_url "${param_text}" "${param_linkcard_index}"`
+    if [ -n "${url}" ]
+    then
+      external_html=`curl -s "${url}" 2>/dev/null`
+      get_html_status=$?
+      if [ $get_html_status -eq 0 ]
+      then
+        # TODO: code/pattern cleanup and correct references to prefix definitions
+        og_description=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:description" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:description" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_image=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:image" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_url=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:url" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:url" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        if [ -n "${og_title}" ] && [ -n "${og_image}" ]
+        then
+          check_required_command 'file'
+          check_result=$?
+          if [ $check_result -eq 0 ]
+          then
+            image_temporary_path=`mktemp bsky_sh_cli.XXXXXXXXXX`
+            mktemp_status=$?
+            debug 'core_build_externa_fragment' "image_temporary_path:${image_temporary_path}"
+            if [ $mktemp_status -eq 0 ]
+            then
+              curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
+              get_image_status=$?
+              if [ $get_image_status -eq 0 ]
+              then
+                mime_type=`file --mime-type --brief "${image_temporary_path}"`
+                _startswith "${mime_type}" 'image/'
+                mime_type_check_status=$?
+                if [ "${mime_type_check_status}" -eq 0 ]
+                then
+                  upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
+                  api_status=$?
+                  if [ $api_status -eq 0 ]
+                  then
+                    thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
+                    # $type is not variable
+                    # shellcheck disable=SC2016
+                    _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+                    status=0
+                  else
+                    error_msg 'image file upload failed'
+                    status=1
+                  fi
+                else  # file mime-type is not image
+                  error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
+                  status=1
+                fi
+              else
+                error_msg "image file download failed: ${og_image}"
+                status=1
+              fi
+              rm -f "${image_temporary_path}" 2>/dev/null
+            else
+              error_msg 'create image download temporary file failed'
+              status=1
+            fi
+          else  # file command not found
+            status=1
+          fi
+        else  # OGP information not found
+          html_title=`_p "${external_html}" | grep -o -i -E '< *title *>[^<]*< */ *title *>' | sed -E 's_< *title *>([^<]*)< */ *title *>_\1_g'`
+          # $type is not variable
+          # shellcheck disable=SC2016
+          _p '{"$type":"app.bsky.embed.external","external":{"description":"","title":"'"${html_title}"'","uri":"'"${url}"'"}}'
+          status=0
+        fi
+      else  # get html failed
+        error_msg "site access failed: ${url}"
+        status=1
+      fi
+    else  # url is not specfied
+      status=0
+    fi
+  else  # param_linkcard_index is 0
+    status=0
+  fi
+
+  debug 'core_build_external_fragment' 'END'
+
+  return $status
+}
+
 core_build_reply_fragment()
 {
   param_reply_target_uri=$1
@@ -635,6 +858,10 @@ core_create_post_chunk()
   view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image_index; image; is_quoted):
@@ -655,6 +882,11 @@ core_create_post_chunk()
         foreach images[] as $image (0; . + 1;
           output_image(.; $image; is_quoted)
         )
+      ;
+      def output_facets_features_link(link_index; uri):
+        link_index as $LINK_INDEX |
+        uri as $URI |
+        "'"${view_template_link}"'"
       ;
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
         post_fragment.uri as $URI |
@@ -685,7 +917,27 @@ core_create_post_chunk()
           then
             "'"${view_template_post_meta}"'",
             "'"${view_template_post_head}"'",
-            "'"${view_template_post_body}"'"
+            "'"${view_template_post_body}"'",
+            (
+              post_fragment.record |
+              if has("facets")
+              then
+                post_fragment.record.facets |
+                map(
+                  if .features[]."$type" == "app.bsky.richtext.facet#link"
+                  then
+                    .
+                  else
+                    empty
+                  end
+                ) |
+                foreach .[] as $facet (0; . + 1;
+                  output_facets_features_link(.; $facet.features[].uri)
+                )
+              else
+                empty
+              end
+            )
           else
             "'"${view_template_post_tail}"'",
             "'"${view_template_post_separator}"'"
@@ -708,6 +960,15 @@ core_create_post_chunk()
         "'"${view_template_post_feed_generator_meta}"'",
         "'"${view_template_post_feed_generator_head}"'",
         "'"${view_template_post_feed_generator_tail}"'"
+      ;
+      def output_post_external(view_idnex; post_fragment):
+        post_fragment.external.uri as $EXTERNAL_URI |
+        post_fragment.external.title as $EXTERNAL_TITLE |
+        post_fragment.external.description as $EXTERNAL_DESCRIPTION |
+        post_fragment.external.thumb as $EXTERNAL_THUMB |
+        "'"${view_template_post_external_meta}"'",
+        "'"${view_template_post_external_head}"'",
+        "'"${view_template_post_external_body}"'"
       ;
       def output_post(view_index; post_fragment):
         output_post_part(true; view_index; post_fragment; false),
@@ -748,6 +1009,10 @@ core_create_post_chunk()
                 select(.embed.record."$type" == "app.bsky.feed.defs#generatorView") |
                 output_post_feed_generator(view_index; post_fragment.embed.record)
               )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.external#view") |
+              output_post_external(view_index; post_fragment.embed)
             )
           else
             empty
@@ -1342,13 +1607,16 @@ core_get_author_feed()
 core_post()
 {
   param_text="$1"
-  if [ $# -gt 1 ]
+  param_linkcard_index="$2"
+  if [ $# -gt 2 ]
   then
+    shift
     shift
   fi
 
   debug 'core_post' 'START'
   debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -1357,17 +1625,27 @@ core_post()
   created_at=`get_ISO8601UTCbs`
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
-      if [ $actual_image_count -eq 0 ]
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
+      if [ $actual_image_count -gt 0 ]
       then
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\"}"
-      else
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":${images_fragment}}"
+        record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
       fi
-        debug_single 'core_post'
-        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
-        _p "${result}" | jq -r '"uri:\(.uri)
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      record="${record}}"
+      debug_single 'core_post'
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
+      _p "${result}" | jq -r '"uri:\(.uri)
 cid:\(.cid)
 text:'"${param_text}"'"
 '
@@ -1382,8 +1660,10 @@ core_reply()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
-  if [ $# -gt 3 ]
+  param_linkcard_index="$4"
+  if [ $# -gt 4 ]
   then
+    shift
     shift
     shift
     shift
@@ -1393,6 +1673,7 @@ core_reply()
   debug 'core_reply' "param_target_uri:${param_target_uri}"
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
+  debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -1404,14 +1685,24 @@ core_reply()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
-      if [ $actual_image_count -eq 0 ]
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+      # image and external (link card) are exclusive, prioritize image specification
+      if [ $actual_image_count -gt 0 ]
       then
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}}"
-      else
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment},\"embed\":${images_fragment}}"
+        record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
       fi
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      record="${record}}"
       debug_single 'core_reply'
       result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
       _p "${result}" | jq -r '"uri:\(.uri)
@@ -1453,8 +1744,10 @@ core_quote()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
-  if [ $# -gt 3 ]
+  param_linkcard_index="$4"
+  if [ $# -gt 4 ]
   then
+    shift
     shift
     shift
     shift
@@ -1464,6 +1757,7 @@ core_quote()
   debug 'core_quote' "param_target_uri:${param_target_uri}"
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
+  debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
@@ -1475,14 +1769,28 @@ core_quote()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -eq 0 ]
       then
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":${quote_record_fragment}}"
+        if [ -n "${external_fragment}" ]
+        then
+          record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${external_fragment},\"record\":${quote_record_fragment}}"
+        else
+          record="${record},\"embed\":${quote_record_fragment}"
+        fi
       else
-        record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}}"
+        record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}"
       fi
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      record="${record}}"
       debug_single 'core_quote'
       result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
       _p "${result}" | jq -r '"uri:\(.uri)

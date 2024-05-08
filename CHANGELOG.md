@@ -1,3 +1,10 @@
+# v0.3.0
+## Add
+- Support for posts with link URLs
+  - Link card generation in text posts containing link URLs
+  - Display link card
+  - Display the link URL included in the text at the end of the post (if it is shortened, display the full name)
+
 # v0.2.0
 ## Add
 - Image post support (command: post/reply/quote)

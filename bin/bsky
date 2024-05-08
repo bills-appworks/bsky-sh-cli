@@ -9,7 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.2.0'
+BSKYSHCLI_CLI_VERSION='0.3.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -41,7 +41,15 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='\($DISPLAYNAME)\n  Feed by @\(
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='Liked by \($LIKECOUNT) users'
 # shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META='[external]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD='\($EXTERNAL_URI)\n\($EXTERNAL_TITLE)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY='\($EXTERNAL_DESCRIPTION)'
+# shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n[banner] \($BANNER)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
 # shellcheck disable=SC2016
@@ -326,7 +334,7 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
+usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
 
 parameters:
   --text '<text>'
@@ -340,8 +348,15 @@ parameters:
     Specify alternate text for image.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
+  --linkcard-index <link index>
+    Specify which of the link URLs included in the text will generate (embed) a link card.
+    <link index> specifies the appearance order number of multiple link URLs included in the text.
+    If this option is omitted, the first appearing link URL will be targeted.
+    If you specify 0 for the <link index>, no link card will be generated.
+
 note:
   you must have started a Bluesky session with the login command.
+  image and link card are exclusive, prioritize image specification.
 EOS
 
   debug 'output_help_post' 'END'
@@ -354,9 +369,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
+usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
        or
-       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
+       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
 
 parameters:
   --index <index>
@@ -379,8 +394,15 @@ parameters:
     Specify alternate text for image.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
+  --linkcard-index <link index>
+    Specify which of the link URLs included in the text will generate (embed) a link card.
+    <link index> specifies the appearance order number of multiple link URLs included in the text.
+    If this option is omitted, the first appearing link URL will be targeted.
+    If you specify 0 for the <link index>, no link card will be generated.
+
 note:
   you must have started a Bluesky session with the login command.
+  image and link card are exclusive, prioritize image specification.
 EOS
 
   debug 'output_help_reply' 'END'
@@ -421,9 +443,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
+usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
        or
-       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]...
+       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
 
 parameters:
   --index <view index>
@@ -446,8 +468,15 @@ parameters:
     Specify alternate text for image.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
+  --linkcard-index <link index>
+    Specify which of the link URLs included in the text will generate (embed) a link card.
+    <link index> specifies the appearance order number of multiple link URLs included in the text.
+    If this option is omitted, the first appearing link URL will be targeted.
+    If you specify 0 for the <link index>, no link card will be generated.
+
 note:
   you must have started a Bluesky session with the login command.
+  image and link card are exclusive, prioritize image specification.
 EOS
 
   debug 'output_help_quote' 'END'
@@ -1036,7 +1065,7 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1053,7 +1082,21 @@ command_post()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_post "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
+    if [ -n "${linkcard_index}" ]
+    then
+      _isnumeric "${linkcard_index}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
+      then
+        error "--linkcard-index parameter must be numeric value: ${depth}"
+      fi
+    else
+      linkcard_index=1
+    fi
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'
@@ -1067,7 +1110,7 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
 
     verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
     verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
@@ -1099,7 +1142,19 @@ command_reply()
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_reply "${uri}" "${cid}" "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
+    if [ -n "${linkcard_index}" ]
+    then
+      _isnumeric "${linkcard_index}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
+      then
+        error "--linkcard-index parameter must be numeric value: ${depth}"
+      fi
+    else
+      linkcard_index=1
+    fi
+    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_reply' 'END'
@@ -1150,7 +1205,7 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
 
     verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
     verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
@@ -1182,7 +1237,19 @@ command_quote()
     then
       error "parameter --text '<text>' not specified"
     fi
-    core_quote "${uri}" "${cid}" "${post_text}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
+    if [ -n "${linkcard_index}" ]
+    then
+      _isnumeric "${linkcard_index}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
+      then
+        error "--linkcard-index parameter must be numeric value: ${depth}"
+      fi
+    else
+      linkcard_index=1
+    fi
+    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_quote' 'END'
