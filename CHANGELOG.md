@@ -1,3 +1,7 @@
+# v0.3.1
+## Fix
+- OGP image file work directry was the current directoy instead of the temporary directory
+
 # v0.3.0
 ## Add
 - Support for posts with link URLs
