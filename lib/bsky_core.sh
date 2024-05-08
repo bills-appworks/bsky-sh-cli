@@ -689,7 +689,7 @@ core_build_external_fragment()
           check_result=$?
           if [ $check_result -eq 0 ]
           then
-            image_temporary_path=`mktemp bsky_sh_cli.XXXXXXXXXX`
+            image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
             mktemp_status=$?
             debug 'core_build_externa_fragment' "image_temporary_path:${image_temporary_path}"
             if [ $mktemp_status -eq 0 ]
