@@ -41,8 +41,16 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='\($DISPLAYNAME)\n  Feed by @\($CREATOR_HANDLE)'
 # template for tail field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='Liked by \($LIKECOUNT) users'
+# template for meta field in post external
+#BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META='[external]'
+# template for head field in post external
+#BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD='\($EXTERNAL_URI)\n\($EXTERNAL_TITLE)'
+# template for body field in post external
+#BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY='\($EXTERNAL_DESCRIPTION)'
 # template for embedded image in post
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
+# template for link in post
+#BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
 # sleep interval for following support commands (timeline, feed, etc.)
 #BSKYSHCLI_SLEEP_INTERVAL='5s'
 # template for profile
