@@ -108,6 +108,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post --text '<text>' [--linkcard-index <link index>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text '${input:post_text}' ${input:linkcard_index}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (post --text '<text>' --image <image file path> --alt '<alt text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -128,6 +136,14 @@
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "${input:profile} reply --index ${input:feed-index} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (reply --index <index> --text '<text>' [--linkcard-index <link index>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} reply --index ${input:feed-index} --text '${input:post_text}' ${input:linkcard_index}"
         },
         {
             "type": "bashdb",
@@ -160,6 +176,14 @@
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "${input:profile} quote --index ${input:feed-index} --text '${input:post_text}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (quote --index <index> --text '<text>' [--linkcard-index <link index>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} quote --index ${input:feed-index} --text '${input:post_text}' ${input:linkcard_index}"
         },
         {
             "type": "bashdb",
@@ -627,6 +651,12 @@
             "id": "post_alt",
             "description": "input alternate text for image",
             "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "linkcard_index",
+            "description": "input link card generate target link index number (delete if unnecessary)",
+            "default": "--linkcard-index "
         }
     ]
 }

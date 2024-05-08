@@ -534,39 +534,50 @@ core_build_images_fragment()
   return $actual_image_count
 }
 
-core_generate_link_facets_element()
+core_extract_link_url()
 {
   param_text="$1"
-  debug 'core_generate_link_facets_element' 'START'
-  debug 'core_generate_link_facets_element' "param_text:${param_text}"
+  param_extract_linkcard_index="$2"
 
-  link_facets_element=''
-  url_list=`echo "${param_text}" | grep -o -i -E "${PATTERN_URL}"`
+  debug 'core_extract_link_url' 'START'
+  debug 'core_extract_link_url' "param_text:${param_text}"
+  debug 'core_extract_link_url' "param_extract_linkcard_index:${param_extract_linkcard_index}"
+
+  # TODO: URL shortening processing
+
   # unescape (e.g. '\n', '"' : escaped at parse_parameters()) for adjust index
 #  expanded_text=`echo "${param_text}" | sed 's/\\\\"/"/g'`
   # in the after loop, "expr length" and "expr match" change to "expr :" and self implemetation by platrom porability reason
   # '\n' handling difficult in self implementation, escape to convert from '\n' to '\t'
   # using GNU sed -z option
+  # 
+  # however, since using jq (cheat) now, may not need to handle '\n'
   expanded_text=`echo "${param_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
   accum_cut_length=0
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $url_list
-  while [ $# -gt 0 ]
+  extract_link_count=0
+
+  while [ -n "${expanded_text}" ]
   do
-    # The parameter position by set expansion will probably be destroyed in the utility function, so iterate it in advance.
+    url=`echo "${expanded_text}" | grep -o -i -E "${PATTERN_URL}"`
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $url
     url=$1
-    shift
-    url_list="$@"
+    if [ -z "${url}" ]
+    then
+      break
+    fi
     # match "ABCDE http://..." "\(.*\)http://..." -> "ABCDE "
     # length "ABCDE " -> url previous string length = url index (0 start)
 #    url_index=`expr length \( match "${expanded_text}" "\(.*\)${url}" \)`
     # "expr length" and "expr match" is not compatible for macOS(?), FreeBSD : https://www.shellcheck.net/wiki/SC2308
     # "${#var}" is not compatible for Solaris sh.
     # implement by "expr :" and self length function.
-    url_before=`expr "${expanded_text}" : "\(.*\)${url}"`
-    _strlen "${url_before}"
-    url_index=$?
+#    url_before=`expr "${expanded_text}" : "\(.*\)${url}"`
+#    _strlen "${url_before}"
+#    url_index=$?
+    # cheat (use jq) for shortest match (countermeasure to same URL string in text)
+    url_index=`_p "${expanded_text}" | jq -R 'index("'"${url}"'")'`
     _strlen "${url}"
     url_length=$?
     # until end of url
@@ -588,17 +599,28 @@ core_generate_link_facets_element()
 #    expanded_text=`_p "${expanded_text}" | tr '\n' '\t' | cut -c "${cut_index}"- | tr '\t' '\n'`
     # at before loop, already convert from '\n' to '\t' by expr platform portability reason
     expanded_text=`_p "${expanded_text}" | cut -c "${cut_index}"-`
-    # reset parameter position
-    # no double quote for use word splitting
-    # shellcheck disable=SC2086
-    set -- $url_list
+    # extract link card target url
+    if [ -n "${param_extract_linkcard_index}" ]
+    then
+      extract_link_count=`expr "${extract_link_count}" + 1`
+      if [ "${extract_link_count}" -eq "${param_extract_linkcard_index}" ]
+      then
+        extract_linkcard_url="${url}"
+      fi
+    fi
   done
-  _p "${link_facets_element}"
+  if [ -z "${param_extract_linkcard_index}" ]
+  then
+    # output facets element: <url #1> <url start index #1> <url end index #1> <url #2> <url start index #2> <url end index #2>...
+    _p "${link_facets_element}"
+    # TODO: URL shortening processing
+#    RESULT_extract_link_url_processed_text="<URL shortening processing text>"
+  else
+    # output specified target index link URL
+    _p "${extract_linkcard_url}"
+  fi  
 
-  # TODO: URL shortening processing
-#  RESULT_generate_link_facets_processed_text="${param_text}"
-
-  debug 'core_generate_link_facets_element' 'END'
+  debug 'core_extract_link_url' 'END'
 }
 
 core_build_link_facets_fragment()
@@ -610,7 +632,7 @@ core_build_link_facets_fragment()
 
   link_facets_fragment='['
   element_count=0
-  link_facets_element=`core_generate_link_facets_element "${param_text}"`
+  link_facets_element=`core_extract_link_url "${param_text}" ''`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $link_facets_element
@@ -636,6 +658,101 @@ core_build_link_facets_fragment()
   fi
 
   debug 'core_build_link_facets_fragment' 'END'
+}
+
+core_build_external_fragment()
+{
+  param_text="$1"
+  param_linkcard_index="$2"
+
+  debug 'core_build_external_fragment' 'START'
+  debug 'core_build_external_fragment' "param_text:${param_text}"
+  debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
+
+  if [ "${param_linkcard_index}" -gt 0 ]
+  then
+    url=`core_extract_link_url "${param_text}" "${param_linkcard_index}"`
+    if [ -n "${url}" ]
+    then
+      external_html=`curl -s "${url}" 2>/dev/null`
+      get_html_status=$?
+      if [ $get_html_status -eq 0 ]
+      then
+        # TODO: code/pattern cleanup and correct references to prefix definitions
+        og_description=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:description" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:description" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_image=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:image" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_url=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:url" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:url" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        if [ -n "${og_title}" ] && [ -n "${og_image}" ]
+        then
+          check_required_command 'file'
+          check_result=$?
+          if [ $check_result -eq 0 ]
+          then
+            image_temporary_path=`mktemp bsky_sh_cli.XXXXXXXXXX`
+            mktemp_status=$?
+            debug 'core_build_externa_fragment' "image_temporary_path:${image_temporary_path}"
+            if [ $mktemp_status -eq 0 ]
+            then
+              curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
+              get_image_status=$?
+              if [ $get_image_status -eq 0 ]
+              then
+                mime_type=`file --mime-type --brief "${image_temporary_path}"`
+                _startswith "${mime_type}" 'image/'
+                mime_type_check_status=$?
+                if [ "${mime_type_check_status}" -eq 0 ]
+                then
+                  upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
+                  api_status=$?
+                  if [ $api_status -eq 0 ]
+                  then
+                    thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
+                    # $type is not variable
+                    # shellcheck disable=SC2016
+                    _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+                    status=0
+                  else
+                    error_msg 'image file upload failed'
+                    status=1
+                  fi
+                else  # file mime-type is not image
+                  error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
+                  status=1
+                fi
+              else
+                error_msg "image file download failed: ${og_image}"
+                status=1
+              fi
+              rm -f "${image_temporary_path}" 2>/dev/null
+            else
+              error_msg 'create image download temporary file failed'
+              status=1
+            fi
+          else  # file command not found
+            status=1
+          fi
+        else  # OGP information not found
+          html_title=`_p "${external_html}" | grep -o -i -E '< *title *>[^<]*< */ *title *>' | sed -E 's_< *title *>([^<]*)< */ *title *>_\1_g'`
+          # $type is not variable
+          # shellcheck disable=SC2016
+          _p '{"$type":"app.bsky.embed.external","external":{"description":"","title":"'"${html_title}"'","uri":"'"${url}"'"}}'
+          status=0
+        fi
+      else  # get html failed
+        error_msg "site access failed: ${url}"
+        status=1
+      fi
+    else  # url is not specfied
+      status=0
+    fi
+  else  # param_linkcard_index is 0
+    status=0
+  fi
+
+  debug 'core_build_external_fragment' 'END'
+
+  return $status
 }
 
 core_build_reply_fragment()
@@ -1490,13 +1607,16 @@ core_get_author_feed()
 core_post()
 {
   param_text="$1"
-  if [ $# -gt 1 ]
+  param_linkcard_index="$2"
+  if [ $# -gt 2 ]
   then
+    shift
     shift
   fi
 
   debug 'core_post' 'START'
   debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -1506,12 +1626,17 @@ core_post()
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -gt 0 ]
       then
         record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
       fi
       if [ -n "${link_facets_fragment}" ]
       then
@@ -1535,8 +1660,10 @@ core_reply()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
-  if [ $# -gt 3 ]
+  param_linkcard_index="$4"
+  if [ $# -gt 4 ]
   then
+    shift
     shift
     shift
     shift
@@ -1546,6 +1673,7 @@ core_reply()
   debug 'core_reply' "param_target_uri:${param_target_uri}"
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
+  debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -1558,12 +1686,17 @@ core_reply()
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+      # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -gt 0 ]
       then
         record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
       fi
       if [ -n "${link_facets_fragment}" ]
       then
@@ -1611,8 +1744,10 @@ core_quote()
   param_target_uri="$1"
   param_target_cid="$2"
   param_text="$3"
-  if [ $# -gt 3 ]
+  param_linkcard_index="$4"
+  if [ $# -gt 4 ]
   then
+    shift
     shift
     shift
     shift
@@ -1622,6 +1757,7 @@ core_quote()
   debug 'core_quote' "param_target_uri:${param_target_uri}"
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
+  debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
@@ -1634,12 +1770,19 @@ core_quote()
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -eq 0 ]
       then
-        record="${record},\"embed\":${quote_record_fragment}"
+        if [ -n "${external_fragment}" ]
+        then
+          record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${external_fragment},\"record\":${quote_record_fragment}}"
+        else
+          record="${record},\"embed\":${quote_record_fragment}"
+        fi
       else
         record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}"
       fi
