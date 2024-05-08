@@ -3,7 +3,7 @@
 - Support for posts with link URLs
   - Link card generation in text posts containing link URLs
   - Display link card
-  - Display the full name of the shortened URL at the end of the post
+  - Display the link URL included in the text at the end of the post (if it is shortened, display the full name)
 
 # v0.2.0
 ## Add
