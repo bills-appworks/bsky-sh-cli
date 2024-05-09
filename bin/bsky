@@ -334,7 +334,7 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
+usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --text '<text>'
@@ -354,6 +354,10 @@ parameters:
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
 
+  --langs '<language code>[,...]'
+    Specify the languages to include in the post.
+    Separate multiple language codes with commas (e.g. --langs 'en,ja').
+
 note:
   you must have started a Bluesky session with the login command.
   image and link card are exclusive, prioritize image specification.
@@ -369,9 +373,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
+usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
        or
-       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
+       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --index <index>
@@ -399,6 +403,10 @@ parameters:
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --langs '<language code>[,...]'
+    Specify the languages to include in the post.
+    Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
 note:
   you must have started a Bluesky session with the login command.
@@ -443,9 +451,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
+usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
        or
-       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>]
+       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --index <view index>
@@ -473,6 +481,10 @@ parameters:
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --langs '<language code>[,...]'
+    Specify the languages to include in the post.
+    Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
 note:
   you must have started a Bluesky session with the login command.
@@ -1065,7 +1077,7 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
+    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1096,7 +1108,7 @@ command_post()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'
@@ -1110,7 +1122,7 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
 
     verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
     verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
@@ -1154,7 +1166,7 @@ command_reply()
     else
       linkcard_index=1
     fi
-    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_reply' 'END'
@@ -1205,7 +1217,7 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
 
     verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
     verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
@@ -1249,7 +1261,7 @@ command_quote()
     else
       linkcard_index=1
     fi
-    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_quote' 'END'

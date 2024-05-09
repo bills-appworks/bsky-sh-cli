@@ -9,6 +9,8 @@
 #
 # resource config
 
+# post default languages (e.g. 'en,ja')
+#BSKYSHCLI_POST_DEFAULT_LANGUAGES=
 # debug mode
 #BSKYSHCLI_DEBUG=ON
 # library path

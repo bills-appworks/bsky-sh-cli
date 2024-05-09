@@ -1604,12 +1604,55 @@ core_get_author_feed()
   return $status
 }
 
+core_build_langs_fragment()
+{
+  param_langs="$1"
+
+  debug 'core_build_langs_fragment' 'START'
+  debug 'core_build_langs_fragment' "param_langs:${param_langs}"
+
+  langs_fragment=''
+
+  langs="${BSKYSHCLI_POST_DEFAULT_LANGAGE}"
+  if [ -n "${param_langs}" ]
+  then
+    langs="${param_langs}"
+  fi
+  if [ -n "${langs}" ]
+  then
+    _slice "${langs}" ','
+    lang_count=$?
+    lang_index=1
+    langs_fragment='['
+    while [ $lang_index -le $lang_count ]
+    do
+      lang_element=`eval _p \"\\$"RESULT_slice_${lang_index}"\"`
+      lang_element=`_p "${lang_element}" | sed 's/^ *\([^ ]*\) *$/\1/g'`
+      if [ $lang_index -gt 1 ]
+      then
+        langs_fragment="${langs_fragment},"
+      fi
+      langs_fragment="${langs_fragment}\"${lang_element}\""
+      lang_index=`expr "${lang_index}" + 1`
+    done
+    langs_fragment="${langs_fragment}]"
+  fi
+  if [ -n "${langs_fragment}" ]
+  then
+    _p "${langs_fragment}"
+  fi
+
+  debug 'core_build_langs_fragment' 'END'
+}
+
 core_post()
 {
   param_text="$1"
   param_linkcard_index="$2"
-  if [ $# -gt 2 ]
+  param_langs="$3"
+  if [ $# -gt 3 ]
   then
+    shift
     shift
     shift
   fi
@@ -1617,6 +1660,7 @@ core_post()
   debug 'core_post' 'START'
   debug 'core_post' "param_text:${param_text}"
   debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_post' "param_langs:${param_langs}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -1627,6 +1671,7 @@ core_post()
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
   external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
@@ -1641,6 +1686,10 @@ core_post()
       if [ -n "${link_facets_fragment}" ]
       then
         record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
       fi
       record="${record}}"
       debug_single 'core_post'
@@ -1661,8 +1710,10 @@ core_reply()
   param_target_cid="$2"
   param_text="$3"
   param_linkcard_index="$4"
-  if [ $# -gt 4 ]
+  param_langs="$5"
+  if [ $# -gt 5 ]
   then
+    shift
     shift
     shift
     shift
@@ -1745,8 +1796,10 @@ core_quote()
   param_target_cid="$2"
   param_text="$3"
   param_linkcard_index="$4"
-  if [ $# -gt 4 ]
+  param_langs="$5"
+  if [ $# -gt 5 ]
   then
+    shift
     shift
     shift
     shift
