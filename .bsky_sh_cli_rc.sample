@@ -51,8 +51,6 @@
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
 # template for link in post
 #BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
-# sleep interval for following support commands (timeline, feed, etc.)
-#BSKYSHCLI_SLEEP_INTERVAL='5s'
 # template for profile
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n[banner] \($BANNER)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
 # template for profile (output id)
