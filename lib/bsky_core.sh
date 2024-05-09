@@ -755,6 +755,50 @@ core_build_external_fragment()
   return $status
 }
 
+# build "langs" json fragment in post
+# 'en,ja' -> '["en","ja"]'
+core_build_langs_fragment()
+{
+  param_langs="$1"
+
+  debug 'core_build_langs_fragment' 'START'
+  debug 'core_build_langs_fragment' "param_langs:${param_langs}"
+
+  langs_fragment=''
+
+  # get default value from configuration
+  langs="${BSKYSHCLI_POST_DEFAULT_LANGUAGES}"
+  if [ -n "${param_langs}" ]
+  then
+    langs="${param_langs}"
+  fi
+  if [ -n "${langs}" ]
+  then
+    _slice "${langs}" ','
+    lang_count=$?
+    lang_index=1
+    langs_fragment='['
+    while [ $lang_index -le $lang_count ]
+    do
+      lang_element=`eval _p \"\\$"RESULT_slice_${lang_index}"\"`
+      lang_element=`_p "${lang_element}" | sed 's/^ *\([^ ]*\) *$/\1/g'`
+      if [ $lang_index -gt 1 ]
+      then
+        langs_fragment="${langs_fragment},"
+      fi
+      langs_fragment="${langs_fragment}\"${lang_element}\""
+      lang_index=`expr "${lang_index}" + 1`
+    done
+    langs_fragment="${langs_fragment}]"
+  fi
+  if [ -n "${langs_fragment}" ]
+  then
+    _p "${langs_fragment}"
+  fi
+
+  debug 'core_build_langs_fragment' 'END'
+}
+
 core_build_reply_fragment()
 {
   param_reply_target_uri=$1
@@ -1604,47 +1648,6 @@ core_get_author_feed()
   return $status
 }
 
-core_build_langs_fragment()
-{
-  param_langs="$1"
-
-  debug 'core_build_langs_fragment' 'START'
-  debug 'core_build_langs_fragment' "param_langs:${param_langs}"
-
-  langs_fragment=''
-
-  langs="${BSKYSHCLI_POST_DEFAULT_LANGAGE}"
-  if [ -n "${param_langs}" ]
-  then
-    langs="${param_langs}"
-  fi
-  if [ -n "${langs}" ]
-  then
-    _slice "${langs}" ','
-    lang_count=$?
-    lang_index=1
-    langs_fragment='['
-    while [ $lang_index -le $lang_count ]
-    do
-      lang_element=`eval _p \"\\$"RESULT_slice_${lang_index}"\"`
-      lang_element=`_p "${lang_element}" | sed 's/^ *\([^ ]*\) *$/\1/g'`
-      if [ $lang_index -gt 1 ]
-      then
-        langs_fragment="${langs_fragment},"
-      fi
-      langs_fragment="${langs_fragment}\"${lang_element}\""
-      lang_index=`expr "${lang_index}" + 1`
-    done
-    langs_fragment="${langs_fragment}]"
-  fi
-  if [ -n "${langs_fragment}" ]
-  then
-    _p "${langs_fragment}"
-  fi
-
-  debug 'core_build_langs_fragment' 'END'
-}
-
 core_post()
 {
   param_text="$1"
@@ -1725,6 +1728,7 @@ core_reply()
   debug 'core_reply' "param_target_cid:${param_target_cid}"
   debug 'core_reply' "param_text:${param_text}"
   debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_reply' "param_langs:${param_langs}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -1738,6 +1742,7 @@ core_reply()
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
   external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
@@ -1752,6 +1757,10 @@ core_reply()
       if [ -n "${link_facets_fragment}" ]
       then
         record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
       fi
       record="${record}}"
       debug_single 'core_reply'
@@ -1811,6 +1820,7 @@ core_quote()
   debug 'core_quote' "param_target_cid:${param_target_cid}"
   debug 'core_quote' "param_text:${param_text}"
   debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_quote' "param_langs:${param_langs}"
   debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
@@ -1824,6 +1834,7 @@ core_quote()
   actual_image_count=$?
   link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
   external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
@@ -1842,6 +1853,10 @@ core_quote()
       if [ -n "${link_facets_fragment}" ]
       then
         record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
       fi
       record="${record}}"
       debug_single 'core_quote'
