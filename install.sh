@@ -554,7 +554,7 @@ then
   _p "Add post default languages in '${HOME}/${rcfile_name}' ... "
   {
     echo "# Configuration add by installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}"
-    echo "BSKYSHCLI_POST_DEFAULT_LANGAGES='${config_langs_value}'"
+    echo "BSKYSHCLI_POST_DEFAULT_LANGUAGES='${config_langs_value}'"
   } >> "${HOME}/${rcfile_name}"
   echo 'Complete'
 fi
