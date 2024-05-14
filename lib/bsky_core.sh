@@ -2342,7 +2342,7 @@ core_info_meta_path()
 {
   debug 'core_info_meta_path' 'START'
 
-  _pn "resource config (BSKYSHCLI_RESORUCE_CONFIG_PATH): ${BSKYSHCLI_RESOURCE_CONFIG_PATH}"
+  _pn "Run Commands (BSKYSHCLI_RUN_COMMANDS_PATH): ${BSKYSHCLI_RUN_COMMANDS_PATH}"
   _pn "work for session, debug log, etc. (BSKYSHCLI_TOOLS_WORK_DIR): ${BSKYSHCLI_TOOLS_WORK_DIR}"
   _pn "library (BSKYSHCLI_LIB_PATH): ${BSKYSHCLI_LIB_PATH}"
   _pn "api (BSKYSHCLI_API_PATH): ${BSKYSHCLI_API_PATH}"
