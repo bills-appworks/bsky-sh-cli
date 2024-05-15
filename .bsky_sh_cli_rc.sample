@@ -9,6 +9,9 @@
 #
 # resource config
 
+# post default languages (e.g. 'en,ja')
+# NOTE: if you installed using the installer install.sh, this setting may be configured at the end of this file.
+#BSKYSHCLI_POST_DEFAULT_LANGUAGES=
 # debug mode
 #BSKYSHCLI_DEBUG=ON
 # library path
