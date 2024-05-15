@@ -11,17 +11,35 @@
 
 targets='
   shellcheck.sh
+  install.sh
   bin/bsky
   lib/bsky_core.sh
   lib/util.sh
   lib/api/*
 '
 
+through_params=''
+while [ $# -gt 0 ]
+do
+  case $1 in
+    --bskyshcli-skip-api)
+      targets=`echo "${targets}" | sed 's_lib/api/\*__g'`
+      ;;
+    *)
+      through_params="${through_params} $1"
+      ;;
+  esac
+  shift
+done
+# no double quote for use word splitting
+# shellcheck disable=SC2086
+set -- $through_params
+
 status_max=0
 for target in $targets
 do
   echo "shellcheck >>>> ${target}"
-# if checking SC1090:source to resource config file, set source-path to home directory
+# if checking SC1090:source to Run Commands file, set source-path to home directory
 ##  shellcheck --source-path="${HOME}" "$@" "${target}"
   shellcheck "$@" "${target}"
   status=$?
