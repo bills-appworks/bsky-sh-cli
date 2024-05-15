@@ -65,6 +65,7 @@ BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/.."
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && pwd)`
 BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
+BSKYSHCLI_DEFAULT_DEBUG_DIR="${BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR}/debug"
 
 # read resource config
 if [ -z "${BSKYSHCLI_RESOURCE_CONFIG_PATH}" ]
@@ -99,6 +100,11 @@ then
   BSKYSHCLI_API_PATH="${BSKYSHCLI_LIB_PATH}/api"
 fi
 export BSKYSHCLI_API_PATH
+if [ -z "${BSKYSHCLI_DEBUG_DIR}" ]
+then
+  BSKYSHCLI_DEBUG_DIR="${BSKYSHCLI_DEFAULT_DEBUG_DIR}"
+fi
+export BSKYSHCLI_DEBUG_DIR
 
 UTILITY_PATH="${BSKYSHCLI_LIB_PATH}/util.sh"
 if [ -r "${UTILITY_PATH}" ]
@@ -1540,6 +1546,23 @@ command_version()
 
 set_timezone
 
+# equal to if ! mkdir...; does not written for compatible with Solaris sh
+mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
+result=$?
+if [ $result -ne 0 ]
+then
+  error "cannot make work directory '${BSKYSHCLI_TOOLS_WORK_DIR}'"
+fi
+if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
+then
+  mkdir -p "${BSKYSHCLI_DEBUG_DIR}"
+  result=$?
+  if [ $result -ne 0 ]
+  then
+    error "cannot make debug directory '${BSKYSHCLI_DEBUG_DIR}'"
+  fi
+fi
+
 debug 'bsky' 'START'
 # CAUTION: command parameters may contain sensitive information such as passwords 
 #debug 'bsky' "command parameters: $*"
@@ -1550,14 +1573,6 @@ if [ $check_result -ne 0 ]
 then
   command_version
   exit 1
-fi
-
-# equal to if ! mkdir...; does not written for compatible with Solaris sh
-mkdir -p "${BSKYSHCLI_TOOLS_WORK_DIR}"
-result=$?
-if [ $result -ne 0 ]
-then
-  error "cannot make work directory '${BSKYSHCLI_TOOLS_WORK_DIR}'"
 fi
 
 parse_global_option "$@"
