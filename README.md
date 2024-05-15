@@ -11,9 +11,9 @@ The goal of this tool is to be able to run it using a shell script execution env
 It is currently under development and will be enriched with functionality in the future.
 
 ## How to use
-There is no installer at this time. Please deploy the provided files to any directory.
+You can install (copy files, edit the login script to set the environment variable PATH) by running `install.sh` included in the provided file. When you run `install.sh`, the installation destination etc. will be confirmed. For details, please refer to [Installation Document](INSTALL.md).
 
-There is a file called `bsky` under the `bin` directory of the provided files, and this is the startup command.
+There is a file called `bsky` under the `bin` subdirectory of the installation destination, and this is the startup command.
 
 Launch the bsky command from the shell by specifying the path, just like any common command or shell script.
 
