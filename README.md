@@ -25,7 +25,7 @@ sudo ./install.sh
 ./install.sh
 ```
 
-For details, please refer to [Installation Document](INSTALL.md).
+For details, please refer to [Installation document](INSTALL.md).
 
 There is a file called `bsky` under the `bin` subdirectory of the installation destination, and this is the startup command.
 
