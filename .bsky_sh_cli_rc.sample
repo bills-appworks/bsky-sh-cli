@@ -7,8 +7,11 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
-# resource config
+# Run Commands
 
+# post default languages (e.g. 'en,ja')
+# NOTE: if you installed using the installer install.sh, this setting may be configured at the end of this file.
+#BSKYSHCLI_POST_DEFAULT_LANGUAGES=
 # debug mode
 #BSKYSHCLI_DEBUG=ON
 # library path
@@ -42,7 +45,7 @@
 # template for tail field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='Liked by \($LIKECOUNT) users'
 # template for meta field in post external
-#BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META='[external]'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META='[link card]'
 # template for head field in post external
 #BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD='\($EXTERNAL_URI)\n\($EXTERNAL_TITLE)'
 # template for body field in post external
@@ -51,8 +54,6 @@
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
 # template for link in post
 #BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
-# sleep interval for following support commands (timeline, feed, etc.)
-#BSKYSHCLI_SLEEP_INTERVAL='5s'
 # template for profile
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE='[avatar] \($AVATAR)\n[banner] \($BANNER)\n\($DISPLAYNAME)\n@\($HANDLE)\n\($FOLLOWERSCOUNT) followers  \($FOLLOWSCOUNT) follows  \($POSTSCOUNT) posts\n\($DESCRIPTION)'
 # template for profile (output id)

@@ -1,3 +1,11 @@
+# v0.4.0
+## Add
+- Specify langs (language code) when posting
+- Simple installer
+## Modify
+- Change the debug related file output directory
+- Minor modifies
+
 # v0.3.1
 ## Fix
 - OGP image file work directry was the current directoy instead of the temporary directory
