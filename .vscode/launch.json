@@ -44,66 +44,66 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (timeline [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "name": "bsky (timeline [--limit <count>:1<=count<=100 default:50] [--next] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} timeline ${input:limit-1-100} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} timeline ${input:limit-1-100} ${input:next} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (feed --actor <handle or did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "name": "bsky (feed --actor <handle or did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} feed --actor '${input:actor}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} feed --actor '${input:actor}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (feed --handle <handle> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "name": "bsky (feed --handle <handle> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} feed --handle '${input:handle}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} feed --handle '${input:handle}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (feed --did <did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "name": "bsky (feed --did <did> --record-key <record key> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} feed --did '${input:did}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} feed --did '${input:did}' --record-key '${input:record-key}' ${input:limit-1-100} ${input:next} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (feed [--url] <bsky.app feed URL> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id])",
+            "name": "bsky (feed [--url] <bsky.app feed URL> [--limit <count>:1<=count<=100 default:50] [--next] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} feed ${input:bsky-app-feed-url} ${input:limit-1-100} ${input:next} ${input:output-id}"
+            "argsString": "${input:profile} feed ${input:bsky-app-feed-url} ${input:limit-1-100} ${input:next} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (author-feed --actor <handle or did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "name": "bsky (author-feed --actor <handle or did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} author-feed --actor '${input:actor}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+            "argsString": "${input:profile} author-feed --actor '${input:actor}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (author-feed --handle <handle> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "name": "bsky (author-feed --handle <handle> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} author-feed --handle '${input:handle}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+            "argsString": "${input:profile} author-feed --handle '${input:handle}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (author-feed --did <did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id])",
+            "name": "bsky (author-feed --did <did> [--limit <count>:1<=count<=100 default:50] [--next] [--filter <filter>] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} author-feed --did '${input:did}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id}"
+            "argsString": "${input:profile} author-feed --did '${input:did}' ${input:limit-1-100} ${input:next} ${input:author-feed-filter} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
@@ -244,18 +244,18 @@
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (thread --index <index> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id])",
+            "name": "bsky (thread --index <index> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} thread --index ${input:feed-index} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id}"
+            "argsString": "${input:profile} thread --index ${input:feed-index} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
             "request": "launch",
-            "name": "bsky (thread --uri <uri> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id])",
+            "name": "bsky (thread --uri <uri> [--depth <depth>:depth<=1000 default:6] [--parent-height <parentHeight>:parentHeight<=1000 default:80] [--output-id] [--output-via])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
-            "argsString": "${input:profile} thread --uri ${input:uri} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id}"
+            "argsString": "${input:profile} thread --uri ${input:uri} ${input:thread-depth} ${input:thread-parent-height} ${input:output-id} ${input:output-via}"
         },
         {
             "type": "bashdb",
@@ -485,6 +485,12 @@
             "id": "output-id",
             "description": "output IDs (uri, cid...)",
             "default": "--output-id"
+        },
+        {
+            "type": "promptString",
+            "id": "output-via",
+            "description": "output via field (unofficial field indicating the posting client name)",
+            "default": "--output-via"
         },
         {
             "type": "promptString",

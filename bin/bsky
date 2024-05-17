@@ -20,9 +20,11 @@ BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
 
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)]'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)]<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \($CREATED_AT)'
 # shellcheck disable=SC2016
@@ -31,7 +33,8 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
 BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Like:\($LIKE_COUNT)'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
-BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)] [did:\($DID)]'
@@ -221,7 +224,7 @@ output_help_timeline()
   cat << 'EOS'
 bsky timeline help
 
-usage: bsky timeline [--limit <number>] [--next]
+usage: bsky timeline [--limit <number>] [--next] [--output-id] [--output-via]
 
 parameters:
   --limit <number>
@@ -232,6 +235,9 @@ parameters:
 
   --output-id
     Output identifier of AT protocol (uri, cid)
+
+  --output-via
+    Output via field (unofficial field indicating the posting client name)  
 
 note:
   you must have started a Bluesky session with the login command.
@@ -247,13 +253,13 @@ output_help_feed()
   cat << 'EOS'
 bsky feed help
 
-usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <number>] [--next] [--output-id]
+usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
        or
-       bsky feed --handle <handle> --record-key <record key> [--limit <number>] [--next] [--output-id]
+       bsky feed --handle <handle> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
        or
-       bsky feed --did <did> --record-key <record key> [--limit <number>] [--next] [--output-id]
+       bsky feed --did <did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
        or
-       bsky feed [--url] <bsky.app feed URL> [--limit <number>] [--next] [--output-id]
+       bsky feed [--url] <bsky.app feed URL> [--limit <number>] [--next] [--output-id] [--output-via]
 
 parameters:
   --actor <handle or did>
@@ -280,6 +286,9 @@ parameters:
   --output-id
     Output identifier of AT protocol (uri, cid)
 
+  --output-via
+    Output via field (unofficial field indicating the posting client name)  
+
 note:
   you must have started a Bluesky session with the login command.
 EOS
@@ -294,11 +303,11 @@ output_help_author_feed()
   cat << 'EOS'
 bsky author-feed help
 
-usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--filter <filter>] [--output-id]
+usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
        or
-       bsky author-feed --handle <handle> [--limit <number>] [--next] [--filter <filter>] [--output-id]
+       bsky author-feed --handle <handle> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
        or
-       bsky author-feed --did <did> [--limit <number>] [--next] [--filter <filter>] [--output-id]
+       bsky author-feed --did <did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
 
 parameters:
   --actor <handle or did>
@@ -326,6 +335,9 @@ parameters:
 
   --output-id
     Output identifier of AT protocol (uri, cid)
+
+  --output-via
+    Output via field (unofficial field indicating the posting client name)  
 
 note:
   you must have started a Bluesky session with the login command.
@@ -536,9 +548,9 @@ output_help_thread()
   cat << 'EOS'
 bsky thread help
 
-usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id]
+usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via]
        or
-       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id]
+       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via]
 
 parameters:
   --index <view index>
@@ -557,6 +569,9 @@ parameters:
 
   --output-id
     Output identifier of AT protocol (uri, cid).
+
+  --output-via
+    Output via field (unofficial field indicating the posting client name)  
 
 note:
   you must have started a Bluesky session with the login command.
@@ -951,7 +966,7 @@ command_timeline()
   then
     output_help_timeline
   else
-    parse_parameters '--limit:1 --next:0 --output-id:0' "$@"
+    parse_parameters '--limit:1 --next:0 --output-id:0 --output-via:0' "$@"
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
@@ -961,7 +976,7 @@ command_timeline()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_timeline '' "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_timeline '' "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
   fi
 
   debug 'command_timeline' 'END'
@@ -983,7 +998,7 @@ command_feed()
       shift
     fi
 
-    parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0' "$@"
+    parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0 --output-via:0' "$@"
 
     if [ -n "${naked_feed_generator}" ]
     then
@@ -1020,7 +1035,7 @@ command_feed()
       limit=''
     fi
 
-    core_get_feed "${did}" "${PARSED_PARAM_KEYVALUE_record_key}" "${url}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_feed "${did}" "${PARSED_PARAM_KEYVALUE_record_key}" "${url}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
   fi
 
   debug 'command_feed' 'END'
@@ -1034,7 +1049,7 @@ command_author_feed()
   then
     output_help_author_feed
   else
-    parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0' "$@"
+    parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0 --output-via:0' "$@"
 
     verify_exclusive 0 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
 
@@ -1068,7 +1083,7 @@ command_author_feed()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_author_feed "${did}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${filter}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_get_author_feed "${did}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${filter}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
   fi
 
   debug 'command_author_feed' 'END'
@@ -1319,7 +1334,7 @@ command_thread()
   then
     output_help_thread
   else
-    parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0' "$@"
+    parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0 --output-via:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1361,7 +1376,7 @@ command_thread()
         error "--parent-height parameter must be numeric value: ${parent_height}"
       fi
     fi
-    core_thread "${uri}" "${depth}" "${parent_height}" "${PARSED_PARAM_KEYONLY_output_id}"
+    core_thread "${uri}" "${depth}" "${parent_height}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
   fi
 
   debug 'command_thread' 'END'
