@@ -10,7 +10,7 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
-VIEW_TEMPLATE_VIA="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
+#VIEW_TEMPLATE_VIA="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
 VIEW_TEMPLATE_CREATED_AT='
