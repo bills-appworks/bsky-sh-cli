@@ -10,7 +10,7 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
-#VIEW_TEMPLATE_VIA="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
+BSKYSHCLI_VIA_VALUE="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
 VIEW_TEMPLATE_CREATED_AT='
@@ -1712,6 +1712,10 @@ core_post()
       then
         record="${record},\"langs\":${langs_fragment}"
       fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
+      fi
       record="${record}}"
       debug_single 'core_post'
       result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''  | tee "$BSKYSHCLI_DEBUG_SINGLE"`
@@ -1779,6 +1783,10 @@ core_reply()
       if [ -n "${langs_fragment}" ]
       then
         record="${record},\"langs\":${langs_fragment}"
+      fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
       fi
       record="${record}}"
       debug_single 'core_reply'
@@ -1875,6 +1883,10 @@ core_quote()
       if [ -n "${langs_fragment}" ]
       then
         record="${record},\"langs\":${langs_fragment}"
+      fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
       fi
       record="${record}}"
       debug_single 'core_quote'

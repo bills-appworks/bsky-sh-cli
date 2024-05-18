@@ -16,6 +16,7 @@ BSKYSHCLI_CLI_VERSION='0.4.0'
 
 # global option (default value)
 BSKYSHCLI_POST_DEFAULT_LANGUAGES=''
+BSKYSHCLI_POST_VIA='ON'
 BSKYSHCLI_GLOBAL_OPTION_PROFILE=''
 
 # $<variables> want to pass through for jq
