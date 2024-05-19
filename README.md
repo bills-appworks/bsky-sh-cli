@@ -159,5 +159,9 @@ It is currently under development, and we will expand the compatible API in the 
 > - There is no API file parameter that specifies the profile. Please specify it using the shell variable `BSKYSHCLI_PROFILE` during execution.
 >    - ```BSKYSHCLI_PROFILE=<profile name> sh <API file name>```
 
+## Disclaimer
+[!WARNING]
+> The author cannot be held responsible for any damages or troubles incurred as a result of use.
+
 ## License
 This software is released under the MIT license. Please refer to [LICENSE](https://github.com/bills-appworks/bsky-sh-cli/blob/main/LICENSE).

@@ -159,5 +159,9 @@ Reply:<リプライ件数> Repost:<リポスト件数> Like:<いいね件数>
 > - プロファイルを指定するAPIファイルのパラメタはありません。実行時にシェル変数`BSKYSHCLI_PROFILE`で指定してください。
 >   - ```BSKYSHCLI_PROFILE=<プロファイル名> sh <APIファイル名>```
 
+## 免責事項
+[!WARNING]
+> 利用によって被ったいかなる損害・トラブルについても、作者は一切責任を負いかねます。
+
 ## ライセンス
 このソフトウェアはMITライセンスによってリリースしています。[LICENSE](https://github.com/bills-appworks/bsky-sh-cli/blob/main/LICENSE)を参照ください。
