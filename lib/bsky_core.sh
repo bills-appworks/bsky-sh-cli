@@ -335,6 +335,109 @@ core_parse_at_uri()
   return "${at_uri_element_count}"
 }
 
+core_text_size()
+{
+  param_text_size_text="$1"
+
+  debug 'core_text_size' 'START'
+  debug 'core_text_size' "param_text_size_text:${param_text_size_text}"
+
+  unescaped_text=`echo "${param_text_size_text}" | sed 's/\\\\"/"/g'`
+  debug 'core_text_size' "unescaped_text:${unescaped_text}"
+#  _strlen "${unescaped_text}"
+#  text_size=$?
+  text_size=`_p "${unescaped_text}" | wc -m`
+
+  debug 'core_text_size' 'END'
+
+  return "${text_size}"
+}
+
+core_get_text_file()
+{
+  param_text_file_path="$1"
+
+  debug 'core_get_text_file' 'START'
+  debug 'core_get_text_file' "param_text_file_path:${param_text_file_path}"
+
+  status=0
+  if [ -r "${param_text_file_path}" ]
+  then
+    # escape (newline) -> \n
+    # using GNU sed -z option
+    < "${param_text_file_path}" sed -z 's/\n/\\n/g'
+  else
+    check_comma=`_p "${param_text_file_path}" | sed 's/[^,]//g'`
+    if [ -n "${check_comma}" ]
+    then
+      error_msg "commas(,) may be used to separate multiple paths"
+    fi
+    error_msg "specified text file is not readable: ${param_text_file_path}"
+    status=1
+  fi
+
+  debug 'core_get_text_file' 'END'
+
+  return $status
+}
+
+core_output_text_file_size()
+{
+  param_text_file_path="$1"
+  param_count_only="$2"
+
+  debug 'core_output_text_file_size' 'START'
+  debug 'core_output_text_file_size' "param_text_file_path:${param_text_file_path}"
+  debug 'core_output_text_file_size' "param_count_only:${param_count_only}"
+
+  if text_file=`core_get_text_file "${param_text_file_path}"`
+  then
+    # unescape \n -> (newline)
+    text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
+    if [ -n "${param_count_only}" ]
+    then
+      _pn "${text_size}"
+    else
+      if [ "${text_size}" -le 300 ]
+      then
+        status='OK'
+      else
+        status='NG:over 300'
+      fi
+      _pn "text file character count: ${text_size} [${status}] [file:${param_text_file_path}]"
+    fi
+  fi
+
+  debug 'core_output_text_file_size' 'END'
+}
+
+core_process_files()
+{
+  param_process_files="$1"
+  param_process_name="$2"
+  if [ $# -ge 2 ]
+  then
+    shift
+    shift
+  fi
+
+  debug 'core_process_files' 'START'
+  debug 'core_process_files' "param_process_files:${param_process_files}"
+  debug 'core_process_files' "param_process_name:${param_process_name}"
+
+  _slice "${param_process_files}" ':'
+  files_count=$?
+  files_index=1
+  while [ $files_index -le $files_count ]
+  do
+    target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+    "${param_process_name}" "${target_file}" "$@"
+    files_index=`expr "$files_index" + 1`
+  done
+
+  debug 'core_process_files' 'END'
+}
+
 core_build_images_fragment_precheck_single()
 {
   param_image="$1"
@@ -2464,4 +2567,40 @@ core_info_meta_profile()
   done
 
   debug 'core_info_meta_profile' 'END'
+}
+
+core_size()
+{
+  param_text="$1"
+  param_text_files="$2"
+  param_count_only="$3"
+
+  debug 'core_size' 'START'
+  debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_text_files:${param_text_files}"
+  debug 'core_post' "param_count_only:${param_count_only}"
+
+  if [ -n "${param_text}" ]
+  then
+    core_text_size "${param_text}"
+    text_size=$?
+    if [ -n "${param_count_only}" ]
+    then
+      _pn "${text_size}"
+    else
+      if [ $text_size -le 300 ]
+      then
+        status='OK'
+      else
+        status='NG:over 300'
+      fi
+      _pn "text character count: ${text_size} [${status}]"
+    fi
+  fi
+  if [ -n "${param_text_files}" ]
+  then
+    core_process_files "${param_text_files}" 'core_output_text_file_size' "${param_count_only}"
+  fi
+
+  debug 'core_size' 'END'
 }

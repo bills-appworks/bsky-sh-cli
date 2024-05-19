@@ -332,6 +332,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (size --text '<text>' [--count-only])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} size --text '${input:post_text}' ${input:count_only}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (size --text-files '<file path>[:...]' [--count-only])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} size --text-files '${input:text_files}' ${input:count_only}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (version)",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -709,6 +725,18 @@
             "id": "language_code",
             "description": "separate multiple language codes with commas (e.g. --langs 'en,ja')",
             "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "text_files",
+            "description": "separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt')",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "count_only",
+            "description": "display only number of size (delete if unnecessary)",
+            "default": "--count-only"
         }
     ]
 }
