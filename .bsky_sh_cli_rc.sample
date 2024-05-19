@@ -12,6 +12,8 @@
 # post default languages (e.g. 'en,ja')
 # NOTE: if you installed using the installer install.sh, this setting may be configured at the end of this file.
 #BSKYSHCLI_POST_DEFAULT_LANGUAGES=
+# post embed via field in record (unofficial field indicating the posting client name): ON/OFF default:ON
+#BSKYSHCLI_POST_VIA=
 # debug mode
 #BSKYSHCLI_DEBUG=ON
 # library path
@@ -21,9 +23,11 @@
 # profile
 #BSKYSHCLI_PROFILE=
 # template for output id field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)]'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
+# template for output via field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
 # template for meta field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)]<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 # template for head field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \($CREATED_AT)'
 # template for body field in post
@@ -33,7 +37,9 @@
 # template for separator field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
 # template for output id placeholder to post templates (meta/head/body/tail/separator)
-#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
+# template for output via placeholder to post templates (meta/head/body/tail/separator)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 # template for quoted field prefix in post
 #BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
 # template for output id field in post feed generator
