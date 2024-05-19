@@ -165,6 +165,7 @@ commands:
   thread       show thread of specified post.
   profile      show profile.
   info         show session/meta informations.
+  size         show number of characters in text.
   help         show this help.
   version      show bsky CLI version.
 
@@ -751,6 +752,35 @@ note:
 EOS
 
   debug 'output_help_info_meta' 'END'
+}
+
+output_help_size()
+{
+  debug 'output_help_size' 'START'
+
+  cat << 'EOS'
+bsky size help
+
+usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--count-only]
+
+parameters:
+  --text '<text>'
+    Specify text for show number of characters.
+
+  --text-files '<file path>[:...]'
+    Specify the path of text files to show number of characters.
+    Separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt').
+
+  --count-only
+    Output only number of characters.
+
+note:
+  Either --text or --text-files must be specified.
+  Newlines at the end of <text> are ignored.
+  URL shortening is not supported at this time.
+EOS
+
+  debug 'output_help_size' 'END'
 }
 
 output_help_version()
@@ -1549,6 +1579,28 @@ command_info()
   debug 'command_info' 'END'
 }
 
+command_size()
+{
+  debug 'command_size' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_size
+  else
+    parse_parameters '--text:1 --text-files:1 --count-only:0' "$@"
+
+    if [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    then
+      error 'parameter specify required --text or --text-files'
+    fi
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_size "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYONLY_count_only}"
+  fi
+
+  debug 'command_size' 'END'
+}
+
 command_version()
 {
   debug 'command_version' 'START'
@@ -1654,6 +1706,10 @@ case $1 in
   info)
     shift
     command_info "$@"
+    ;;
+  size)
+    shift
+    command_size "$@"
     ;;
   help)
     output_help_general
