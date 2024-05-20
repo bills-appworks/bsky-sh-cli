@@ -148,6 +148,30 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (posts [--mode <posts mode>] --text '<text>' [--langs '<language code>[,...]'])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} posts ${input:posts_mode} --text '${input:post_text}' ${input:langs}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (posts [--mode <posts mode>] --text-files '<file path>[:...]' [--langs '<language code>[,...]'])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} posts ${input:posts_mode} --text-files '${input:text_files}' ${input:langs}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (posts [--mode <posts mode>] --text '<text>' --text-files '<file path>[:...]' [--langs '<language code>[,...]'])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} posts ${input:posts_mode} --text '${input:post_text}' --text-files '${input:text_files}' ${input:langs}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (reply --index <index> --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -388,6 +412,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.getPosts (<uris>...)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPosts",
+            "terminalKind": "integrated",
+            "argsString": "${input:api_uris}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getPostThread (<uri> <[depth depth<=1000 default:6]> <[parentHeight parentHeight<=1000 default:80]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getPostThread",
             "terminalKind": "integrated",
@@ -596,6 +628,12 @@
         },
         {
             "type": "promptString",
+            "id": "api_uris",
+            "description": "input space delimited multiple uri",
+            "default": ""
+        },
+        {
+            "type": "promptString",
             "id": "refreshJwt",
             "description": "input refresh JWT token"
         },
@@ -734,6 +772,12 @@
         },
         {
             "type": "promptString",
+            "id": "langs",
+            "description": "separate multiple language codes with commas (e.g. --langs 'en,ja') (delete if unnecessary)",
+            "default": "--langs ''"
+        },
+        {
+            "type": "promptString",
             "id": "text_files",
             "description": "separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt')",
             "default": ""
@@ -743,6 +787,13 @@
             "id": "count_only",
             "description": "display only number of size (delete if unnecessary)",
             "default": "--count-only"
+        },
+        {
+            "type": "pickString",
+            "id": "posts_mode",
+            "description": "select multiple post thread mode (delete if unnecessary)",
+            "options": ["", "--mode thread", "--mode sibling", "--mode independence"],
+            "default": ""
         }
     ]
 }
