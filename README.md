@@ -160,7 +160,7 @@ It is currently under development, and we will expand the compatible API in the 
 >    - ```BSKYSHCLI_PROFILE=<profile name> sh <API file name>```
 
 ## Disclaimer
-[!WARNING]
+> [!WARNING]
 > The author cannot be held responsible for any damages or troubles incurred as a result of use.
 
 ## License

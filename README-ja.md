@@ -151,7 +151,7 @@ Reply:<リプライ件数> Repost:<リポスト件数> Like:<いいね件数>
 
 現時点では開発中で、今後対応APIを充実していきます。
 
-[!NOTE]
+> [!NOTE]
 > - APIファイル`com.atproto.server.createSession`は、認証成功後に返されるJWTをセション管理ファイルに保存し、他のAPIのほとんどはセション管理ファイルからJWTを取得して認証に利用します。セション管理ファイルは、デフォルトでは`$HOME/.bsky_sh_cli/_bsky_sh_cli_session`、プロファイル指定時は`$HOME/.bsky_sh_cli/<プロファイル名>_session`になります。
 > - セションの自動更新は行われません。API実行結果の出力が`ExpiredToken`のエラーとなった場合は、以下の方法でセションを更新してください。
 >   - セション管理ファイルの`SESSION_REFRESH_JWT`の値を、APIファイル`com.atproto.server.refreshSession`のパラメタとして与えて実行
@@ -160,7 +160,7 @@ Reply:<リプライ件数> Repost:<リポスト件数> Like:<いいね件数>
 >   - ```BSKYSHCLI_PROFILE=<プロファイル名> sh <APIファイル名>```
 
 ## 免責事項
-[!WARNING]
+> [!WARNING]
 > 利用によって被ったいかなる損害・トラブルについても、作者は一切責任を負いかねます。
 
 ## ライセンス
