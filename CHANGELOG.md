@@ -1,3 +1,13 @@
+# v0.5.0
+## Add
+- Multiple post function such as thread posting (posts command)
+- Function to check number of characters in post text (size command)
+- Support for via (unofficial field for posting client name)
+- "app.bsky.feed.getPosts" add to API wrapper script
+## Modify
+- Improved execution result display for posting commands
+- Minor modifies
+
 # v0.4.0
 ## Add
 - Specify langs (language code) when posting
