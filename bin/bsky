@@ -357,11 +357,13 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky post [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --text '<text>'
     Specify text for post.
+    If this option is omitted, text input from standard input (pipe/redirect/interactive).
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --image<N> <image file path>
     Specify image file path.
@@ -432,9 +434,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky reply --index <view index> [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
        or
-       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --index <index>
@@ -448,6 +450,8 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+    If this option is omitted, text input from standard input (pipe/redirect/interactive).
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --image<N> <image file path>
     Specify image file path.
@@ -510,9 +514,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky quote --index <view index> [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
        or
-       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
 
 parameters:
   --index <view index>
@@ -526,6 +530,8 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+    If this option is omitted, text input from standard input (pipe/redirect/interactive).
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --image<N> <image file path>
     Specify image file path.
@@ -1178,10 +1184,10 @@ command_post()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    post_text="${PARSED_PARAM_KEYVALUE_text}"
+    post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}"`
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or standard input)"
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1291,9 +1297,10 @@ command_reply()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
+    post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}"`
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or standard input)"
     fi
     linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
     if [ -n "${linkcard_index}" ]
@@ -1386,9 +1393,10 @@ command_quote()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
+    post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}"`
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or standard input)"
     fi
     linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
     if [ -n "${linkcard_index}" ]

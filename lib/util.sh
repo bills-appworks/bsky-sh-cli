@@ -889,6 +889,56 @@ is_session_exist()
   return $status
 }
 
+is_stdin_exist()
+{
+  debug 'is_stdin_exist' 'START'
+
+  if [ -p /dev/stdin ] || [ -f /dev/stdin ]
+  then
+    status=0
+  else
+    status=1
+  fi
+
+  debug 'is_stdin_exist' 'END'
+
+  return $status
+}
+
+get_stdin_simple()
+{
+  debug 'get_stdin_simple' 'START'
+
+  cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+
+  debug 'get_stdin_simple' 'END'
+}
+
+resolve_post_text()
+{
+  param_resolve_post_text=$1
+
+  debug 'resolve_post_text' 'START'
+  debug 'resolve_post_text' "param_resolve_post_text:${param_resolve_post_text}"
+
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple
+  elif [ -n "${param_resolve_post_text}" ]
+  then
+    # --text parameter
+    _p "${param_resolve_post_text}"
+  else
+    # interactive input
+    _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+    get_stdin_simple
+    _pn '[Posting...]' 1>&2
+  fi
+
+  debug 'resolve_post_text' 'END'
+}
+
 # ifndef BSKYSHCLI_DEFINE_UTIL
 fi
 
