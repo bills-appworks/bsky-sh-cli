@@ -571,6 +571,21 @@ create_json_keyvalue()
   debug 'create_json_keyvalue' 'END'
 }
 
+create_json_keyvalue_variable()
+{
+  param_variable=$1
+  param_quote=$2
+
+  debug 'create_json_keyvalue_variable' 'START'
+  debug 'create_json_keyvalue_variable' "param_key:${param_variable} param_quote:${param_quote}"
+
+  value=`eval _p \"\\$"${param_variable}"\"`
+  value=`_p "${value}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
+  create_json_keyvalue "${param_variable}" "${value}" "${param_quote}"
+
+  debug 'create_json_keyvalue_variable' 'END'
+}
+
 api_core()
 {
   param_api="$1"
