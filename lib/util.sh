@@ -924,6 +924,7 @@ get_stdin_simple()
 {
   debug 'get_stdin_simple' 'START'
 
+  # standard input filtered: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
   cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
 
   debug 'get_stdin_simple' 'END'
@@ -933,8 +934,7 @@ get_stdin_simple_lines()
 {
   debug 'get_stdin_simple' 'START'
 
-  # standard input filtered: \ -> \\,  " -> \",  \n... at tail -> (null)
-#  cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g'
+  # standard input filtered: newline... at tail -> (null)
   cat - | sed -z 's/\(\n\)*$//g'
 
   debug 'get_stdin_simple' 'END'
@@ -1017,10 +1017,13 @@ standard_input_lines()
 resolve_post_text()
 {
   param_resolve_post_text=$1
+  param_resolve_post_text_file=$2
 
   debug 'resolve_post_text' 'START'
   debug 'resolve_post_text' "param_resolve_post_text:${param_resolve_post_text}"
+  debug 'resolve_post_text' "param_resolve_post_text_file:${param_resolve_post_text_file}"
 
+  status_resolve_post_text=0
   if is_stdin_exist
   then
     # standard input (pipe or redirect)
@@ -1029,6 +1032,18 @@ resolve_post_text()
   then
     # --text parameter
     _p "${param_resolve_post_text}"
+  elif [ -n "${param_resolve_post_text_file}" ]
+  then
+    # --text-file parameter
+    if [ -r "${param_resolve_post_text_file}" ]
+    then
+      # escape: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
+      # using GNU sed -z option
+      < "${param_resolve_post_text_file}" sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+    else
+      error_msg "specified text file is not readable: ${param_resolve_post_text_file}"
+      status_resolve_post_text=1
+    fi
   else
     # interactive input
     _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
@@ -1037,6 +1052,8 @@ resolve_post_text()
   fi
 
   debug 'resolve_post_text' 'END'
+
+  return $status_resolve_post_text
 }
 
 # ifndef BSKYSHCLI_DEFINE_UTIL
