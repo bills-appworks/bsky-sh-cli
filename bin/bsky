@@ -408,7 +408,7 @@ parameters:
 note:
   you must have started a Bluesky session with the login command.
   --text and --text-file are exclusive.
-  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-file` option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -444,15 +444,15 @@ parameters:
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
   --separator-prefix '<delimiter string>'
-    Splits posts within a single specified text (`--text` option, a file specified by the `--text-files` option, or standard input) at lines starting with the specified <separator string>.
+    Splits posts within a single specified text (--text option, a file specified by the --text-files option, or standard input) at lines starting with the specified <separator string>.
 
   --output-json
     Output JSON format.
 
 note:
   you must have started a Bluesky session with the login command.
-  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-files` option, and standard input (pipe/redirect) are specified, input will be interactive.
-  Standard input (pipe/redirect), `--text` option, and `--text-files` option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in `--text` -> files specified in `--text-files`.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-files option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), --text option, and`--text-files option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in --text -> files specified in --text-files.
 EOS
 
   debug 'output_help_posts' 'END'
@@ -512,7 +512,7 @@ parameters:
 note:
   you must have started a Bluesky session with the login command.
   --text and --text-file are exclusive.
-  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-file` option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -604,7 +604,7 @@ parameters:
 note:
   you must have started a Bluesky session with the login command.
   --text and --text-file are exclusive.
-  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-file` option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -889,7 +889,7 @@ parameters:
     Separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt').
 
   --separator-prefix '<delimiter string>'
-    Splits posts within a single specified text (`--text` option, a file specified by the `--text-files` option, or standard input) at lines starting with the specified <separator string>.
+    Splits posts within a single specified text (--text option, a file specified by the --text-files option, or standard input) at lines starting with the specified <separator string>.
 
   --count-only
     Output only number of characters.
@@ -899,8 +899,8 @@ parameters:
       --count-only
 
 note:
-  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-files` option, and standard input (pipe/redirect) are specified, input will be interactive.
-  Standard input (pipe/redirect), `--text` option, and `--text-files` option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in `--text` -> files specified in `--text-files`.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-files option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), --text option, and --text-files option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in --text -> files specified in --text-files.
   Newlines at the end of text are ignored.
   URL shortening is not supported at this time.
 EOS
