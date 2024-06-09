@@ -372,19 +372,19 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post [--text '<text>'] [--text-file '<file path>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --text '<text>'
     Specify text for post.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --text-file '<file path>'
+  --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
@@ -465,9 +465,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> [--text '<text>'] [--text-file '<file path>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky reply --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <index>
@@ -483,12 +483,12 @@ parameters:
     Specify text for post.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --text-file '<file path>'
+  --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
@@ -557,9 +557,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> [--text '<text>'] [--text-file '<file path>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky quote --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<file path>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <view index>
@@ -575,12 +575,12 @@ parameters:
     Specify text for post.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --text-file '<file path>'
+  --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
