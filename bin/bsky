@@ -1274,11 +1274,20 @@ command_posts()
   then
     output_help_posts
   else
-    parse_parameters '--mode:1 --text:1 --text-files:1 --langs:1 --output-json:0' "$@"
+    parse_parameters '--mode:1 --text:1 --text-files:1 --langs:1 --output-json:0 --separator-prefix:1' "$@"
 
-    if [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
+    if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
     then
-      error 'parameter specify required --text or --text-files'
+      separator_prefix="${PARSED_PARAM_KEYVALUE_separator_prefix}"
+    fi
+
+    # standard input
+    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}"`
+
+    if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    then
+      error "text must be specify (--text or --text-files or standard input)"
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_mode}" ]
@@ -1294,15 +1303,23 @@ command_posts()
       esac
     fi
 
+    # unescaped
+    specified_text=`echo "${PARSED_PARAM_KEYVALUE_text}" | sed 's/\\\\"/"/g'`
     # posts count check
     posts_count=0
-    if [ -n "${PARSED_PARAM_KEYVALUE_text}" ]
-    then
-      posts_count=1
-    fi
-    _slice "${PARSED_PARAM_KEYVALUE_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-    test_files_count=$?
-    posts_count=`expr "${posts_count}" + "${test_files_count}"`
+    # posts count in standard input
+    core_posts_count_lines "${stdin_text}" "${separator_prefix}"
+    stdin_count=$?
+    posts_count=`expr "${posts_count}" + "${stdin_count}"`
+    # posts count in parameter specified
+    core_posts_count_lines "${specified_text}" "${separator_prefix}"
+    specified_text_count=$?
+    posts_count=`expr "${posts_count}" + "${specified_text_count}"`
+    # posts count in text files
+    core_posts_files_count_lines "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}"
+    text_files_count=$?
+    posts_count=`expr "${posts_count}" + "${text_files_count}"`
+    debug 'command_posts' "posts count: ${posts_count}"
     if [ "${posts_count}" -gt 10 ]
     then
       error "The total number of posts by --text and --text-files options exceeds the limit of 10. Detect count:${posts_count}"
@@ -1310,7 +1327,7 @@ command_posts()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}"
+    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_posts' 'END'

@@ -929,6 +929,91 @@ get_stdin_simple()
   debug 'get_stdin_simple' 'END'
 }
 
+get_stdin_simple_lines()
+{
+  debug 'get_stdin_simple' 'START'
+
+  # standard input filtered: \ -> \\,  " -> \",  \n... at tail -> (null)
+#  cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g'
+  cat - | sed -z 's/\(\n\)*$//g'
+
+  debug 'get_stdin_simple' 'END'
+}
+
+interactive_input_post()
+{
+  debug 'interactive_input_post' 'START'
+
+  # interactive input
+  _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+  get_stdin_simple
+  _pn '[Posting...]' 1>&2
+
+  debug 'interactive_input_post' 'END'
+}
+
+interactive_input_post_lines()
+{
+  debug 'interactive_input_post_lines' 'START'
+
+  # interactive input
+  _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+  get_stdin_simple_lines
+  _pn '[Posting...]' 1>&2
+
+  debug 'interactive_input_post_lines' 'END'
+}
+
+standard_input()
+{
+  param_standard_input_text=$1
+  param_standard_input_text_file=$2
+
+  debug 'standard_input' 'START'
+  debug 'standard_input' "param_standard_input_text:${param_standard_input_text}"
+  debug 'standard_input' "param_standard_input_text_file:${param_standard_input_text_file}"
+
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple
+  elif [ -z "${param_standard_input_text}" ] && [ -z "${param_standard_input_text_file}" ]
+  then
+    # interactive input
+    interactive_input_post
+  else
+    # --text or --text-file(s) parameter
+    :
+  fi
+
+  debug 'standard_input' 'END'
+}
+
+standard_input_lines()
+{
+  param_standard_input_lines_text=$1
+  param_standard_input_lines_text_file=$2
+
+  debug 'standard_input_lines' 'START'
+  debug 'standard_input_lines' "param_standard_input_lines_text:${param_standard_input_lines_text}"
+  debug 'standard_input_lines' "param_standard_input_lines_text_file:${param_standard_input_lines_text_file}"
+
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple_lines
+  elif [ -z "${param_standard_input_lines_text}" ] && [ -z "${param_standard_input_lines_text_file}" ]
+  then
+    # interactive input
+    interactive_input_post_lines
+  else
+    # --text or --text-file(s) parameter
+    :
+  fi
+
+  debug 'standard_input_lines' 'END'
+}
+
 resolve_post_text()
 {
   param_resolve_post_text=$1

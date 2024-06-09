@@ -352,6 +352,73 @@ core_text_size()
   return "${text_size}"
 }
 
+core_text_size_lines()
+{
+  param_core_text_size_lines_text="$1"
+  param_core_text_size_lines_separator_prefix="$2"
+
+  debug 'core_text_size_lines' 'START'
+  debug 'core_text_size_lines' "param_core_text_size_lines_text:${param_core_text_size_lines_text}"
+  debug 'core_text_size_lines' "param_core_text_size_lines_separator_prefix:${param_core_text_size_lines_separator_prefix}"
+
+  count=0
+  lines=''
+  if [ -n "${param_core_text_size_lines_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_text_size_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_core_text_size_lines_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          size=`_p "${lines}" | wc -m`
+          eval "RESULT_core_text_size_lines_${count}=${size}"
+          debug 'core_text_size_lines' "count:${count} size:${size}"
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      size=`_p "${lines}" | wc -m`
+      eval "RESULT_core_text_size_lines_${count}=${size}"
+      debug 'core_text_size_lines' "remain part count:${count} size:${size}"
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    size=`_p "${param_core_text_size_lines_text}" | wc -m`
+    eval "RESULT_core_text_size_lines_${count}=${size}"
+    debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
+  fi
+
+  debug 'core_text_size_lines' 'END'
+
+  return $count
+}
+
 core_get_text_file()
 {
   param_text_file_path="$1"
@@ -455,6 +522,42 @@ core_verify_text_file_size()
   return $status_core_verify_text_file_size
 }
 
+core_verify_text_file_size_lines()
+{
+  param_text_file_path="$1"
+  param_separator_prefix="$2"
+
+  debug 'core_verify_text_file_size_lines' 'START'
+  debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
+  debug 'core_verify_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  status_core_verify_text_file_size_lines=0
+  if text_file=`core_get_text_file "${param_text_file_path}"`
+  then
+    # unescape \n -> (newline)
+    text_file=`_p "${text_file}" | sed 's/\\\\n/\n/g'`
+    core_text_size_lines "${text_file}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at ${param_text_file_path}"
+        status_core_verify_text_file_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  else
+    status_core_verify_text_file_size_lines=1
+  fi
+
+  debug 'core_verify_text_file_size_lines' 'END'
+
+  return $status_core_verify_text_file_size_lines
+}
+
 core_process_files()
 {
   param_process_files="$1"
@@ -492,17 +595,17 @@ core_process_files()
 
 core_verify_text_size()
 {
-  param_text="$1"
+  param_core_verify_text_size_text="$1"
   param_text_files="$2"
 
   debug 'core_verify_text_size' 'START'
-  debug 'core_verify_text_size' "param_text:${param_text}"
+  debug 'core_verify_text_size' "param_core_verify_text_size_text:${param_core_verify_text_size_text}"
   debug 'core_verify_text_size' "param_text_files:${param_text_files}"
 
   status_core_verify_text_size=0
-  if [ -n "${param_text}" ]
+  if [ -n "${param_core_verify_text_size_text}" ]
   then
-    core_text_size "${param_text}"
+    core_text_size "${param_core_verify_text_size_text}"
     size=$?
     if [ $size -gt 300 ]
     then
@@ -730,23 +833,23 @@ core_build_images_fragment()
 
 core_extract_link_url()
 {
-  param_text="$1"
+  param_core_extract_link_url_text="$1"
   param_extract_linkcard_index="$2"
 
   debug 'core_extract_link_url' 'START'
-  debug 'core_extract_link_url' "param_text:${param_text}"
+  debug 'core_extract_link_url' "param_core_extract_link_url_text:${param_core_extract_link_url_text}"
   debug 'core_extract_link_url' "param_extract_linkcard_index:${param_extract_linkcard_index}"
 
   # TODO: URL shortening processing
 
   # unescape (e.g. '\n', '"' : escaped at parse_parameters()) for adjust index
-#  expanded_text=`echo "${param_text}" | sed 's/\\\\"/"/g'`
+#  expanded_text=`echo "${param_core_extract_link_url_text}" | sed 's/\\\\"/"/g'`
   # in the after loop, "expr length" and "expr match" change to "expr :" and self implemetation by platrom porability reason
   # '\n' handling difficult in self implementation, escape to convert from '\n' to '\t'
   # using GNU sed -z option
   # 
   # however, since using jq (cheat) now, may not need to handle '\n'
-  expanded_text=`echo "${param_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
+  expanded_text=`echo "${param_core_extract_link_url_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
   accum_cut_length=0
   extract_link_count=0
 
@@ -819,14 +922,14 @@ core_extract_link_url()
 
 core_build_link_facets_fragment()
 {
-  param_text="$1"
+  param_core_build_link_facets_fragment_text="$1"
 
   debug 'core_build_link_facets_fragment' 'START'
-  debug 'core_build_link_facets_fragment' "param_text:${param_text}"
+  debug 'core_build_link_facets_fragment' "param_core_build_link_facets_fragment_text:${param_core_build_link_facets_fragment_text}"
 
   link_facets_fragment='['
   element_count=0
-  link_facets_element=`core_extract_link_url "${param_text}" ''`
+  link_facets_element=`core_extract_link_url "${param_core_build_link_facets_fragment_text}" ''`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $link_facets_element
@@ -856,16 +959,16 @@ core_build_link_facets_fragment()
 
 core_build_external_fragment()
 {
-  param_text="$1"
+  param_core_build_external_fragment_text="$1"
   param_linkcard_index="$2"
 
   debug 'core_build_external_fragment' 'START'
-  debug 'core_build_external_fragment' "param_text:${param_text}"
+  debug 'core_build_external_fragment' "param_core_build_external_fragment_text:${param_core_build_external_fragment_text}"
   debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
 
   if [ "${param_linkcard_index}" -gt 0 ]
   then
-    url=`core_extract_link_url "${param_text}" "${param_linkcard_index}"`
+    url=`core_extract_link_url "${param_core_build_external_fragment_text}" "${param_linkcard_index}"`
     if [ -n "${url}" ]
     then
       external_html=`curl -s "${url}" 2>/dev/null`
@@ -1921,13 +2024,13 @@ core_output_post()
 
 core_posts_single()
 {
-  param_text="$1"
+  param_core_posts_single_text="$1"
   param_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
 
   debug 'core_posts_single' 'START'
-  debug 'core_posts_single' "param_text:${param_text}"
+  debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
   debug 'core_posts_single' "param_langs:${param_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
@@ -1939,14 +2042,14 @@ core_posts_single()
   else
     reply_fragment=''
   fi
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" 1`
+  link_facets_fragment=`core_build_link_facets_fragment "${param_core_posts_single_text}"`
+  external_fragment=`core_build_external_fragment "${param_core_posts_single_text}" 1`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   if [ -n "${reply_fragment}" ]
   then
-    record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
   else
-    record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\""
   fi
   if [ -n "${external_fragment}" ]
   then
@@ -1984,37 +2087,183 @@ core_posts_single()
   return $status_core_posts_single
 }
 
-core_posts_single_file()
+core_is_post_text_meaningful()
 {
-  param_file_path="$1"
-  param_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
+  param_post_text="$1"
 
-  debug 'core_posts_single_file' 'START'
-  debug 'core_posts_single_file' "param_file_path:${param_file_path}"
-  debug 'core_posts_single_file' "param_langs:${param_langs}"
-  debug 'core_posts_single_file' "param_parent_uri:${param_parent_uri}"
-  debug 'core_posts_single_file' "param_parent_cid:${param_parent_cid}"
+  debug 'core_is_post_text_meaningful' 'START'
+  debug 'core_is_post_text_meaningful' "param_post_text:${param_post_text}"
 
-  if [ -r "${param_file_path}" ]
+  modified_post_text=`_p "${param_post_text}" | sed -z 's/\(\n\)*$//g'`
+  if [ -n "${modified_post_text}" ]
   then
-    text=`< "${param_file_path}" sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-    if core_posts_single "${text}" "${param_langs}" "${param_parent_uri}" "${param_parent_cid}"
-    then
-      status_core_posts_single_file=0
-      RESULT_core_posts_single_file_uri="${RESULT_core_posts_single_uri}"
-      RESULT_core_posts_single_file_cid="${RESULT_core_posts_single_cid}"
-    else
-      status_core_posts_single_file=1
-    fi
+    is_post_text_meaningful=0
   else
-    status_core_posts_single_file=1
+    is_post_text_meaningful=1
   fi
 
-  debug 'core_posts_single_file' 'END'
+  debug 'core_is_post_text_meaningful' 'END'
 
-  return $status_core_posts_single_file
+  return $is_post_text_meaningful
+}
+
+core_posts_count_lines()
+{
+  param_core_posts_count_lines_text="$1"
+  param_core_posts_count_lines_separator_prefix="$2"
+
+  debug 'core_posts_count_lines' 'START'
+  debug 'core_posts_count_lines' "param_core_posts_count_lines_text:${param_core_posts_count_lines_text}"
+  debug 'core_posts_count_lines' "param_core_posts_count_lines_separator_prefix:${param_core_posts_count_lines_separator_prefix}"
+
+  count=0
+  lines=''
+  if [ -n "${param_core_posts_count_lines_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_count_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_core_posts_count_lines_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+  fi
+  debug 'core_posts_count_lines' "count: ${count}"
+
+  debug 'core_posts_count_lines' 'END'
+
+  return $count
+}
+
+core_posts_files_count_lines()
+{
+  param_core_posts_files_count_lines_files="$1"
+  param_core_posts_files_count_lines_separator_prefix="$2"
+
+  debug 'core_posts_files_count_lines' 'START'
+  debug 'core_posts_files_count_lines' "param_core_posts_files_count_lines_files:${param_core_posts_files_count_lines_files}"
+  debug 'core_posts_files_count_lines' "param_core_posts_files_count_lines_separator_prefix:${param_core_posts_files_count_lines_separator_prefix}"
+
+  core_posts_files_count_lines_count=0
+  _slice "${param_core_posts_files_count_lines_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+  files_count=$?
+  if [ -n "${param_core_posts_files_count_lines_separator_prefix}" ]
+  then
+    files_index=1
+    while [ $files_index -le $files_count ]
+    do
+      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+      file_content=`cat "${target_file}"`
+      core_posts_count_lines "${file_content}" "${param_core_posts_files_count_lines_separator_prefix}"
+      file_content_count=$?
+      core_posts_files_count_lines_count=`expr "${core_posts_files_count_lines_count}" + "${file_content_count}"`
+      files_index=`expr "${files_index}" + 1`
+    done
+  else
+    core_posts_files_count_lines_count="${files_count}"
+  fi
+
+  debug 'core_posts_files_count_lines' 'END'
+
+  return $core_posts_files_count_lines_count
+}
+
+core_verify_text_size_lines()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_separator_prefix="$4"
+
+  debug 'core_verify_text_size_lines' 'START'
+  debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
+  debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
+  debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
+  debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  status_core_verify_text_size_lines=0
+
+  if [ -n "${param_stdin_text}" ]
+  then
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at standard input"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at --text value"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}"
+    then
+      :
+    else
+      status_core_verify_text_size_lines=1
+    fi
+  fi
+
+  if [ $status_core_verify_text_size_lines -ne 0 ]
+  then
+    error 'Processing has been canceled'
+  fi
+
+  debug 'core_verify_text_size_lines' 'END'
 }
 
 core_thread()
@@ -2178,30 +2427,182 @@ core_post()
   debug 'core_post' 'END'
 }
 
+core_posts_thread_lines()
+{
+  param_core_posts_thread_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_thread_lines' 'START'
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
+  debug 'core_posts_thread_lines' "param_langs:${param_langs}"
+  debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_thread_lines_parent_uri="${param_parent_uri}"
+  core_posts_thread_lines_parent_cid="${param_parent_cid}"
+  core_posts_thread_lines_root_uri=''
+  RESULT_core_posts_thread_lines_uri=''
+  RESULT_core_posts_thread_lines_cid=''
+  RESULT_core_posts_thread_lines_root_uri=''
+  #RESULT_core_posts_thread_lines_uri_list=''
+  #RESULT_core_posts_thread_lines_count=0
+  status_core_posts_thread_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_thread_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+          then  # post succeeded
+            core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+            core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+            RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+            RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+            #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            if [ -z "${core_posts_thread_lines_root_uri}" ]
+            then
+              core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+              RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+            fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_thread_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+      then  # post succeeded
+        core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+        core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+        RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+        RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+        #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        if [ -z "${core_posts_thread_lines_root_uri}" ]
+        then
+          core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+          RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+        fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_thread_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_thread_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+    then  # post succeeded
+      core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+      core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+      RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+      RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+      #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      if [ -z "${core_posts_thread_lines_root_uri}" ]
+      then
+        core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+        RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+      fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_thread_lines=1
+    fi
+  fi
+  #RESULT_core_posts_thread_lines_count="${count}"
+
+  debug 'core_posts_thread_lines' 'END'
+
+  return $status_core_posts_thread_lines
+}
+
 core_posts_thread()
 {
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-  param_output_json="$4"
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
 
   debug 'core_posts_thread' 'START'
-  debug 'core_posts_thread' "param_text:${param_text}"
+  debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
   debug 'core_posts_thread' "param_text_files:${param_text_files}"
   debug 'core_posts_thread' "param_langs:${param_langs}"
+  debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
+  #post_uri_list=''
 
-  if [ -n "${param_text}" ]
-  then
-    if core_posts_single "${param_text}" "${param_langs}"
+  if [ -n "${param_stdin_text}" ]
+  then  # standard input (pipe/redirect)
+    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
     then
-      parent_uri="${RESULT_core_posts_single_uri}"
-      parent_cid="${RESULT_core_posts_single_cid}"
-      thread_root_uri="${parent_uri}"
+      parent_uri="${RESULT_core_posts_thread_lines_uri}"
+      parent_cid="${RESULT_core_posts_thread_lines_cid}"
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      parent_uri="${RESULT_core_posts_thread_lines_uri}"
+      parent_cid="${RESULT_core_posts_thread_lines_cid}"
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -2215,13 +2616,24 @@ core_posts_thread()
     while [ $files_index -le $files_count ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
+      if [ -r "${target_file}" ]
       then
-        parent_uri="${RESULT_core_posts_single_file_uri}"
-        parent_cid="${RESULT_core_posts_single_file_cid}"
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+      then
+        parent_uri="${RESULT_core_posts_thread_lines_uri}"
+        parent_cid="${RESULT_core_posts_thread_lines_cid}"
         if [ -z "${thread_root_uri}" ]
         then
-          thread_root_uri="${parent_uri}"
+          thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
       else
         error 'Processing has been canceled'
@@ -2236,30 +2648,212 @@ core_posts_thread()
   debug 'core_posts_thread' 'END'
 }
 
+core_posts_sibling_lines()
+{
+  param_core_posts_sibling_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_sibling_lines' 'START'
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
+  debug 'core_posts_sibling_lines' "param_langs:${param_langs}"
+  debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_sibling_lines_parent_uri="${param_parent_uri}"
+  core_posts_sibling_lines_parent_cid="${param_parent_cid}"
+  core_posts_sibling_lines_root_uri=''
+  RESULT_core_posts_sibling_lines_uri=''
+  RESULT_core_posts_sibling_lines_cid=''
+  RESULT_core_posts_sibling_lines_root_uri=''
+  #RESULT_core_posts_sibling_lines_uri_list=''
+  #RESULT_core_posts_sibling_lines_count=0
+  status_core_posts_sibling_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_sibling_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+          then  # post succeeded
+            if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+            then
+              core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+            fi
+            if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+            then
+              core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+            fi
+            RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+            RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+            #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            if [ -z "${core_posts_sibling_lines_root_uri}" ]
+            then
+              core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+              RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+            fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_sibling_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+      then  # post succeeded
+        if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+        then
+          core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+        fi
+        if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+        then
+          core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+        fi
+        RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+        RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+        #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        if [ -z "${core_posts_sibling_lines_root_uri}" ]
+        then
+          core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+          RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+        fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_sibling_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_sibling_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+    then  # post succeeded
+      if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+      then
+        core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+      fi
+      if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+      then
+        core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+      fi
+      RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+      RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+      #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      if [ -z "${core_posts_sibling_lines_root_uri}" ]
+      then
+        core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+        RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+      fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_sibling_lines=1
+    fi
+  fi
+  #RESULT_core_posts_sibling_lines_count="${count}"
+
+  debug 'core_posts_sibling_lines' 'END'
+
+  return $status_core_posts_sibling_lines
+}
+
 core_posts_sibling()
 {
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-  param_output_json="$4"
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
 
   debug 'core_posts_sibling' 'START'
-  debug 'core_posts_sibling' "param_text:${param_text}"
+  debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
   debug 'core_posts_sibling' "param_text_files:${param_text_files}"
   debug 'core_posts_sibling' "param_langs:${param_langs}"
+  debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
+  #post_uri_list=''
 
-  if [ -n "${param_text}" ]
+  if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_single "${param_text}" "${param_langs}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
     then
-      parent_uri="${RESULT_core_posts_single_uri}"
-      parent_cid="${RESULT_core_posts_single_cid}"
-      thread_root_uri="${parent_uri}"
+      if [ -z "${parent_uri}" ]
+      then
+        parent_uri="${RESULT_core_posts_sibling_lines_uri}"
+      fi
+      if [ -z "${parent_cid}" ]
+      then
+        parent_cid="${RESULT_core_posts_sibling_lines_cid}"
+      fi
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      if [ -z "${parent_uri}" ]
+      then
+        parent_uri="${RESULT_core_posts_sibling_lines_uri}"
+      fi
+      if [ -z "${parent_cid}" ]
+      then
+        parent_cid="${RESULT_core_posts_sibling_lines_cid}"
+      fi
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -2273,19 +2867,30 @@ core_posts_sibling()
     while [ $files_index -le $files_count ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
+      if [ -r "${target_file}" ]
+      then
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
       then
         if [ -z "${parent_uri}" ]
         then
-          parent_uri="${RESULT_core_posts_single_file_uri}"
+          parent_uri="${RESULT_core_posts_sibling_lines_uri}"
         fi
         if [ -z "${parent_cid}" ]
         then
-          parent_cid="${RESULT_core_posts_single_file_cid}"
+          parent_cid="${RESULT_core_posts_sibling_lines_cid}"
         fi
         if [ -z "${thread_root_uri}" ]
         then
-          thread_root_uri="${parent_uri}"
+          thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
       else
         error 'Processing has been canceled'
@@ -2300,17 +2905,150 @@ core_posts_sibling()
   debug 'core_posts_sibling' 'END'
 }
 
+core_posts_independence_lines()
+{
+  param_core_posts_independence_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_independence_lines' 'START'
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
+  debug 'core_posts_independence_lines' "param_langs:${param_langs}"
+  debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_independence_parent_uri=''
+  core_posts_independence_parent_cid=''
+  #core_posts_independence_lines_root_uri=''
+  #RESULT_core_posts_independence_lines_uri=''
+  #RESULT_core_posts_independence_lines_cid=''
+  #RESULT_core_posts_independence_lines_root_uri=''
+  RESULT_core_posts_independence_lines_uri_list=''
+  #RESULT_core_posts_independence_lines_count=0
+  status_core_posts_independence_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_independence_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+          then  # post succeeded
+            core_posts_independence_parent_uri=''
+            core_posts_independence_parent_cid=''
+            #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+            #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+            RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            #if [ -z "${core_posts_independence_lines_root_uri}" ]
+            #then
+            #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+            #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+            #fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_independence_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+      then  # post succeeded
+        core_posts_independence_parent_uri=''
+        core_posts_independence_parent_cid=''
+        #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+        #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+        RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        #if [ -z "${core_posts_independence_lines_root_uri}" ]
+        #then
+        #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+        #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+        #fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_independence_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_independence_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+    then  # post succeeded
+      core_posts_independence_parent_uri=''
+      core_posts_independence_parent_cid=''
+      #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+      #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+      RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      #if [ -z "${core_posts_independence_lines_root_uri}" ]
+      #then
+      #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+      #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+      #fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_independence_lines=1
+    fi
+  fi
+  #RESULT_core_posts_independence_lines_count="${count}"
+
+  debug 'core_posts_independence_lines' 'END'
+
+  return $status_core_posts_independence_lines
+}
+
 core_posts_independence()
 {
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-  param_output_json="$4"
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
 
   debug 'core_posts_independence' 'START'
-  debug 'core_posts_independence' "param_text:${param_text}"
+  debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
   debug 'core_posts_independence' "param_text_files:${param_text_files}"
   debug 'core_posts_independence' "param_langs:${param_langs}"
+  debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
 
   parent_uri=''
@@ -2318,14 +3056,27 @@ core_posts_independence()
   thread_root_uri=''
   post_uri_list=''
 
-  if [ -n "${param_text}" ]
-  then
-    if core_posts_single "${param_text}" "${param_langs}"
+  if [ -n "${param_stdin_text}" ]
+  then  # standard input (pipe/redirect)
+    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}"
     then
       #parent_uri=''
       #parent_cid=''
-      #thread_root_uri="${RESULT_core_posts_single_uri}"
-      post_uri_list="${post_uri_list} ${RESULT_core_posts_single_uri}"
+      #thread_root_uri=''
+      post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}"
+    then
+      #parent_uri=''
+      #parent_cid=''
+      #thread_root_uri=''
+      post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
     else
       error 'Processing has been canceled'
     fi
@@ -2339,15 +3090,23 @@ core_posts_independence()
     while [ $files_index -le $files_count ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
+      if [ -r "${target_file}" ]
+      then
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}"
       then
         #parent_uri=''
         #parent_cid=''
-        #if [ -z "${thread_root_uri}" ]
-        #then
-        #  thread_root_uri="${RESULT_core_posts_single_file_uri}"
-        #fi
-        post_uri_list="${post_uri_list} ${RESULT_core_posts_single_file_uri}"
+        #thread_root_uri=''
+        post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       else
         error 'Processing has been canceled'
       fi
@@ -2363,16 +3122,20 @@ core_posts_independence()
 core_posts()
 {
   param_mode="$1"
-  param_text="$2"
-  param_text_files="$3"
-  param_langs="$4"
-  param_output_json="$5"
+  param_stdin_text="$2"
+  param_specified_text="$3"
+  param_text_files="$4"
+  param_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
 
   debug 'core_posts' 'START'
   debug 'core_posts' "param_mode:${param_mode}"
-  debug 'core_posts' "param_text:${param_text}"
+  debug 'core_posts' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts' "param_specified_text:${param_specified_text}"
   debug 'core_posts' "param_text_fies:${param_text_files}"
   debug 'core_posts' "param_langs:${param_langs}"
+  debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
 
   read_session_file
@@ -2380,17 +3143,17 @@ core_posts()
   collection='app.bsky.feed.post'
 
   # size check
-  core_verify_text_size "${param_text}" "${param_text_files}"
+  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}"
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_text}" "${param_text_files}" "${param_langs}" "${param_output_json}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
       ;;
     independence)
-      core_posts_independence "${param_text}" "${param_text_files}" "${param_langs}" "${param_output_json}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
       ;;
     thread|*)
-      core_posts_thread "${param_text}" "${param_text_files}" "${param_langs}" "${param_output_json}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
       ;;
   esac
 
@@ -3322,21 +4085,21 @@ core_info_meta_profile()
 
 core_size()
 {
-  param_text="$1"
+  param_specified_text="$1"
   param_text_files="$2"
   param_count_only="$3"
   param_output_json="$4"
 
   debug 'core_size' 'START'
-  debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_specified_text:${param_specified_text}"
   debug 'core_post' "param_text_files:${param_text_files}"
   debug 'core_post' "param_count_only:${param_count_only}"
   debug 'core_post' "param_output_json:${param_output_json}"
 
   json_stack=''
-  if [ -n "${param_text}" ]
+  if [ -n "${param_specified_text}" ]
   then
-    core_text_size "${param_text}"
+    core_text_size "${param_specified_text}"
     text_size=$?
     if [ $text_size -le 300 ]
     then
