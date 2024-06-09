@@ -416,7 +416,7 @@ output_help_posts()
   cat << 'EOS'
 bsky post help
 
-usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--langs '<language code>[,...]'] [--separator-prefix '<delimiter string>'] [--output-json]
 
 parameters:
   --mode <posts mode>
@@ -437,12 +437,16 @@ parameters:
     Specify the languages to include in the posts.
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
+  --separator-prefix '<delimiter string>'
+    Splits posts within a single specified text (`--text` option, a file specified by the `--text-files` option, or standard input) at lines starting with the specified <separator string>.
+
   --output-json
     Output JSON format.
 
 note:
   you must have started a Bluesky session with the login command.
-  Either --text or --text-files must be specified.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-files` option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), `--text` option, and `--text-files` option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in `--text` -> files specified in `--text-files`.
 EOS
 
   debug 'output_help_posts' 'END'
@@ -856,7 +860,7 @@ output_help_size()
   cat << 'EOS'
 bsky size help
 
-usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--count-only] [--output-json]
+usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--separator-prefix '<delimiter string>'] [--count-only] [--output-json]
 
 parameters:
   --text '<text>'
@@ -866,6 +870,9 @@ parameters:
     Specify the path of text files to show number of characters.
     Separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt').
 
+  --separator-prefix '<delimiter string>'
+    Splits posts within a single specified text (`--text` option, a file specified by the `--text-files` option, or standard input) at lines starting with the specified <separator string>.
+
   --count-only
     Output only number of characters.
 
@@ -874,8 +881,9 @@ parameters:
       --count-only
 
 note:
-  Either --text or --text-files must be specified.
-  Newlines at the end of <text> are ignored.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the `--text` option, `--text-files` option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), `--text` option, and `--text-files` option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in `--text` -> files specified in `--text-files`.
+  Newlines at the end of text are ignored.
   URL shortening is not supported at this time.
 EOS
 
@@ -1327,7 +1335,7 @@ command_posts()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}"
+    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_posts' 'END'
@@ -1789,15 +1797,24 @@ command_size()
   then
     output_help_size
   else
-    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0' "$@"
+    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1' "$@"
 
-    if [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
+    if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
     then
-      error 'parameter specify required --text or --text-files'
+      separator_prefix="${PARSED_PARAM_KEYVALUE_separator_prefix}"
+    fi
+
+    # standard input
+    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}"`
+
+    if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    then
+      error 'parameter specify required --text or --text-files or standard input'
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_size "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}"
+    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_size' 'END'

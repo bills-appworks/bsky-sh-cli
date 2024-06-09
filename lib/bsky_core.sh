@@ -496,6 +496,86 @@ core_output_text_file_size()
   debug 'core_output_text_file_size' 'END'
 }
 
+core_output_text_file_size_lines()
+{
+  param_text_file_path="$1"
+  param_separator_prefix="$2"
+  param_count_only="$3"
+  param_output_json="$4"
+
+  debug 'core_output_text_file_size_lines' 'START'
+  debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
+  debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
+  debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
+
+  if [ -r "${param_text_file_path}" ]
+  then
+    file_content=`cat "${param_text_file_path}"`
+    core_text_size_lines "${file_content}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
+      then
+        status=0
+      else
+        status=1
+      fi
+      if [ -n "${param_output_json}" ]
+      then
+        if [ $status -eq 0 ]
+        then
+          status_value='true'
+        else
+          status_value='false'
+        fi
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "text file character count: ${text_size} [${status_message}] [file:${param_text_file_path}]"
+          else
+            _pn "text file character count: ${text_size} [${status_message}] [section #${section_index} of file:${param_text_file_path}]"
+          fi
+        fi
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${json_stack}"
+    fi
+  else
+    check_comma=`_p "${param_text_file_path}" | sed 's/[^,]//g'`
+    if [ -n "${check_comma}" ]
+    then
+      error_msg "commas(,) may be used to separate multiple paths"
+    fi
+    error_msg "specified text file is not readable: ${param_text_file_path}"
+  fi
+
+  debug 'core_output_text_file_size_lines' 'END'
+}
+
 core_verify_text_file_size()
 {
   param_text_file_path="$1"
@@ -630,6 +710,73 @@ core_verify_text_size()
   fi
 
   debug 'core_verify_text_size' 'END'
+}
+
+core_verify_text_size_lines()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_separator_prefix="$4"
+
+  debug 'core_verify_text_size_lines' 'START'
+  debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
+  debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
+  debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
+  debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  status_core_verify_text_size_lines=0
+
+  if [ -n "${param_stdin_text}" ]
+  then
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at standard input"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at --text value"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}"
+    then
+      :
+    else
+      status_core_verify_text_size_lines=1
+    fi
+  fi
+
+  if [ $status_core_verify_text_size_lines -ne 0 ]
+  then
+    error 'Processing has been canceled'
+  fi
+
+  debug 'core_verify_text_size_lines' 'END'
 }
 
 core_build_images_fragment_precheck_single()
@@ -2197,73 +2344,6 @@ core_posts_files_count_lines()
   debug 'core_posts_files_count_lines' 'END'
 
   return $core_posts_files_count_lines_count
-}
-
-core_verify_text_size_lines()
-{
-  param_stdin_text="$1"
-  param_specified_text="$2"
-  param_text_files="$3"
-  param_separator_prefix="$4"
-
-  debug 'core_verify_text_size_lines' 'START'
-  debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
-  debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
-  debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
-  debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
-
-  status_core_verify_text_size_lines=0
-
-  if [ -n "${param_stdin_text}" ]
-  then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
-    section_count=$?
-    section_index=1
-    while [ $section_index -le $section_count ]
-    do
-      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
-      if [ "${size}" -gt 300 ]
-      then
-        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at standard input"
-        status_core_verify_text_size_lines=1
-      fi
-      section_index=`expr "${section_index}" + 1`
-    done
-  fi
-
-  if [ -n "${param_specified_text}" ]
-  then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
-    section_count=$?
-    section_index=1
-    while [ $section_index -le $section_count ]
-    do
-      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
-      if [ "${size}" -gt 300 ]
-      then
-        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at --text value"
-        status_core_verify_text_size_lines=1
-      fi
-      section_index=`expr "${section_index}" + 1`
-    done
-  fi
-
-  if [ -n "${param_text_files}" ]
-  then
-    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}"
-    then
-      :
-    else
-      status_core_verify_text_size_lines=1
-    fi
-  fi
-
-  if [ $status_core_verify_text_size_lines -ne 0 ]
-  then
-    error 'Processing has been canceled'
-  fi
-
-  debug 'core_verify_text_size_lines' 'END'
 }
 
 core_thread()
@@ -4085,67 +4165,158 @@ core_info_meta_profile()
 
 core_size()
 {
-  param_specified_text="$1"
-  param_text_files="$2"
-  param_count_only="$3"
-  param_output_json="$4"
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_separator_prefix="$4"
+  param_count_only="$5"
+  param_output_json="$6"
 
   debug 'core_size' 'START'
+  debug 'core_post' "param_stdin_text:${param_stdin_text}"
   debug 'core_post' "param_specified_text:${param_specified_text}"
   debug 'core_post' "param_text_files:${param_text_files}"
+  debug 'core_post' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_post' "param_count_only:${param_count_only}"
   debug 'core_post' "param_output_json:${param_output_json}"
 
   json_stack=''
-  if [ -n "${param_specified_text}" ]
+  status=0
+  # standard input
+  if [ -n "${param_stdin_text}" ]
   then
-    core_text_size "${param_specified_text}"
-    text_size=$?
-    if [ $text_size -le 300 ]
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    if [ -n "${json_stack}" ]
     then
-      status=0
-    else
-      status=1
+      json_stack="${json_stack},"
     fi
-    if [ -n "${param_output_json}" ]
-    then
-      if [ $status -eq 0 ]
+    json_stack="${json_stack}\"stdin\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
       then
-        status_value='true'
+        status=0
       else
-        status_value='false'
+        status=1
       fi
-      json_stack="${json_stack}\"text\":{\"size\":${text_size},\"status\":${status_value}}"
-    else
-      if [ -n "${param_count_only}" ]
+      if [ -n "${param_output_json}" ]
       then
-        _pn "${text_size}"
-      else
         if [ $status -eq 0 ]
         then
-          status_message='OK'
+          status_value='true'
         else
-          status_message='NG:over 300'
+          status_value='false'
         fi
-        _pn "text character count: ${text_size} [${status_message}]"
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "standard input character count: ${text_size} [${status_message}]"
+          else
+            _pn "standard input character count (section #${section_index}): ${text_size} [${status_message}]"
+          fi
+        fi
       fi
-    fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]"
   fi
+  # parameter specified text
+  if [ -n "${param_specified_text}" ]
+  then
+    # unescaped
+    unescaped_text=`echo "${param_specified_text}" | sed 's/\\\\"/"/g'`
+    core_text_size_lines "${unescaped_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    if [ -n "${json_stack}" ]
+    then
+      json_stack="${json_stack},"
+    fi
+    json_stack="${json_stack}\"text\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
+      then
+        status=0
+      else
+        status=1
+      fi
+      if [ -n "${param_output_json}" ]
+      then
+        if [ $status -eq 0 ]
+        then
+          status_value='true'
+        else
+          status_value='false'
+        fi
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "text character count: ${text_size} [${status_message}]"
+          else
+            _pn "text character count (section #${section_index}): ${text_size} [${status_message}]"
+          fi
+        fi
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]"
+  fi
+  # text files
   if [ -n "${param_text_files}" ]
   then
     if [ -n "${param_output_json}" ]
     then
-      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size' "${param_count_only}" "${param_output_json}"`
+      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}"`
       json_files=`_p "${json_files}" | jq --slurp -c '.'`
       json_files="\"files\":${json_files}"
       if [ -n "${json_stack}" ]
       then
         json_stack="${json_stack},"
       fi
-      _p "{${json_stack}${json_files}}"
+      json_stack="${json_stack}${json_files}"
     else
-      core_process_files "${param_text_files}" 'core_output_text_file_size' "${param_count_only}"
+      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}"
     fi
+  fi
+  json_stack="{${json_stack}}"
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${json_stack}"
   fi
 
   debug 'core_size' 'END'
