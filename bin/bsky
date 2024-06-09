@@ -377,7 +377,6 @@ usage: bsky post [--text '<text>'] [--text-file '<file path>'] [--image<N> <path
 parameters:
   --text '<text>'
     Specify text for post.
-    If this option is omitted, text input from standard input (pipe/redirect/interactive).
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --text-file '<file path>'
@@ -482,7 +481,6 @@ parameters:
 
   --text '<text>'
     Specify text for post.
-    If this option is omitted, text input from standard input (pipe/redirect/interactive).
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --text-file '<file path>'
@@ -575,7 +573,6 @@ parameters:
 
   --text '<text>'
     Specify text for post.
-    If this option is omitted, text input from standard input (pipe/redirect/interactive).
     If you specifiy standard input (pipe/redirect), this option is ignored.
 
   --text-file '<file path>'
