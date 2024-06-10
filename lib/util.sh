@@ -571,6 +571,21 @@ create_json_keyvalue()
   debug 'create_json_keyvalue' 'END'
 }
 
+create_json_keyvalue_variable()
+{
+  param_variable=$1
+  param_quote=$2
+
+  debug 'create_json_keyvalue_variable' 'START'
+  debug 'create_json_keyvalue_variable' "param_key:${param_variable} param_quote:${param_quote}"
+
+  value=`eval _p \"\\$"${param_variable}"\"`
+  value=`_p "${value}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
+  create_json_keyvalue "${param_variable}" "${value}" "${param_quote}"
+
+  debug 'create_json_keyvalue_variable' 'END'
+}
+
 api_core()
 {
   param_api="$1"
@@ -887,6 +902,158 @@ is_session_exist()
   debug 'is_session_exist' 'END'
 
   return $status
+}
+
+is_stdin_exist()
+{
+  debug 'is_stdin_exist' 'START'
+
+  if [ -p /dev/stdin ] || [ -f /dev/stdin ]
+  then
+    status=0
+  else
+    status=1
+  fi
+
+  debug 'is_stdin_exist' 'END'
+
+  return $status
+}
+
+get_stdin_simple()
+{
+  debug 'get_stdin_simple' 'START'
+
+  # standard input filtered: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
+  cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+
+  debug 'get_stdin_simple' 'END'
+}
+
+get_stdin_simple_lines()
+{
+  debug 'get_stdin_simple' 'START'
+
+  # standard input filtered: newline... at tail -> (null)
+  cat - | sed -z 's/\(\n\)*$//g'
+
+  debug 'get_stdin_simple' 'END'
+}
+
+interactive_input_post()
+{
+  debug 'interactive_input_post' 'START'
+
+  # interactive input
+  _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+  get_stdin_simple
+  _pn '[Posting...]' 1>&2
+
+  debug 'interactive_input_post' 'END'
+}
+
+interactive_input_post_lines()
+{
+  debug 'interactive_input_post_lines' 'START'
+
+  # interactive input
+  _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+  get_stdin_simple_lines
+  _pn '[Posting...]' 1>&2
+
+  debug 'interactive_input_post_lines' 'END'
+}
+
+standard_input()
+{
+  param_standard_input_text=$1
+  param_standard_input_text_file=$2
+
+  debug 'standard_input' 'START'
+  debug 'standard_input' "param_standard_input_text:${param_standard_input_text}"
+  debug 'standard_input' "param_standard_input_text_file:${param_standard_input_text_file}"
+
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple
+  elif [ -z "${param_standard_input_text}" ] && [ -z "${param_standard_input_text_file}" ]
+  then
+    # interactive input
+    interactive_input_post
+  else
+    # --text or --text-file(s) parameter
+    :
+  fi
+
+  debug 'standard_input' 'END'
+}
+
+standard_input_lines()
+{
+  param_standard_input_lines_text=$1
+  param_standard_input_lines_text_file=$2
+
+  debug 'standard_input_lines' 'START'
+  debug 'standard_input_lines' "param_standard_input_lines_text:${param_standard_input_lines_text}"
+  debug 'standard_input_lines' "param_standard_input_lines_text_file:${param_standard_input_lines_text_file}"
+
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple_lines
+  elif [ -z "${param_standard_input_lines_text}" ] && [ -z "${param_standard_input_lines_text_file}" ]
+  then
+    # interactive input
+    interactive_input_post_lines
+  else
+    # --text or --text-file(s) parameter
+    :
+  fi
+
+  debug 'standard_input_lines' 'END'
+}
+
+resolve_post_text()
+{
+  param_resolve_post_text=$1
+  param_resolve_post_text_file=$2
+
+  debug 'resolve_post_text' 'START'
+  debug 'resolve_post_text' "param_resolve_post_text:${param_resolve_post_text}"
+  debug 'resolve_post_text' "param_resolve_post_text_file:${param_resolve_post_text_file}"
+
+  status_resolve_post_text=0
+  if is_stdin_exist
+  then
+    # standard input (pipe or redirect)
+    get_stdin_simple
+  elif [ -n "${param_resolve_post_text}" ]
+  then
+    # --text parameter
+    _p "${param_resolve_post_text}"
+  elif [ -n "${param_resolve_post_text_file}" ]
+  then
+    # --text-file parameter
+    if [ -r "${param_resolve_post_text_file}" ]
+    then
+      # escape: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
+      # using GNU sed -z option
+      < "${param_resolve_post_text_file}" sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+    else
+      error_msg "specified text file is not readable: ${param_resolve_post_text_file}"
+      status_resolve_post_text=1
+    fi
+  else
+    # interactive input
+    _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
+    get_stdin_simple
+    _pn '[Posting...]' 1>&2
+  fi
+
+  debug 'resolve_post_text' 'END'
+
+  return $status_resolve_post_text
 }
 
 # ifndef BSKYSHCLI_DEFINE_UTIL

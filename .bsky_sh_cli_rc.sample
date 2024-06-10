@@ -12,6 +12,8 @@
 # post default languages (e.g. 'en,ja')
 # NOTE: if you installed using the installer install.sh, this setting may be configured at the end of this file.
 #BSKYSHCLI_POST_DEFAULT_LANGUAGES=
+# multiple post separator prefix
+#BSKYSHCLI_POSTS_SEPARATOR_PREFIX=
 # post embed via field in record (unofficial field indicating the posting client name): ON/OFF default:ON
 #BSKYSHCLI_POST_VIA=
 # debug mode

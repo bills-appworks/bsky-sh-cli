@@ -9,7 +9,7 @@
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.5.0'
+BSKYSHCLI_CLI_VERSION='0.6.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -228,7 +228,7 @@ output_help_timeline()
   cat << 'EOS'
 bsky timeline help
 
-usage: bsky timeline [--limit <number>] [--next] [--output-id] [--output-via]
+usage: bsky timeline [--limit <number>] [--next] [--output-id] [--output-via] [--output-json]
 
 parameters:
   --limit <number>
@@ -242,6 +242,11 @@ parameters:
 
   --output-via
     Output via field (unofficial field indicating the posting client name)  
+
+  --output-json
+    Output JSON format. Following parameters are ignored:
+      --output-id
+      --output-via
 
 note:
   you must have started a Bluesky session with the login command.
@@ -257,13 +262,13 @@ output_help_feed()
   cat << 'EOS'
 bsky feed help
 
-usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
+usage: bsky feed --actor <handle or did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via] [--output-json]
        or
-       bsky feed --handle <handle> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
+       bsky feed --handle <handle> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via] [--output-json]
        or
-       bsky feed --did <did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via]
+       bsky feed --did <did> --record-key <record key> [--limit <number>] [--next] [--output-id] [--output-via] [--output-json]
        or
-       bsky feed [--url] <bsky.app feed URL> [--limit <number>] [--next] [--output-id] [--output-via]
+       bsky feed [--url] <bsky.app feed URL> [--limit <number>] [--next] [--output-id] [--output-via] [--output-json]
 
 parameters:
   --actor <handle or did>
@@ -293,6 +298,11 @@ parameters:
   --output-via
     Output via field (unofficial field indicating the posting client name)  
 
+  --output-json
+    Output JSON format. Following parameters are ignored:
+      --output-id
+      --output-via
+
 note:
   you must have started a Bluesky session with the login command.
 EOS
@@ -307,11 +317,11 @@ output_help_author_feed()
   cat << 'EOS'
 bsky author-feed help
 
-usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
+usage: bsky author-feed --actor <handle or did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via] [--output-json]
        or
-       bsky author-feed --handle <handle> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
+       bsky author-feed --handle <handle> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via] [--output-json]
        or
-       bsky author-feed --did <did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via]
+       bsky author-feed --did <did> [--limit <number>] [--next] [--filter <filter>] [--output-id] [--output-via] [--output-json]
 
 parameters:
   --actor <handle or did>
@@ -343,6 +353,11 @@ parameters:
   --output-via
     Output via field (unofficial field indicating the posting client name)  
 
+  --output-json
+    Output JSON format. Following parameters are ignored:
+      --output-id
+      --output-via
+
 note:
   you must have started a Bluesky session with the login command.
 EOS
@@ -357,13 +372,19 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --text '<text>'
     Specify text for post.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --text-file '<path to text file>'
+    Specify the path of text file to post.
+    Only a single file can be specified.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
+
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
@@ -381,8 +402,13 @@ parameters:
     Specify the languages to include in the post.
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
+  --output-json
+    Output JSON format.
+
 note:
   you must have started a Bluesky session with the login command.
+  --text and --text-file are exclusive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -396,7 +422,7 @@ output_help_posts()
   cat << 'EOS'
 bsky post help
 
-usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--langs '<language code>[,...]']
+usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--langs '<language code>[,...]'] [--separator-prefix '<delimiter string>'] [--output-json]
 
 parameters:
   --mode <posts mode>
@@ -417,9 +443,16 @@ parameters:
     Specify the languages to include in the posts.
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
+  --separator-prefix '<delimiter string>'
+    Splits posts within a single specified text (--text option, a file specified by the --text-files option, or standard input) at lines starting with the specified <separator string>.
+
+  --output-json
+    Output JSON format.
+
 note:
   you must have started a Bluesky session with the login command.
-  Either --text or --text-files must be specified.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-files option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), --text option, and`--text-files option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in --text -> files specified in --text-files.
 EOS
 
   debug 'output_help_posts' 'END'
@@ -432,9 +465,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky reply --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky reply --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <index>
@@ -448,8 +481,14 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --text-file '<path to text file>'
+    Specify the path of text file to post.
+    Only a single file can be specified.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
+
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
@@ -467,8 +506,13 @@ parameters:
     Specify the languages to include in the post.
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
+  --output-json
+    Output JSON format.
+
 note:
   you must have started a Bluesky session with the login command.
+  --text and --text-file are exclusive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -482,9 +526,9 @@ output_help_repost()
   cat << 'EOS'
 bsky repost help
 
-usage: bsky repost --index <view index>
+usage: bsky repost --index <view index> [--output-json]
        or
-       bsky repost --uri <uri> --cid <cid>
+       bsky repost --uri <uri> --cid <cid> [--output-json]
 
 parameters:
   --index <view index>
@@ -495,6 +539,9 @@ parameters:
   --cid <cid>
     Specify the AT URI and CID pointing to the feed to be reposted to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --output-json
+    Output JSON format.
 
 note:
   you must have started a Bluesky session with the login command.
@@ -510,9 +557,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+usage: bsky quote --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky quote --uri <uri> --cid <cid> --text '<text>' [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]']
+       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <view index>
@@ -526,8 +573,14 @@ parameters:
 
   --text '<text>'
     Specify text for post.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <image file path>
+  --text-file '<path to text file>'
+    Specify the path of text file to post.
+    Only a single file can be specified.
+    If you specifiy standard input (pipe/redirect), this option is ignored.
+
+  --image<N> <path to image file>
     Specify image file path.
     <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
 
@@ -545,8 +598,13 @@ parameters:
     Specify the languages to include in the post.
     Separate multiple language codes with commas (e.g. --langs 'en,ja').
 
+  --output-json
+    Output JSON format.
+
 note:
   you must have started a Bluesky session with the login command.
+  --text and --text-file are exclusive.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
   image and link card are exclusive, prioritize image specification.
 EOS
 
@@ -560,9 +618,9 @@ output_help_like()
   cat << 'EOS'
 bsky like help
 
-usage: bsky like --index <view index>
+usage: bsky like --index <view index> [--output-json]
        or
-       bsky like --uri <uri> --cid <cid>
+       bsky like --uri <uri> --cid <cid> [--output-json]
 
 parameters:
   --index <view index>
@@ -573,6 +631,9 @@ parameters:
   --cid <cid>
     Specify the AT URI and CID pointing to the feed to be liked to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --output-json
+    Output JSON format.
 
 note:
   you must have started a Bluesky session with the login command.
@@ -588,9 +649,9 @@ output_help_thread()
   cat << 'EOS'
 bsky thread help
 
-usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via]
+usage: bsky thread --index <view index> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via] [--output-json]
        or
-       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via]
+       bsky thread --uri <uri> [--depth <number>] [--parent-height <number>] [--output-id] [--output-via] [--output-json]
 
 parameters:
   --index <view index>
@@ -613,6 +674,11 @@ parameters:
   --output-via
     Output via field (unofficial field indicating the posting client name)  
 
+  --output-json
+    Output JSON format. Following parameters are ignored:
+      --output-id
+      --output-via
+
 note:
   you must have started a Bluesky session with the login command.
 EOS
@@ -627,13 +693,13 @@ output_help_profile()
   cat << 'EOS'
 bsky author-feed help
 
-usage: bsky profile --actor <handle or did> [--output-id]
+usage: bsky profile --actor <handle or did> [--output-id] [--output-json]
        or
-       bsky profile --handle <handle> [--output-id]
+       bsky profile --handle <handle> [--output-id] [--output-json]
        or
-       bsky profile --did <did> [--output-id]
+       bsky profile --did <did> [--output-id] [--output-json]
        or
-       bsky profile [--output-id]
+       bsky profile [--output-id] [--output-json]
 
 parameters:
   --actor <handle or did>
@@ -647,6 +713,10 @@ parameters:
 
   --output-id
     Output identifier of AT protocol (uri, cid)
+
+  --output-json
+    Output JSON format. Following parameter is ignored:
+      --output-id
 
 note:
   if --actor, --handle, and --did are all omitted, the current session account will be targeted.
@@ -663,7 +733,7 @@ output_help_pref()
   cat << 'EOS'
 bsky pref help
 
-usage: bsky pref [--group <preference group>] [--item <preference item>] [--output-id]
+usage: bsky pref [--group <preference group>] [--item <preference item>] [--output-json]
 
 parameters:
   --group <preference group>[,<preference group>...]
@@ -687,6 +757,9 @@ parameters:
     If this parameter value is specified in the format '<item>', only one --group parameter can be specified.
     preference item:
       (items description is under construction)
+
+  --output-json
+    Output JSON format.
 
 EOS
   debug 'output_help_pref' 'END'
@@ -756,6 +829,9 @@ parameters:
   --output-id
     output IDs for some paramaters.
 
+  --output-json
+    Output JSON format. Other parameters are ignored.
+
 note:
   show all session informations if parameters not specified.
 EOS
@@ -785,6 +861,9 @@ parameters:
   --profile
     show session active profiles.
 
+  --output-json
+    Output JSON format. Other parameters are ignored:
+
 note:
   show all session informations if parameters not specified.
 EOS
@@ -799,7 +878,7 @@ output_help_size()
   cat << 'EOS'
 bsky size help
 
-usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--count-only]
+usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--separator-prefix '<delimiter string>'] [--count-only] [--output-json]
 
 parameters:
   --text '<text>'
@@ -809,12 +888,20 @@ parameters:
     Specify the path of text files to show number of characters.
     Separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt').
 
+  --separator-prefix '<delimiter string>'
+    Splits posts within a single specified text (--text option, a file specified by the --text-files option, or standard input) at lines starting with the specified <separator string>.
+
   --count-only
     Output only number of characters.
 
+  --output-json
+    Output JSON format. Following parameter is ignored:
+      --count-only
+
 note:
-  Either --text or --text-files must be specified.
-  Newlines at the end of <text> are ignored.
+  Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-files option, and standard input (pipe/redirect) are specified, input will be interactive.
+  Standard input (pipe/redirect), --text option, and --text-files option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in --text -> files specified in --text-files.
+  Newlines at the end of text are ignored.
   URL shortening is not supported at this time.
 EOS
 
@@ -1035,7 +1122,7 @@ command_timeline()
   then
     output_help_timeline
   else
-    parse_parameters '--limit:1 --next:0 --output-id:0 --output-via:0' "$@"
+    parse_parameters '--limit:1 --next:0 --output-id:0 --output-via:0 --output-json:0' "$@"
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
     then
       verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
@@ -1045,7 +1132,7 @@ command_timeline()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_timeline '' "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
+    core_get_timeline '' "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_timeline' 'END'
@@ -1067,7 +1154,7 @@ command_feed()
       shift
     fi
 
-    parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0 --output-via:0' "$@"
+    parse_parameters '--actor:1 --record-key:1 --handle:1 --did:1 --url:1 --limit:1 --next:0 --output-id:0 --output-via:0 --output-json:0' "$@"
 
     if [ -n "${naked_feed_generator}" ]
     then
@@ -1104,7 +1191,7 @@ command_feed()
       limit=''
     fi
 
-    core_get_feed "${did}" "${PARSED_PARAM_KEYVALUE_record_key}" "${url}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
+    core_get_feed "${did}" "${PARSED_PARAM_KEYVALUE_record_key}" "${url}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_feed' 'END'
@@ -1118,7 +1205,7 @@ command_author_feed()
   then
     output_help_author_feed
   else
-    parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0 --output-via:0' "$@"
+    parse_parameters '--actor:1 --handle:1 --did:1 --limit:1 --next:0 --filter:1 --output-id:0 --output-via:0 --output-json:0' "$@"
 
     verify_exclusive 0 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
 
@@ -1152,7 +1239,7 @@ command_author_feed()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_author_feed "${did}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${filter}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
+    core_get_author_feed "${did}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${filter}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_author_feed' 'END'
@@ -1168,20 +1255,27 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
+    parse_parameters '--text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    verify_exclusive 1 '--text --text-file' "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"
     # shellcheck disable=SC2154
-    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+    verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    # shellcheck disable=SC2154
+    verify_exclusive 1 '--alt --alt1' "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    post_text="${PARSED_PARAM_KEYVALUE_text}"
+    if post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"`
+    then
+      :
+    else
+      error 'Processing has been canceled'
+    fi
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or --text-file or standard input)"
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1199,7 +1293,7 @@ command_post()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'
@@ -1213,11 +1307,20 @@ command_posts()
   then
     output_help_posts
   else
-    parse_parameters '--mode:1 --text:1 --text-files:1 --langs:1' "$@"
+    parse_parameters '--mode:1 --text:1 --text-files:1 --langs:1 --output-json:0 --separator-prefix:1' "$@"
 
-    if [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
+    if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
     then
-      error 'parameter specify required --text or --text-files'
+      separator_prefix="${PARSED_PARAM_KEYVALUE_separator_prefix}"
+    fi
+
+    # standard input
+    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}"`
+
+    if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    then
+      error "text must be specify (--text or --text-files or standard input)"
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_mode}" ]
@@ -1233,15 +1336,23 @@ command_posts()
       esac
     fi
 
+    # unescaped
+    specified_text=`echo "${PARSED_PARAM_KEYVALUE_text}" | sed 's/\\\\"/"/g'`
     # posts count check
     posts_count=0
-    if [ -n "${PARSED_PARAM_KEYVALUE_text}" ]
-    then
-      posts_count=1
-    fi
-    _slice "${PARSED_PARAM_KEYVALUE_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-    test_files_count=$?
-    posts_count=`expr "${posts_count}" + "${test_files_count}"`
+    # posts count in standard input
+    core_posts_count_lines "${stdin_text}" "${separator_prefix}"
+    stdin_count=$?
+    posts_count=`expr "${posts_count}" + "${stdin_count}"`
+    # posts count in parameter specified
+    core_posts_count_lines "${specified_text}" "${separator_prefix}"
+    specified_text_count=$?
+    posts_count=`expr "${posts_count}" + "${specified_text_count}"`
+    # posts count in text files
+    core_posts_files_count_lines "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}"
+    text_files_count=$?
+    posts_count=`expr "${posts_count}" + "${text_files_count}"`
+    debug 'command_posts' "posts count: ${posts_count}"
     if [ "${posts_count}" -gt 10 ]
     then
       error "The total number of posts by --text and --text-files options exceeds the limit of 10. Detect count:${posts_count}"
@@ -1249,7 +1360,7 @@ command_posts()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}"
+    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_posts' 'END'
@@ -1263,10 +1374,11 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0' "$@"
 
-    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
-    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+    verify_exclusive 1 '--text --text-file' "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"
+    verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    verify_exclusive 1 '--alt --alt1' "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1275,7 +1387,6 @@ command_reply()
     uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
     cid="${PARSED_PARAM_KEYVALUE_cid}"
-    post_text="${PARSED_PARAM_KEYVALUE_text}"
     if [ -n "${view_index}" ]
     then
       if [ -n "${uri}" ] || [ -n "${cid}" ]
@@ -1291,9 +1402,15 @@ command_reply()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
+    if post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"`
+    then
+      :
+    else
+      error 'Processing has been canceled'
+    fi
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or --text-file or standard input)"
     fi
     linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
     if [ -n "${linkcard_index}" ]
@@ -1307,7 +1424,7 @@ command_reply()
     else
       linkcard_index=1
     fi
-    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_reply' 'END'
@@ -1321,7 +1438,7 @@ command_repost()
   then
     output_help_repost
   else
-    parse_parameters '--index:1 --uri:1 --cid:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1344,7 +1461,7 @@ command_repost()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    core_repost "${uri}" "${cid}"
+    core_repost "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_repost' 'END'
@@ -1358,10 +1475,11 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0' "$@"
 
-    verify_exclusive 1 '--image --image1', "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
-    verify_exclusive 1 '--alt --alt1', "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+    verify_exclusive 1 '--text --text-file' "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"
+    verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
+    verify_exclusive 1 '--alt --alt1' "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1370,7 +1488,6 @@ command_quote()
     uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
     cid="${PARSED_PARAM_KEYVALUE_cid}"
-    post_text="${PARSED_PARAM_KEYVALUE_text}"
     if [ -n "${view_index}" ]
     then
       if [ -n "${uri}" ] || [ -n "${cid}" ]
@@ -1386,9 +1503,15 @@ command_quote()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
+    if post_text=`resolve_post_text "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"`
+    then
+      :
+    else
+      error 'Processing has been canceled'
+    fi
     if [ -z "${post_text}" ]
     then
-      error "parameter --text '<text>' not specified"
+      error "text must be specify (--text or --text-file standard input)"
     fi
     linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
     if [ -n "${linkcard_index}" ]
@@ -1402,7 +1525,7 @@ command_quote()
     else
       linkcard_index=1
     fi
-    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_quote' 'END'
@@ -1416,7 +1539,7 @@ command_like()
   then
     output_help_like
   else
-    parse_parameters '--index:1 --uri:1 --cid:1' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1439,7 +1562,7 @@ command_like()
         error "parameter must be specify --index or --uri/--cid"
       fi
     fi
-    core_like "${uri}" "${cid}"
+    core_like "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_like' 'END'
@@ -1453,7 +1576,7 @@ command_thread()
   then
     output_help_thread
   else
-    parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0 --output-via:0' "$@"
+    parse_parameters '--index:1 --uri:1 --depth:1 --parent-height:1 --output-id:0 --output-via:0 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1495,7 +1618,7 @@ command_thread()
         error "--parent-height parameter must be numeric value: ${parent_height}"
       fi
     fi
-    core_thread "${uri}" "${depth}" "${parent_height}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}"
+    core_thread "${uri}" "${depth}" "${parent_height}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_thread' 'END'
@@ -1509,7 +1632,7 @@ command_profile()
   then
     output_help_profile
   else
-    parse_parameters '--actor:1 --handle:1 --did:1 --output-id:0 --dump:0' "$@"
+    parse_parameters '--actor:1 --handle:1 --did:1 --output-id:0 --dump:0 --output-json:0' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1530,7 +1653,7 @@ command_profile()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_profile "${did}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}"
+    core_get_profile "${did}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_profile' 'END'
@@ -1544,11 +1667,11 @@ command_pref()
   then
     output_help_pref
   else
-    parse_parameters '--group:1 --item:1 --dump:0' "$@"
+    parse_parameters '--group:1 --item:1 --dump:0 --output-json:0' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_get_pref "${PARSED_PARAM_KEYVALUE_group}" "${PARSED_PARAM_KEYVALUE_item}" "${PARSED_PARAM_KEYONLY_dump}"
+    core_get_pref "${PARSED_PARAM_KEYVALUE_group}" "${PARSED_PARAM_KEYVALUE_item}" "${PARSED_PARAM_KEYONLY_dump}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_pref' 'END'
@@ -1562,7 +1685,7 @@ command_info_session()
   then
     output_help_info_session
   else
-    parse_parameters '--all:0 --which:0 --status:0 --login:0 --refresh:0 --handle:0 --did:0 --index:0 --cursor:0 --output-id:0' "$@"
+    parse_parameters '--all:0 --which:0 --status:0 --login:0 --refresh:0 --handle:0 --did:0 --index:0 --cursor:0 --output-id:0 --output-json:0' "$@"
     count_options=$?
     if [ $count_options -eq 0 ]
     then
@@ -1571,39 +1694,61 @@ command_info_session()
     then
       PARSED_PARAM_KEYONLY_all='(defined)'
     fi
+    output_json="${PARSED_PARAM_KEYONLY_output_json}"
 
     read_session_file
-    if [ -n "${PARSED_PARAM_KEYONLY_which}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    if [ -n "${output_json}" ]
     then
-      core_info_session_which
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_status}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_status
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_login}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_login
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_refresh}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_refresh
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_handle}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_handle
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_did}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_did
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_index}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_index "${PARSED_PARAM_KEYONLY_output_id}"
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_cursor}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_session_cursor
+      _p '{'
+        core_info_session_which "${output_json}"
+        _p ','
+        core_info_session_status "${output_json}"
+        _p ','
+        core_info_session_login "${output_json}"
+        _p ','
+        core_info_session_refresh "${output_json}"
+        _p ','
+        core_info_session_handle "${output_json}"
+        _p ','
+        core_info_session_did "${output_json}"
+        _p ','
+        core_info_session_index "${PARSED_PARAM_KEYONLY_output_id}" "${output_json}"
+        _p ','
+        core_info_session_cursor "${output_json}"
+      _p '}'
+    else
+      if [ -n "${PARSED_PARAM_KEYONLY_which}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_which
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_status}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_status
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_login}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_login
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_refresh}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_refresh
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_handle}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_handle
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_did}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_did
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_index}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_index "${PARSED_PARAM_KEYONLY_output_id}"
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_cursor}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_session_cursor
+      fi
     fi
   fi
 
@@ -1618,7 +1763,7 @@ command_info_meta()
   then
     output_help_info_meta
   else
-    parse_parameters '--all:0 --path:0 --config:0 --profile:0' "$@"
+    parse_parameters '--all:0 --path:0 --config:0 --profile:0 --output-json:0' "$@"
     count_options=$?
     if [ $count_options -eq 0 ]
     then
@@ -1626,17 +1771,29 @@ command_info_meta()
     fi
     
     read_session_file
-    if [ -n "${PARSED_PARAM_KEYONLY_path}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+    output_json="${PARSED_PARAM_KEYONLY_output_json}"
+    if [ -n "${output_json}" ]
     then
-      core_info_meta_path
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_config}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_meta_config
-    fi
-    if [ -n "${PARSED_PARAM_KEYONLY_profile}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
-    then
-      core_info_meta_profile
+      _p '{'
+        core_info_meta_path "${output_json}"
+        _p ','
+        core_info_meta_config "${output_json}"
+        _p ','
+        core_info_meta_profile "${output_json}"
+      _p '}'
+    else
+      if [ -n "${PARSED_PARAM_KEYONLY_path}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_meta_path
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_config}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_meta_config
+      fi
+      if [ -n "${PARSED_PARAM_KEYONLY_profile}" ] || [ -n "${PARSED_PARAM_KEYONLY_all}" ]
+      then
+        core_info_meta_profile
+      fi
     fi
   fi
 
@@ -1675,15 +1832,24 @@ command_size()
   then
     output_help_size
   else
-    parse_parameters '--text:1 --text-files:1 --count-only:0' "$@"
+    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1' "$@"
 
-    if [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
+    if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
     then
-      error 'parameter specify required --text or --text-files'
+      separator_prefix="${PARSED_PARAM_KEYVALUE_separator_prefix}"
+    fi
+
+    # standard input
+    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}"`
+
+    if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
+    then
+      error 'parameter specify required --text or --text-files or standard input'
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_size "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYONLY_count_only}"
+    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_size' 'END'

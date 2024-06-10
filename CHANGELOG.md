@@ -1,3 +1,12 @@
+# v0.6.0
+## Add
+- Standard input (pipe, redirect, interactive) support (post/posts/reply/quote/size commands)
+- Added JSON output option to most commands (--output-json option)
+- Thread posting function (posts command) supports multiple posts in one file by specifying a separator string (--separator-prefix option)
+- Single posting function (post/reply/quote commands) supports specifying a text file (--text-file option)
+## Fix
+- Minor fixes
+
 # v0.5.0
 ## Add
 - Multiple post function such as thread posting (posts command)
