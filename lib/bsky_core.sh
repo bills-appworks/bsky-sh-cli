@@ -2323,22 +2323,25 @@ core_posts_files_count_lines()
   debug 'core_posts_files_count_lines' "param_core_posts_files_count_lines_separator_prefix:${param_core_posts_files_count_lines_separator_prefix}"
 
   core_posts_files_count_lines_count=0
-  _slice "${param_core_posts_files_count_lines_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-  files_count=$?
-  if [ -n "${param_core_posts_files_count_lines_separator_prefix}" ]
+  if [ -n "${param_core_posts_files_count_lines_files}" ]
   then
-    files_index=1
-    while [ $files_index -le $files_count ]
-    do
-      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      file_content=`cat "${target_file}"`
-      core_posts_count_lines "${file_content}" "${param_core_posts_files_count_lines_separator_prefix}"
-      file_content_count=$?
-      core_posts_files_count_lines_count=`expr "${core_posts_files_count_lines_count}" + "${file_content_count}"`
-      files_index=`expr "${files_index}" + 1`
-    done
-  else
-    core_posts_files_count_lines_count="${files_count}"
+    _slice "${param_core_posts_files_count_lines_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+    files_count=$?
+    if [ -n "${param_core_posts_files_count_lines_separator_prefix}" ]
+    then
+      files_index=1
+      while [ $files_index -le $files_count ]
+      do
+        target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+        file_content=`cat "${target_file}"`
+        core_posts_count_lines "${file_content}" "${param_core_posts_files_count_lines_separator_prefix}"
+        file_content_count=$?
+        core_posts_files_count_lines_count=`expr "${core_posts_files_count_lines_count}" + "${file_content_count}"`
+        files_index=`expr "${files_index}" + 1`
+      done
+    else
+      core_posts_files_count_lines_count="${files_count}"
+    fi
   fi
 
   debug 'core_posts_files_count_lines' 'END'
