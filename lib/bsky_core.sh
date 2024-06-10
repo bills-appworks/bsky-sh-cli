@@ -352,6 +352,73 @@ core_text_size()
   return "${text_size}"
 }
 
+core_text_size_lines()
+{
+  param_core_text_size_lines_text="$1"
+  param_core_text_size_lines_separator_prefix="$2"
+
+  debug 'core_text_size_lines' 'START'
+  debug 'core_text_size_lines' "param_core_text_size_lines_text:${param_core_text_size_lines_text}"
+  debug 'core_text_size_lines' "param_core_text_size_lines_separator_prefix:${param_core_text_size_lines_separator_prefix}"
+
+  count=0
+  lines=''
+  if [ -n "${param_core_text_size_lines_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_text_size_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_core_text_size_lines_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          size=`_p "${lines}" | wc -m`
+          eval "RESULT_core_text_size_lines_${count}=${size}"
+          debug 'core_text_size_lines' "count:${count} size:${size}"
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      size=`_p "${lines}" | wc -m`
+      eval "RESULT_core_text_size_lines_${count}=${size}"
+      debug 'core_text_size_lines' "remain part count:${count} size:${size}"
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    size=`_p "${param_core_text_size_lines_text}" | wc -m`
+    eval "RESULT_core_text_size_lines_${count}=${size}"
+    debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
+  fi
+
+  debug 'core_text_size_lines' 'END'
+
+  return $count
+}
+
 core_get_text_file()
 {
   param_text_file_path="$1"
@@ -384,30 +451,129 @@ core_output_text_file_size()
 {
   param_text_file_path="$1"
   param_count_only="$2"
+  param_output_json="$3"
 
   debug 'core_output_text_file_size' 'START'
   debug 'core_output_text_file_size' "param_text_file_path:${param_text_file_path}"
   debug 'core_output_text_file_size' "param_count_only:${param_count_only}"
+  debug 'core_output_text_file_size' "param_output_json:${param_output_json}"
 
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
     # unescape \n -> (newline)
     text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
-    if [ -n "${param_count_only}" ]
+    if [ "${text_size}" -le 300 ]
     then
-      _pn "${text_size}"
+      status=0
     else
-      if [ "${text_size}" -le 300 ]
+      status=1
+    fi
+    if [ -n "${param_output_json}" ]
+    then
+      if [ $status -eq 0 ]
       then
-        status='OK'
+        status_value='true'
       else
-        status='NG:over 300'
+        status_value='false'
       fi
-      _pn "text file character count: ${text_size} [${status}] [file:${param_text_file_path}]"
+      _p "{\"size\":${text_size},\"status\":${status_value},\"file\":\"${param_text_file_path}\"}"
+    else
+      if [ -n "${param_count_only}" ]
+      then
+        _pn "${text_size}"
+      else
+        if [ $status -eq 0 ]
+        then
+          status_message='OK'
+        else
+          status_message='NG:over 300'
+        fi
+        _pn "text file character count: ${text_size} [${status_message}] [file:${param_text_file_path}]"
+      fi
     fi
   fi
 
   debug 'core_output_text_file_size' 'END'
+}
+
+core_output_text_file_size_lines()
+{
+  param_text_file_path="$1"
+  param_separator_prefix="$2"
+  param_count_only="$3"
+  param_output_json="$4"
+
+  debug 'core_output_text_file_size_lines' 'START'
+  debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
+  debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
+  debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
+
+  if [ -r "${param_text_file_path}" ]
+  then
+    file_content=`cat "${param_text_file_path}"`
+    core_text_size_lines "${file_content}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
+      then
+        status=0
+      else
+        status=1
+      fi
+      if [ -n "${param_output_json}" ]
+      then
+        if [ $status -eq 0 ]
+        then
+          status_value='true'
+        else
+          status_value='false'
+        fi
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "text file character count: ${text_size} [${status_message}] [file:${param_text_file_path}]"
+          else
+            _pn "text file character count: ${text_size} [${status_message}] [section #${section_index} of file:${param_text_file_path}]"
+          fi
+        fi
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${json_stack}"
+    fi
+  else
+    check_comma=`_p "${param_text_file_path}" | sed 's/[^,]//g'`
+    if [ -n "${check_comma}" ]
+    then
+      error_msg "commas(,) may be used to separate multiple paths"
+    fi
+    error_msg "specified text file is not readable: ${param_text_file_path}"
+  fi
+
+  debug 'core_output_text_file_size_lines' 'END'
 }
 
 core_verify_text_file_size()
@@ -434,6 +600,42 @@ core_verify_text_file_size()
   debug 'core_verify_text_file_size' 'END'
 
   return $status_core_verify_text_file_size
+}
+
+core_verify_text_file_size_lines()
+{
+  param_text_file_path="$1"
+  param_separator_prefix="$2"
+
+  debug 'core_verify_text_file_size_lines' 'START'
+  debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
+  debug 'core_verify_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  status_core_verify_text_file_size_lines=0
+  if text_file=`core_get_text_file "${param_text_file_path}"`
+  then
+    # unescape \n -> (newline)
+    text_file=`_p "${text_file}" | sed 's/\\\\n/\n/g'`
+    core_text_size_lines "${text_file}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at ${param_text_file_path}"
+        status_core_verify_text_file_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  else
+    status_core_verify_text_file_size_lines=1
+  fi
+
+  debug 'core_verify_text_file_size_lines' 'END'
+
+  return $status_core_verify_text_file_size_lines
 }
 
 core_process_files()
@@ -473,17 +675,17 @@ core_process_files()
 
 core_verify_text_size()
 {
-  param_text="$1"
+  param_core_verify_text_size_text="$1"
   param_text_files="$2"
 
   debug 'core_verify_text_size' 'START'
-  debug 'core_verify_text_size' "param_text:${param_text}"
+  debug 'core_verify_text_size' "param_core_verify_text_size_text:${param_core_verify_text_size_text}"
   debug 'core_verify_text_size' "param_text_files:${param_text_files}"
 
   status_core_verify_text_size=0
-  if [ -n "${param_text}" ]
+  if [ -n "${param_core_verify_text_size_text}" ]
   then
-    core_text_size "${param_text}"
+    core_text_size "${param_core_verify_text_size_text}"
     size=$?
     if [ $size -gt 300 ]
     then
@@ -508,6 +710,73 @@ core_verify_text_size()
   fi
 
   debug 'core_verify_text_size' 'END'
+}
+
+core_verify_text_size_lines()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_separator_prefix="$4"
+
+  debug 'core_verify_text_size_lines' 'START'
+  debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
+  debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
+  debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
+  debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  status_core_verify_text_size_lines=0
+
+  if [ -n "${param_stdin_text}" ]
+  then
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at standard input"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    while [ $section_index -le $section_count ]
+    do
+      size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${size}" -gt 300 ]
+      then
+        error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: section #${section_index} at --text value"
+        status_core_verify_text_size_lines=1
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}"
+    then
+      :
+    else
+      status_core_verify_text_size_lines=1
+    fi
+  fi
+
+  if [ $status_core_verify_text_size_lines -ne 0 ]
+  then
+    error 'Processing has been canceled'
+  fi
+
+  debug 'core_verify_text_size_lines' 'END'
 }
 
 core_build_images_fragment_precheck_single()
@@ -711,23 +980,23 @@ core_build_images_fragment()
 
 core_extract_link_url()
 {
-  param_text="$1"
+  param_core_extract_link_url_text="$1"
   param_extract_linkcard_index="$2"
 
   debug 'core_extract_link_url' 'START'
-  debug 'core_extract_link_url' "param_text:${param_text}"
+  debug 'core_extract_link_url' "param_core_extract_link_url_text:${param_core_extract_link_url_text}"
   debug 'core_extract_link_url' "param_extract_linkcard_index:${param_extract_linkcard_index}"
 
   # TODO: URL shortening processing
 
   # unescape (e.g. '\n', '"' : escaped at parse_parameters()) for adjust index
-#  expanded_text=`echo "${param_text}" | sed 's/\\\\"/"/g'`
+#  expanded_text=`echo "${param_core_extract_link_url_text}" | sed 's/\\\\"/"/g'`
   # in the after loop, "expr length" and "expr match" change to "expr :" and self implemetation by platrom porability reason
   # '\n' handling difficult in self implementation, escape to convert from '\n' to '\t'
   # using GNU sed -z option
   # 
   # however, since using jq (cheat) now, may not need to handle '\n'
-  expanded_text=`echo "${param_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
+  expanded_text=`echo "${param_core_extract_link_url_text}" | sed -z 's/\\\\"/"/g ; s/\n/\t/g'`
   accum_cut_length=0
   extract_link_count=0
 
@@ -800,14 +1069,14 @@ core_extract_link_url()
 
 core_build_link_facets_fragment()
 {
-  param_text="$1"
+  param_core_build_link_facets_fragment_text="$1"
 
   debug 'core_build_link_facets_fragment' 'START'
-  debug 'core_build_link_facets_fragment' "param_text:${param_text}"
+  debug 'core_build_link_facets_fragment' "param_core_build_link_facets_fragment_text:${param_core_build_link_facets_fragment_text}"
 
   link_facets_fragment='['
   element_count=0
-  link_facets_element=`core_extract_link_url "${param_text}" ''`
+  link_facets_element=`core_extract_link_url "${param_core_build_link_facets_fragment_text}" ''`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $link_facets_element
@@ -837,16 +1106,16 @@ core_build_link_facets_fragment()
 
 core_build_external_fragment()
 {
-  param_text="$1"
+  param_core_build_external_fragment_text="$1"
   param_linkcard_index="$2"
 
   debug 'core_build_external_fragment' 'START'
-  debug 'core_build_external_fragment' "param_text:${param_text}"
+  debug 'core_build_external_fragment' "param_core_build_external_fragment_text:${param_core_build_external_fragment_text}"
   debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
 
   if [ "${param_linkcard_index}" -gt 0 ]
   then
-    url=`core_extract_link_url "${param_text}" "${param_linkcard_index}"`
+    url=`core_extract_link_url "${param_core_build_external_fragment_text}" "${param_linkcard_index}"`
     if [ -n "${url}" ]
     then
       external_html=`curl -s "${url}" 2>/dev/null`
@@ -1676,6 +1945,7 @@ core_get_timeline()
   param_next="$3"
   param_output_id="$4"
   param_output_via="$5"
+  param_output_json="$6"
 
   debug 'core_get_timeline' 'START'
   debug 'core_get_timeline' "param_algorithm:${param_algorithm}"
@@ -1683,6 +1953,7 @@ core_get_timeline()
   debug 'core_get_timeline' "param_next:${param_next}"
   debug 'core_get_timeline' "param_output_id:${param_output_id}"
   debug 'core_get_timeline' "param_output_via:${param_output_via}"
+  debug 'core_get_timeline' "param_output_json:${param_output_json}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -1704,8 +1975,13 @@ core_get_timeline()
 
   if [ $status -eq 0 ]
   then
-    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-    _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    else
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    fi
 
     cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
     view_session_functions=`core_create_session_chunk`
@@ -1728,6 +2004,7 @@ core_get_feed()
   param_next="$5"
   param_output_id="$6"
   param_output_via="$7"
+  param_output_json="$8"
 
   debug 'core_get_feed' 'START'
   debug 'core_get_feed' "param_did:${param_did}"
@@ -1737,6 +2014,7 @@ core_get_feed()
   debug 'core_get_feed' "param_next:${param_next}"
   debug 'core_get_feed' "param_output_id:${param_output_id}"
   debug 'core_get_feed' "param_output_via:${param_output_via}"
+  debug 'core_get_feed' "param_output_json:${param_output_json}"
 
   if [ -n "${param_did}" ]
   then
@@ -1772,8 +2050,13 @@ core_get_feed()
 
     if [ $status -eq 0 ]
     then
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-      _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+      if [ -n "${param_output_json}" ]
+      then
+        _p "${result}"
+      else
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+      fi
 
       cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
       view_session_functions=`core_create_session_chunk`
@@ -1796,6 +2079,7 @@ core_get_author_feed()
   param_filter="$4"
   param_output_id="$5"
   param_output_via="$6"
+  param_output_json="$7"
 
   debug 'core_get_author_feed' 'START'
   debug 'core_get_author_feed' "param_did:${param_did}"
@@ -1803,7 +2087,8 @@ core_get_author_feed()
   debug 'core_get_author_feed' "param_next:${param_next}"
   debug 'core_get_author_feed' "param_filter:${param_filter}"
   debug 'core_get_author_feed' "param_output_id:${param_output_id}"
-  debug 'core_get_author_feed' "param_output_id:${param_output_via}"
+  debug 'core_get_author_feed' "param_output_via:${param_output_via}"
+  debug 'core_get_author_feed' "param_output_json:${param_output_json}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -1825,8 +2110,13 @@ core_get_author_feed()
 
   if [ $status -eq 0 ]
   then
-    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-    _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    else
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    fi
 
     cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
     view_session_functions=`core_create_session_chunk`
@@ -1845,11 +2135,13 @@ core_output_post()
   param_post_uri_list="$1"
   param_output_id="$2"
   param_output_via="$3"
+  param_output_json="$4"
 
   debug 'core_output_post' 'START'
   debug 'core_output_post' "param_post_uri_list:${param_post_uri_list}"
   debug 'core_output_post' "param_output_id:${param_output_id}"
   debug 'core_output_post' "param_output_via:${param_output_via}"
+  debug 'core_output_post' "param_output_json:${param_output_json}"
 
   result=`api app.bsky.feed.getPosts "${param_post_uri_list}"`
   status=$?
@@ -1859,9 +2151,14 @@ core_output_post()
   if [ $status -eq 0 ]
   then
     feed_struct_posts=`_p "${result}" | jq -c '{"feed":[.[] | {"post":.[]}]}'`
-    # parameter: output-id, output-via
-    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-    _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    else
+      # parameter: output-id, output-via
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+    fi
 
     view_session_functions=`core_create_session_chunk`
     feed_view_index=`_p "${feed_struct_posts}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
@@ -1874,13 +2171,13 @@ core_output_post()
 
 core_posts_single()
 {
-  param_text="$1"
+  param_core_posts_single_text="$1"
   param_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
 
   debug 'core_posts_single' 'START'
-  debug 'core_posts_single' "param_text:${param_text}"
+  debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
   debug 'core_posts_single' "param_langs:${param_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
@@ -1892,14 +2189,14 @@ core_posts_single()
   else
     reply_fragment=''
   fi
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" 1`
+  link_facets_fragment=`core_build_link_facets_fragment "${param_core_posts_single_text}"`
+  external_fragment=`core_build_external_fragment "${param_core_posts_single_text}" 1`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   if [ -n "${reply_fragment}" ]
   then
-    record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
   else
-    record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\""
   fi
   if [ -n "${external_fragment}" ]
   then
@@ -1937,537 +2234,119 @@ core_posts_single()
   return $status_core_posts_single
 }
 
-core_posts_single_file()
+core_is_post_text_meaningful()
 {
-  param_file_path="$1"
-  param_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
+  param_post_text="$1"
 
-  debug 'core_posts_single_file' 'START'
-  debug 'core_posts_single_file' "param_file_path:${param_file_path}"
-  debug 'core_posts_single_file' "param_langs:${param_langs}"
-  debug 'core_posts_single_file' "param_parent_uri:${param_parent_uri}"
-  debug 'core_posts_single_file' "param_parent_cid:${param_parent_cid}"
+  debug 'core_is_post_text_meaningful' 'START'
+  debug 'core_is_post_text_meaningful' "param_post_text:${param_post_text}"
 
-  if [ -r "${param_file_path}" ]
+  modified_post_text=`_p "${param_post_text}" | sed -z 's/\(\n\)*$//g'`
+  if [ -n "${modified_post_text}" ]
   then
-    text=`< "${param_file_path}" sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-    if core_posts_single "${text}" "${param_langs}" "${param_parent_uri}" "${param_parent_cid}"
-    then
-      status_core_posts_single_file=0
-      RESULT_core_posts_single_file_uri="${RESULT_core_posts_single_uri}"
-      RESULT_core_posts_single_file_cid="${RESULT_core_posts_single_cid}"
-    else
-      status_core_posts_single_file=1
-    fi
+    is_post_text_meaningful=0
   else
-    status_core_posts_single_file=1
+    is_post_text_meaningful=1
   fi
 
-  debug 'core_posts_single_file' 'END'
+  debug 'core_is_post_text_meaningful' 'END'
 
-  return $status_core_posts_single_file
+  return $is_post_text_meaningful
 }
 
-core_post()
+core_posts_count_lines()
 {
-  param_text="$1"
-  param_linkcard_index="$2"
-  param_langs="$3"
-  if [ $# -gt 3 ]
+  param_core_posts_count_lines_text="$1"
+  param_core_posts_count_lines_separator_prefix="$2"
+
+  debug 'core_posts_count_lines' 'START'
+  debug 'core_posts_count_lines' "param_core_posts_count_lines_text:${param_core_posts_count_lines_text}"
+  debug 'core_posts_count_lines' "param_core_posts_count_lines_separator_prefix:${param_core_posts_count_lines_separator_prefix}"
+
+  count=0
+  lines=''
+  if [ -n "${param_core_posts_count_lines_separator_prefix}" ]
   then
-    shift
-    shift
-    shift
-  fi
-
-  debug 'core_post' 'START'
-  debug 'core_post' "param_text:${param_text}"
-  debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
-  debug 'core_post' "param_langs:${param_langs}"
-  debug 'core_post' "param_image_alt:$*"
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.post'
-  created_at=`get_ISO8601UTCbs`
-  images_fragment=`core_build_images_fragment "$@"`
-  actual_image_count=$?
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
-  langs_fragment=`core_build_langs_fragment "${param_langs}"`
-  case $actual_image_count in
-    0|1|2|3|4)
-      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
-      # image and external (link card) are exclusive, prioritize image specification
-      if [ $actual_image_count -gt 0 ]
-      then
-        record="${record},\"embed\":${images_fragment}"
-      elif [ -n "${external_fragment}" ]
-      then
-        record="${record},\"embed\":${external_fragment}"
-      fi
-      if [ -n "${link_facets_fragment}" ]
-      then
-        record="${record},\"facets\":${link_facets_fragment}"
-      fi
-      if [ -n "${langs_fragment}" ]
-      then
-        record="${record},\"langs\":${langs_fragment}"
-      fi
-      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
-      then
-        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
-      fi
-      record="${record}}"
-
-      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-      status=$?
-      debug_single 'core_post'
-      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-      if [ $status -eq 0 ]
-      then
-        core_output_post "`_p "${result}" | jq -r '.uri'`"
-      else
-        error 'post command failed'
-      fi
-      ;;
-  esac
-
-  debug 'core_post' 'END'
-}
-
-core_posts_thread()
-{
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-
-  debug 'core_posts_thread' 'START'
-  debug 'core_posts_thread' "param_text:${param_text}"
-  debug 'core_posts_thread' "param_text_files:${param_text_files}"
-  debug 'core_posts_thread' "param_langs:${param_langs}"
-
-  parent_uri=''
-  parent_cid=''
-  thread_root_uri=''
-
-  if [ -n "${param_text}" ]
-  then
-    if core_posts_single "${param_text}" "${param_langs}"
-    then
-      parent_uri="${RESULT_core_posts_single_uri}"
-      parent_cid="${RESULT_core_posts_single_cid}"
-      thread_root_uri="${parent_uri}"
-    else
-      error 'Processing has been canceled'
-    fi
-  fi
-
-  if [ -n "${param_text_files}" ]
-  then
-    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-    files_count=$?
-    files_index=1
-    while [ $files_index -le $files_count ]
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_count_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
     do
-      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
-      then
-        parent_uri="${RESULT_core_posts_single_file_uri}"
-        parent_cid="${RESULT_core_posts_single_file_cid}"
-        if [ -z "${thread_root_uri}" ]
-        then
-          thread_root_uri="${parent_uri}"
+      if _startswith "$1" "${param_core_posts_count_lines_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
         fi
-      else
-        error 'Processing has been canceled'
-      fi
-      files_index=`expr "$files_index" + 1`
-    done
-  fi
-
-  # depth='', parent-height=0
-  core_thread "${thread_root_uri}" '' 0
-
-  debug 'core_posts_thread' 'END'
-}
-
-core_posts_sibling()
-{
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-
-  debug 'core_posts_sibling' 'START'
-  debug 'core_posts_sibling' "param_text:${param_text}"
-  debug 'core_posts_sibling' "param_text_files:${param_text_files}"
-  debug 'core_posts_sibling' "param_langs:${param_langs}"
-
-  parent_uri=''
-  parent_cid=''
-  thread_root_uri=''
-
-  if [ -n "${param_text}" ]
-  then
-    if core_posts_single "${param_text}" "${param_langs}"
-    then
-      parent_uri="${RESULT_core_posts_single_uri}"
-      parent_cid="${RESULT_core_posts_single_cid}"
-      thread_root_uri="${parent_uri}"
-    else
-      error 'Processing has been canceled'
-    fi
-  fi
-
-  if [ -n "${param_text_files}" ]
-  then
-    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-    files_count=$?
-    files_index=1
-    while [ $files_index -le $files_count ]
-    do
-      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
-      then
-        if [ -z "${parent_uri}" ]
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
         then
-          parent_uri="${RESULT_core_posts_single_file_uri}"
-        fi
-        if [ -z "${parent_cid}" ]
-        then
-          parent_cid="${RESULT_core_posts_single_file_cid}"
-        fi
-        if [ -z "${thread_root_uri}" ]
-        then
-          thread_root_uri="${parent_uri}"
-        fi
-      else
-        error 'Processing has been canceled'
-      fi
-      files_index=`expr "$files_index" + 1`
-    done
-  fi
-
-  # depth='', parent-height=0
-  core_thread "${thread_root_uri}" '' 0
-
-  debug 'core_posts_sibling' 'END'
-}
-
-core_posts_independence()
-{
-  param_text="$1"
-  param_text_files="$2"
-  param_langs="$3"
-
-  debug 'core_posts_independence' 'START'
-  debug 'core_posts_independence' "param_text:${param_text}"
-  debug 'core_posts_independence' "param_text_files:${param_text_files}"
-  debug 'core_posts_independence' "param_langs:${param_langs}"
-
-  parent_uri=''
-  parent_cid=''
-  thread_root_uri=''
-  post_uri_list=''
-
-  if [ -n "${param_text}" ]
-  then
-    if core_posts_single "${param_text}" "${param_langs}"
-    then
-      #parent_uri=''
-      #parent_cid=''
-      #thread_root_uri="${RESULT_core_posts_single_uri}"
-      post_uri_list="${post_uri_list} ${RESULT_core_posts_single_uri}"
-    else
-      error 'Processing has been canceled'
-    fi
-  fi
-
-  if [ -n "${param_text_files}" ]
-  then
-    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
-    files_count=$?
-    files_index=1
-    while [ $files_index -le $files_count ]
-    do
-      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
-      if core_posts_single_file "${target_file}" "${param_langs}" "${parent_uri}" "${parent_cid}"
-      then
-        #parent_uri=''
-        #parent_cid=''
-        #if [ -z "${thread_root_uri}" ]
-        #then
-        #  thread_root_uri="${RESULT_core_posts_single_file_uri}"
-        #fi
-        post_uri_list="${post_uri_list} ${RESULT_core_posts_single_file_uri}"
-      else
-        error 'Processing has been canceled'
-      fi
-      files_index=`expr "$files_index" + 1`
-    done
-  fi
-
-  core_output_post "${post_uri_list}"
-
-  debug 'core_posts_independence' 'END'
-}
-
-core_posts()
-{
-  param_mode="$1"
-  param_text="$2"
-  param_text_files="$3"
-  param_langs="$4"
-
-  debug 'core_posts' 'START'
-  debug 'core_posts' "param_mode:${param_mode}"
-  debug 'core_posts' "param_text:${param_text}"
-  debug 'core_posts' "param_text_fies:${param_text_files}"
-  debug 'core_posts' "param_langs:${param_langs}"
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.post'
-
-  # size check
-  core_verify_text_size "${param_text}" "${param_text_files}"
-
-  case $param_mode in
-    sibling)
-      core_posts_sibling "${param_text}" "${param_text_files}" "${param_langs}"
-      ;;
-    independence)
-      core_posts_independence "${param_text}" "${param_text_files}" "${param_langs}"
-      ;;
-    thread|*)
-      core_posts_thread "${param_text}" "${param_text_files}" "${param_langs}"
-      ;;
-  esac
-
-  debug 'core_posts' 'END'
-}
-
-core_reply()
-{
-  param_target_uri="$1"
-  param_target_cid="$2"
-  param_text="$3"
-  param_linkcard_index="$4"
-  param_langs="$5"
-  if [ $# -gt 5 ]
-  then
-    shift
-    shift
-    shift
-    shift
-    shift
-  fi
-
-  debug 'core_reply' 'START'
-  debug 'core_reply' "param_target_uri:${param_target_uri}"
-  debug 'core_reply' "param_target_cid:${param_target_cid}"
-  debug 'core_reply' "param_text:${param_text}"
-  debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
-  debug 'core_reply' "param_langs:${param_langs}"
-  debug 'core_reply' "param_image_alt:$*"
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.post'
-  created_at=`get_ISO8601UTCbs`
-  reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment "$@"`
-  actual_image_count=$?
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
-  langs_fragment=`core_build_langs_fragment "${param_langs}"`
-  case $actual_image_count in
-    0|1|2|3|4)
-      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
-      # image and external (link card) are exclusive, prioritize image specification
-      if [ $actual_image_count -gt 0 ]
-      then
-        record="${record},\"embed\":${images_fragment}"
-      elif [ -n "${external_fragment}" ]
-      then
-        record="${record},\"embed\":${external_fragment}"
-      fi
-      if [ -n "${link_facets_fragment}" ]
-      then
-        record="${record},\"facets\":${link_facets_fragment}"
-      fi
-      if [ -n "${langs_fragment}" ]
-      then
-        record="${record},\"langs\":${langs_fragment}"
-      fi
-      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
-      then
-        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
-      fi
-      record="${record}}"
-
-      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-      status=$?
-      debug_single 'core_reply'
-      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-      if [ $status -eq 0 ]
-      then
-        core_output_post "`_p "${result}" | jq -r '.uri'`"
-      else
-        error 'reply command failed'
-      fi
-      ;;
-  esac
-
-  debug 'core_reply' 'END'
-}
-
-core_repost()
-{
-  param_target_uri="$1"
-  param_target_cid="$2"
-
-  debug 'core_repost' 'START'
-  debug 'core_repost' "param_target_uri:${param_target_uri}"
-  debug 'core_repost' "param_target_cid:${param_target_cid}"
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.repost'
-  created_at=`get_ISO8601UTCbs`
-  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
-
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-  status=$?
-  debug_single 'core_repost'
-  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-  if [ $status -eq 0 ]
-  then
-    _p "${result}" | jq -r '"[repost uri:\(.uri)]"'
-    core_output_post "${param_target_uri}"
-  else
-    error 'repost command failed'
-  fi
-
-  debug 'core_repost' 'END'
-}
-
-core_quote()
-{
-  param_target_uri="$1"
-  param_target_cid="$2"
-  param_text="$3"
-  param_linkcard_index="$4"
-  param_langs="$5"
-  if [ $# -gt 5 ]
-  then
-    shift
-    shift
-    shift
-    shift
-    shift
-  fi
-
-  debug 'core_quote' 'START'
-  debug 'core_quote' "param_target_uri:${param_target_uri}"
-  debug 'core_quote' "param_target_cid:${param_target_cid}"
-  debug 'core_quote' "param_text:${param_text}"
-  debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
-  debug 'core_quote' "param_langs:${param_langs}"
-  debug 'core_quote' "param_image_alt:$*"
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.post'
-  created_at=`get_ISO8601UTCbs`
-  quote_record_fragment=`core_build_quote_record_fragment "${param_target_uri}" "${param_target_cid}"`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  images_fragment=`core_build_images_fragment "$@"`
-  actual_image_count=$?
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
-  langs_fragment=`core_build_langs_fragment "${param_langs}"`
-  case $actual_image_count in
-    0|1|2|3|4)
-      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
-      # image and external (link card) are exclusive, prioritize image specification
-      if [ $actual_image_count -eq 0 ]
-      then
-        if [ -n "${external_fragment}" ]
-        then
-          record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${external_fragment},\"record\":${quote_record_fragment}}"
+          lines=`printf "%s\n%s" "${lines}" "$1"`
         else
-          record="${record},\"embed\":${quote_record_fragment}"
+          lines="$1"
         fi
-      else
-        record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}"
       fi
-      if [ -n "${link_facets_fragment}" ]
-      then
-        record="${record},\"facets\":${link_facets_fragment}"
-      fi
-      if [ -n "${langs_fragment}" ]
-      then
-        record="${record},\"langs\":${langs_fragment}"
-      fi
-      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
-      then
-        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
-      fi
-      record="${record}}"
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+  fi
+  debug 'core_posts_count_lines' "count: ${count}"
 
-      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-      status=$?
-      debug_single 'core_quote'
-      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-      if [ $status -eq 0 ]
-      then
-        core_output_post "`_p "${result}" | jq -r '.uri'`"
-      else
-        error 'quote command failed'
-      fi
-      ;;
-  esac
+  debug 'core_posts_count_lines' 'END'
 
-  debug 'core_quote' 'END'
+  return $count
 }
 
-core_like()
+core_posts_files_count_lines()
 {
-  param_target_uri="$1"
-  param_target_cid="$2"
+  param_core_posts_files_count_lines_files="$1"
+  param_core_posts_files_count_lines_separator_prefix="$2"
 
-  debug 'core_like' 'START'
-  debug 'core_like' "param_target_uri:${param_target_uri}"
-  debug 'core_like' "param_target_cid:${param_target_cid}"
+  debug 'core_posts_files_count_lines' 'START'
+  debug 'core_posts_files_count_lines' "param_core_posts_files_count_lines_files:${param_core_posts_files_count_lines_files}"
+  debug 'core_posts_files_count_lines' "param_core_posts_files_count_lines_separator_prefix:${param_core_posts_files_count_lines_separator_prefix}"
 
-  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
-
-  read_session_file
-  repo="${SESSION_HANDLE}"
-  collection='app.bsky.feed.like'
-  created_at=`get_ISO8601UTCbs`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
-
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-  status=$?
-  debug_single 'core_like'
-  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-  if [ $status -eq 0 ]
+  core_posts_files_count_lines_count=0
+  if [ -n "${param_core_posts_files_count_lines_files}" ]
   then
-    _p "${result}" | jq -r '"[like uri:\(.uri)]"'
-    core_output_post "${param_target_uri}"
-  else
-    error 'quote command failed'
+    _slice "${param_core_posts_files_count_lines_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+    files_count=$?
+    if [ -n "${param_core_posts_files_count_lines_separator_prefix}" ]
+    then
+      files_index=1
+      while [ $files_index -le $files_count ]
+      do
+        target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+        file_content=`cat "${target_file}"`
+        core_posts_count_lines "${file_content}" "${param_core_posts_files_count_lines_separator_prefix}"
+        file_content_count=$?
+        core_posts_files_count_lines_count=`expr "${core_posts_files_count_lines_count}" + "${file_content_count}"`
+        files_index=`expr "${files_index}" + 1`
+      done
+    else
+      core_posts_files_count_lines_count="${files_count}"
+    fi
   fi
 
-  debug 'core_like' 'END'
+  debug 'core_posts_files_count_lines' 'END'
+
+  return $core_posts_files_count_lines_count
 }
 
 core_thread()
@@ -2477,6 +2356,7 @@ core_thread()
   param_parent_height="$3"
   param_output_id="$4"
   param_output_via="$5"
+  param_output_json="$6"
 
   debug 'core_thread' 'START'
   debug 'core_thread' "param_target_uri:${param_target_uri}"
@@ -2484,6 +2364,7 @@ core_thread()
   debug 'core_thread' "param_parent_height:${param_parent_height}"
   debug 'core_thread' "param_output_id:${param_output_id}"
   debug 'core_thread' "param_output_via:${param_output_via}"
+  debug 'core_thread' "param_output_json:${param_output_json}"
 
   debug_single 'core_thread'
   result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
@@ -2538,9 +2419,14 @@ core_thread()
     ;
     output_replies(.thread; 0; "")
   '
-  _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
-  _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
-  _p "${result}" | jq -r "${view_post_functions}${thread_parse_prodecure_replies}"
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${result}"
+  else
+    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
+    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
+    _p "${result}" | jq -r "${view_post_functions}${thread_parse_prodecure_replies}"
+  fi
 
   view_session_functions=`core_create_session_chunk`
   feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
@@ -2553,16 +2439,1071 @@ core_thread()
   debug 'core_thread' 'END'
 }
 
+core_post()
+{
+  param_text="$1"
+  param_linkcard_index="$2"
+  param_langs="$3"
+  param_output_json="$4"
+  if [ $# -gt 4 ]
+  then
+    shift
+    shift
+    shift
+    shift
+  fi
+
+  debug 'core_post' 'START'
+  debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_post' "param_langs:${param_langs}"
+  debug 'core_post' "param_output_json:${param_output_json}"
+  debug 'core_post' "param_image_alt:$*"
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  images_fragment=`core_build_images_fragment "$@"`
+  actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
+  case $actual_image_count in
+    0|1|2|3|4)
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
+      if [ $actual_image_count -gt 0 ]
+      then
+        record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
+      fi
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
+      fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
+      fi
+      record="${record}}"
+
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+      status=$?
+      debug_single 'core_post'
+      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+      if [ $status -eq 0 ]
+      then
+        core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+      else
+        error 'post command failed'
+      fi
+      ;;
+  esac
+
+  debug 'core_post' 'END'
+}
+
+core_posts_thread_lines()
+{
+  param_core_posts_thread_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_thread_lines' 'START'
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
+  debug 'core_posts_thread_lines' "param_langs:${param_langs}"
+  debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_thread_lines_parent_uri="${param_parent_uri}"
+  core_posts_thread_lines_parent_cid="${param_parent_cid}"
+  core_posts_thread_lines_root_uri=''
+  RESULT_core_posts_thread_lines_uri=''
+  RESULT_core_posts_thread_lines_cid=''
+  RESULT_core_posts_thread_lines_root_uri=''
+  #RESULT_core_posts_thread_lines_uri_list=''
+  #RESULT_core_posts_thread_lines_count=0
+  status_core_posts_thread_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_thread_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+          then  # post succeeded
+            core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+            core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+            RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+            RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+            #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            if [ -z "${core_posts_thread_lines_root_uri}" ]
+            then
+              core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+              RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+            fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_thread_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+      then  # post succeeded
+        core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+        core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+        RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+        RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+        #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        if [ -z "${core_posts_thread_lines_root_uri}" ]
+        then
+          core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+          RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+        fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_thread_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_thread_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+    then  # post succeeded
+      core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
+      core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
+      RESULT_core_posts_thread_lines_uri="${core_posts_thread_lines_parent_uri}"
+      RESULT_core_posts_thread_lines_cid="${core_posts_thread_lines_parent_cid}"
+      #RESULT_core_posts_thread_lines_uri_list="${RESULT_core_posts_thread_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      if [ -z "${core_posts_thread_lines_root_uri}" ]
+      then
+        core_posts_thread_lines_root_uri="${core_posts_thread_lines_parent_uri}"
+        RESULT_core_posts_thread_lines_root_uri="${core_posts_thread_lines_root_uri}"
+      fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_thread_lines=1
+    fi
+  fi
+  #RESULT_core_posts_thread_lines_count="${count}"
+
+  debug 'core_posts_thread_lines' 'END'
+
+  return $status_core_posts_thread_lines
+}
+
+core_posts_thread()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
+
+  debug 'core_posts_thread' 'START'
+  debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
+  debug 'core_posts_thread' "param_text_files:${param_text_files}"
+  debug 'core_posts_thread' "param_langs:${param_langs}"
+  debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_thread' "param_output_json:${param_output_json}"
+
+  parent_uri=''
+  parent_cid=''
+  thread_root_uri=''
+  #post_uri_list=''
+
+  if [ -n "${param_stdin_text}" ]
+  then  # standard input (pipe/redirect)
+    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      parent_uri="${RESULT_core_posts_thread_lines_uri}"
+      parent_cid="${RESULT_core_posts_thread_lines_cid}"
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      parent_uri="${RESULT_core_posts_thread_lines_uri}"
+      parent_cid="${RESULT_core_posts_thread_lines_cid}"
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+    files_count=$?
+    files_index=1
+    while [ $files_index -le $files_count ]
+    do
+      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+      if [ -r "${target_file}" ]
+      then
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+      then
+        parent_uri="${RESULT_core_posts_thread_lines_uri}"
+        parent_cid="${RESULT_core_posts_thread_lines_cid}"
+        if [ -z "${thread_root_uri}" ]
+        then
+          thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
+        fi
+      else
+        error 'Processing has been canceled'
+      fi
+      files_index=`expr "$files_index" + 1`
+    done
+  fi
+
+  # depth='', parent-height=0
+  core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+
+  debug 'core_posts_thread' 'END'
+}
+
+core_posts_sibling_lines()
+{
+  param_core_posts_sibling_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_sibling_lines' 'START'
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
+  debug 'core_posts_sibling_lines' "param_langs:${param_langs}"
+  debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_sibling_lines_parent_uri="${param_parent_uri}"
+  core_posts_sibling_lines_parent_cid="${param_parent_cid}"
+  core_posts_sibling_lines_root_uri=''
+  RESULT_core_posts_sibling_lines_uri=''
+  RESULT_core_posts_sibling_lines_cid=''
+  RESULT_core_posts_sibling_lines_root_uri=''
+  #RESULT_core_posts_sibling_lines_uri_list=''
+  #RESULT_core_posts_sibling_lines_count=0
+  status_core_posts_sibling_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_sibling_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+          then  # post succeeded
+            if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+            then
+              core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+            fi
+            if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+            then
+              core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+            fi
+            RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+            RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+            #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            if [ -z "${core_posts_sibling_lines_root_uri}" ]
+            then
+              core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+              RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+            fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_sibling_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+      then  # post succeeded
+        if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+        then
+          core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+        fi
+        if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+        then
+          core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+        fi
+        RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+        RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+        #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        if [ -z "${core_posts_sibling_lines_root_uri}" ]
+        then
+          core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+          RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+        fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_sibling_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_sibling_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+    then  # post succeeded
+      if [ -z "${core_posts_sibling_lines_parent_uri}" ]
+      then
+        core_posts_sibling_lines_parent_uri="${RESULT_core_posts_single_uri}"
+      fi
+      if [ -z "${core_posts_sibling_lines_parent_cid}" ]
+      then
+        core_posts_sibling_lines_parent_cid="${RESULT_core_posts_single_cid}"
+      fi
+      RESULT_core_posts_sibling_lines_uri="${core_posts_sibling_lines_parent_uri}"
+      RESULT_core_posts_sibling_lines_cid="${core_posts_sibling_lines_parent_cid}"
+      #RESULT_core_posts_sibling_lines_uri_list="${RESULT_core_posts_sibling_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      if [ -z "${core_posts_sibling_lines_root_uri}" ]
+      then
+        core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_parent_uri}"
+        RESULT_core_posts_sibling_lines_root_uri="${core_posts_sibling_lines_root_uri}"
+      fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_sibling_lines=1
+    fi
+  fi
+  #RESULT_core_posts_sibling_lines_count="${count}"
+
+  debug 'core_posts_sibling_lines' 'END'
+
+  return $status_core_posts_sibling_lines
+}
+
+core_posts_sibling()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
+
+  debug 'core_posts_sibling' 'START'
+  debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
+  debug 'core_posts_sibling' "param_text_files:${param_text_files}"
+  debug 'core_posts_sibling' "param_langs:${param_langs}"
+  debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_sibling' "param_output_json:${param_output_json}"
+
+  parent_uri=''
+  parent_cid=''
+  thread_root_uri=''
+  #post_uri_list=''
+
+  if [ -n "${param_stdin_text}" ]
+  then
+    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      if [ -z "${parent_uri}" ]
+      then
+        parent_uri="${RESULT_core_posts_sibling_lines_uri}"
+      fi
+      if [ -z "${parent_cid}" ]
+      then
+        parent_cid="${RESULT_core_posts_sibling_lines_cid}"
+      fi
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    then
+      if [ -z "${parent_uri}" ]
+      then
+        parent_uri="${RESULT_core_posts_sibling_lines_uri}"
+      fi
+      if [ -z "${parent_cid}" ]
+      then
+        parent_cid="${RESULT_core_posts_sibling_lines_cid}"
+      fi
+      if [ -z "${thread_root_uri}" ]
+      then
+        thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
+      fi
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+    files_count=$?
+    files_index=1
+    while [ $files_index -le $files_count ]
+    do
+      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+      if [ -r "${target_file}" ]
+      then
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+      then
+        if [ -z "${parent_uri}" ]
+        then
+          parent_uri="${RESULT_core_posts_sibling_lines_uri}"
+        fi
+        if [ -z "${parent_cid}" ]
+        then
+          parent_cid="${RESULT_core_posts_sibling_lines_cid}"
+        fi
+        if [ -z "${thread_root_uri}" ]
+        then
+          thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
+        fi
+      else
+        error 'Processing has been canceled'
+      fi
+      files_index=`expr "$files_index" + 1`
+    done
+  fi
+
+  # depth='', parent-height=0
+  core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+
+  debug 'core_posts_sibling' 'END'
+}
+
+core_posts_independence_lines()
+{
+  param_core_posts_independence_lines_text="$1"
+  param_langs="$2"
+  param_parent_uri="$3"
+  param_parent_cid="$4"
+  param_separator_prefix="$5"
+
+  debug 'core_posts_independence_lines' 'START'
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
+  debug 'core_posts_independence_lines' "param_langs:${param_langs}"
+  debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
+  debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
+
+  core_posts_independence_parent_uri=''
+  core_posts_independence_parent_cid=''
+  #core_posts_independence_lines_root_uri=''
+  #RESULT_core_posts_independence_lines_uri=''
+  #RESULT_core_posts_independence_lines_cid=''
+  #RESULT_core_posts_independence_lines_root_uri=''
+  RESULT_core_posts_independence_lines_uri_list=''
+  #RESULT_core_posts_independence_lines_count=0
+  status_core_posts_independence_lines=0
+  count=0
+  lines=''
+  if [ -n "${param_separator_prefix}" ]
+  then
+    # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+    evacuated_IFS=$IFS
+    # each line separated by newline
+    IFS='
+'
+    # no double quote for use word splitting
+    # shellcheck disable=SC2086
+    set -- $param_core_posts_independence_lines_text
+    IFS=$evacuated_IFS
+    while [ $# -gt 0 ]
+    do
+      if _startswith "$1" "${param_separator_prefix}"
+      then  # separator line detected
+        if core_is_post_text_meaningful "${lines}"
+        then  # post text is meaningful
+          count=`expr "${count}" + 1`
+          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+          if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+          then  # post succeeded
+            core_posts_independence_parent_uri=''
+            core_posts_independence_parent_cid=''
+            #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+            #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+            RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+            #if [ -z "${core_posts_independence_lines_root_uri}" ]
+            #then
+            #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+            #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+            #fi
+            # clear single post content
+            lines=''
+          else  # post failed
+            status_core_posts_independence_lines=1
+            break
+          fi
+        fi
+        # clear single post content
+        lines=''
+      else  # separator not detected
+        # stack to single content
+        if [ -n "${lines}" ]
+        then
+          lines=`printf "%s\n%s" "${lines}" "$1"`
+        else
+          lines="$1"
+        fi
+      fi
+      # go to next line
+      shift
+    done
+    # process after than last separator
+    if core_is_post_text_meaningful "${lines}"
+    then
+      count=`expr "${count}" + 1`
+      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+      if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+      then  # post succeeded
+        core_posts_independence_parent_uri=''
+        core_posts_independence_parent_cid=''
+        #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+        #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+        RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+        #if [ -z "${core_posts_independence_lines_root_uri}" ]
+        #then
+        #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+        #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+        #fi
+        # clear single post content
+        lines=''
+      else  # post failed
+        status_core_posts_independence_lines=1
+      fi
+    fi
+  else  # separator not specified : all lines as single content
+    count=1
+    text=`_p "${param_core_posts_independence_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+    if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+    then  # post succeeded
+      core_posts_independence_parent_uri=''
+      core_posts_independence_parent_cid=''
+      #RESULT_core_posts_independence_lines_uri="${core_posts_independence_parent_uri}"
+      #RESULT_core_posts_independence_lines_cid="${core_posts_independence_parent_cid}"
+      RESULT_core_posts_independence_lines_uri_list="${RESULT_core_posts_independence_lines_uri_list} ${RESULT_core_posts_single_uri}"
+      #if [ -z "${core_posts_independence_lines_root_uri}" ]
+      #then
+      #  core_posts_independence_lines_root_uri="${core_posts_independence_lines_parent_uri}"
+      #  RESULT_core_posts_independence_lines_root_uri="${core_posts_independence_lines_root_uri}"
+      #fi
+      # clear single post content
+      lines=''
+    else  # post failed
+      status_core_posts_independence_lines=1
+    fi
+  fi
+  #RESULT_core_posts_independence_lines_count="${count}"
+
+  debug 'core_posts_independence_lines' 'END'
+
+  return $status_core_posts_independence_lines
+}
+
+core_posts_independence()
+{
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_langs="$4"
+  param_separator_prefix="$5"
+  param_output_json="$6"
+
+  debug 'core_posts_independence' 'START'
+  debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
+  debug 'core_posts_independence' "param_text_files:${param_text_files}"
+  debug 'core_posts_independence' "param_langs:${param_langs}"
+  debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_independence' "param_output_json:${param_output_json}"
+
+  parent_uri=''
+  parent_cid=''
+  thread_root_uri=''
+  post_uri_list=''
+
+  if [ -n "${param_stdin_text}" ]
+  then  # standard input (pipe/redirect)
+    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}"
+    then
+      #parent_uri=''
+      #parent_cid=''
+      #thread_root_uri=''
+      post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_specified_text}" ]
+  then
+    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}"
+    then
+      #parent_uri=''
+      #parent_cid=''
+      #thread_root_uri=''
+      post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+    else
+      error 'Processing has been canceled'
+    fi
+  fi
+
+  if [ -n "${param_text_files}" ]
+  then
+    _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+    files_count=$?
+    files_index=1
+    while [ $files_index -le $files_count ]
+    do
+      target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+      if [ -r "${target_file}" ]
+      then
+        file_content=`cat "${target_file}"`
+      else
+        check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
+        if [ -n "${check_comma}" ]
+        then
+          error_msg "commas(,) may be used to separate multiple paths"
+        fi
+        error_msg "Specified file is not readable: ${target_file}"
+      fi
+      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}"
+      then
+        #parent_uri=''
+        #parent_cid=''
+        #thread_root_uri=''
+        post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+      else
+        error 'Processing has been canceled'
+      fi
+      files_index=`expr "$files_index" + 1`
+    done
+  fi
+
+  core_output_post "${post_uri_list}" '' '' "${param_output_json}"
+
+  debug 'core_posts_independence' 'END'
+}
+
+core_posts()
+{
+  param_mode="$1"
+  param_stdin_text="$2"
+  param_specified_text="$3"
+  param_text_files="$4"
+  param_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+
+  debug 'core_posts' 'START'
+  debug 'core_posts' "param_mode:${param_mode}"
+  debug 'core_posts' "param_stdin_text:${param_stdin_text}"
+  debug 'core_posts' "param_specified_text:${param_specified_text}"
+  debug 'core_posts' "param_text_fies:${param_text_files}"
+  debug 'core_posts' "param_langs:${param_langs}"
+  debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts' "param_output_json:${param_output_json}"
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+
+  # size check
+  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}"
+
+  case $param_mode in
+    sibling)
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      ;;
+    independence)
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      ;;
+    thread|*)
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      ;;
+  esac
+
+  debug 'core_posts' 'END'
+}
+
+core_reply()
+{
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_text="$3"
+  param_linkcard_index="$4"
+  param_langs="$5"
+  param_output_json="$6"
+  if [ $# -gt 6 ]
+  then
+    shift
+    shift
+    shift
+    shift
+    shift
+    shift
+  fi
+
+  debug 'core_reply' 'START'
+  debug 'core_reply' "param_target_uri:${param_target_uri}"
+  debug 'core_reply' "param_target_cid:${param_target_cid}"
+  debug 'core_reply' "param_text:${param_text}"
+  debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_reply' "param_langs:${param_langs}"
+  debug 'core_reply' "param_output_json:${param_output_json}"
+  debug 'core_reply' "param_image_alt:$*"
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  reply_fragment=`core_build_reply_fragment "${param_target_uri}" "${param_target_cid}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  images_fragment=`core_build_images_fragment "$@"`
+  actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
+  case $actual_image_count in
+    0|1|2|3|4)
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+      # image and external (link card) are exclusive, prioritize image specification
+      if [ $actual_image_count -gt 0 ]
+      then
+        record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${external_fragment}" ]
+      then
+        record="${record},\"embed\":${external_fragment}"
+      fi
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
+      fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
+      fi
+      record="${record}}"
+
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+      status=$?
+      debug_single 'core_reply'
+      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+      if [ $status -eq 0 ]
+      then
+        core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+      else
+        error 'reply command failed'
+      fi
+      ;;
+  esac
+
+  debug 'core_reply' 'END'
+}
+
+core_repost()
+{
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_output_json="$3"
+
+  debug 'core_repost' 'START'
+  debug 'core_repost' "param_target_uri:${param_target_uri}"
+  debug 'core_repost' "param_target_cid:${param_target_cid}"
+  debug 'core_repost' "param_output_json:${param_output_json}"
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.repost'
+  created_at=`get_ISO8601UTCbs`
+  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+  status=$?
+  debug_single 'core_repost'
+  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+  if [ $status -eq 0 ]
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      _p "{\"repost\":${result},\"original\":"
+    else
+      _p "${result}" | jq -r '"[repost uri:\(.uri)]"'
+    fi
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "}"
+    fi
+  else
+    error 'repost command failed'
+  fi
+
+  debug 'core_repost' 'END'
+}
+
+core_quote()
+{
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_text="$3"
+  param_linkcard_index="$4"
+  param_langs="$5"
+  param_output_json="$6"
+  if [ $# -gt 6 ]
+  then
+    shift
+    shift
+    shift
+    shift
+    shift
+    shift
+  fi
+
+  debug 'core_quote' 'START'
+  debug 'core_quote' "param_target_uri:${param_target_uri}"
+  debug 'core_quote' "param_target_cid:${param_target_cid}"
+  debug 'core_quote' "param_text:${param_text}"
+  debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_quote' "param_langs:${param_langs}"
+  debug 'core_quote' "param_output_json:${param_output_json}"
+  debug 'core_quote' "param_image_alt:$*"
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.post'
+  created_at=`get_ISO8601UTCbs`
+  quote_record_fragment=`core_build_quote_record_fragment "${param_target_uri}" "${param_target_cid}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  images_fragment=`core_build_images_fragment "$@"`
+  actual_image_count=$?
+  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  langs_fragment=`core_build_langs_fragment "${param_langs}"`
+  case $actual_image_count in
+    0|1|2|3|4)
+      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      # image and external (link card) are exclusive, prioritize image specification
+      if [ $actual_image_count -eq 0 ]
+      then
+        if [ -n "${external_fragment}" ]
+        then
+          record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${external_fragment},\"record\":${quote_record_fragment}}"
+        else
+          record="${record},\"embed\":${quote_record_fragment}"
+        fi
+      else
+        record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}"
+      fi
+      if [ -n "${link_facets_fragment}" ]
+      then
+        record="${record},\"facets\":${link_facets_fragment}"
+      fi
+      if [ -n "${langs_fragment}" ]
+      then
+        record="${record},\"langs\":${langs_fragment}"
+      fi
+      if [ "${BSKYSHCLI_POST_VIA}" = 'ON' ]
+      then
+        record="${record},\"via\":\"${BSKYSHCLI_VIA_VALUE}\""
+      fi
+      record="${record}}"
+
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+      status=$?
+      debug_single 'core_quote'
+      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+      if [ $status -eq 0 ]
+      then
+        core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+      else
+        error 'quote command failed'
+      fi
+      ;;
+  esac
+
+  debug 'core_quote' 'END'
+}
+
+core_like()
+{
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_output_json="$3"
+
+  debug 'core_like' 'START'
+  debug 'core_like' "param_target_uri:${param_target_uri}"
+  debug 'core_like' "param_target_cid:${param_target_cid}"
+  debug 'core_like' "param_output_json:${param_output_json}"
+
+  subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
+
+  read_session_file
+  repo="${SESSION_HANDLE}"
+  collection='app.bsky.feed.like'
+  created_at=`get_ISO8601UTCbs`
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+
+  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+  status=$?
+  debug_single 'core_like'
+  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+  if [ $status -eq 0 ]
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      _p "{\"like\":${result},\"original\":"
+    else
+      _p "${result}" | jq -r '"[like uri:\(.uri)]"'
+    fi
+      core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "}"
+    fi
+  else
+    error 'quote command failed'
+  fi
+
+  debug 'core_like' 'END'
+}
+
 core_get_profile()
 {
   param_did="$1"
   param_output_id="$2"
   param_dump="$3"
+  param_output_json="$4"
 
   debug 'core_get_profile' 'START'
   debug 'core_get_profile' "param_did:${param_did}"
   debug 'core_get_profile' "param_output_id:${param_output_id}"
   debug 'core_get_profile' "param_dump:${param_dump}"
+  debug 'core_get_profile' "param_output_json:${param_output_json}"
 
   result=`api app.bsky.actor.getProfile "${param_did}"`
   status=$?
@@ -2571,7 +3512,10 @@ core_get_profile()
 
   if [ $status -eq 0 ]
   then
-    if [ -n "${param_dump}" ]
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    elif [ -n "${param_dump}" ]
     then
       _p "${result}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
     else
@@ -2622,8 +3566,13 @@ core_get_pref()
   param_group="$1"
   param_item="$2"
   param_dump="$3"
+  param_output_json="$4"
 
   debug 'core_get_pref' 'START'
+  debug 'core_get_pref' "param_group:${param_group}"
+  debug 'core_get_pref' "param_item:${param_item}"
+  debug 'core_get_pref' "param_dump:${param_dump}"
+  debug 'core_get_pref' "param_output_json:${param_output_json}"
 
   result=`api app.bsky.actor.getPreferences`
   status=$?
@@ -2632,7 +3581,10 @@ core_get_pref()
 
   if [ $status -eq 0 ]
   then
-    if [ -n "${param_dump}" ]
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    elif [ -n "${param_dump}" ]
     then
       _p "${result}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
     else
@@ -2863,24 +3815,46 @@ core_get_pref()
 
 core_info_session_which()
 {
-  debug 'core_info_session_which' 'START'
+  param_output_json="$1"
 
-  _p "session file path: "
-  _pn "`get_session_filepath`"
+  debug 'core_info_session_which' 'START'
+  debug 'core_info_session_which' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"which\":\"`get_session_filepath`\""
+  else
+    _p "session file path: "
+    _pn "`get_session_filepath`"
+  fi
 
   debug 'core_info_session_which' 'END'
 }
 
 core_info_session_status()
 {
-  debug 'core_info_session_status' 'START'
+  param_output_json="$1"
 
-  _p "login status: "
-  if is_session_exist
+  debug 'core_info_session_status' 'START'
+  debug 'core_info_session_status' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
   then
-    _pn "login"
+    _p "\"loginStatus\":"
+    if is_session_exist
+    then
+      _p 'true'
+    else
+      _p 'false'
+    fi
   else
-    _pn "not login"
+    _p "login status: "
+    if is_session_exist
+    then
+      _pn "login"
+    else
+      _pn "not login"
+    fi
   fi
 
   debug 'core_info_session_status' 'END'
@@ -2888,36 +3862,68 @@ core_info_session_status()
 
 core_info_session_login()
 {
-  debug 'core_info_session_login' 'START'
+  param_output_json="$1"
 
-  _pn "login timestamp: ${SESSION_LOGIN_TIMESTAMP}"
+  debug 'core_info_session_login' 'START'
+  debug 'core_info_session_login' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"loginTimestamp\":\"${SESSION_LOGIN_TIMESTAMP}\""
+  else
+    _pn "login timestamp: ${SESSION_LOGIN_TIMESTAMP}"
+  fi
 
   debug 'core_info_session_login' 'END'
 }
 
 core_info_session_refresh()
 {
-  debug 'core_info_session_refresh' 'START'
+  param_output_json="$1"
 
-  _pn "session refresh timestamp: ${SESSION_REFRESH_TIMESTAMP}"
+  debug 'core_info_session_refresh' 'START'
+  debug 'core_info_session_refresh' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"refreshTimestamp\":\"${SESSION_REFRESH_TIMESTAMP}\""
+  else
+    _pn "session refresh timestamp: ${SESSION_REFRESH_TIMESTAMP}"
+  fi
 
   debug 'core_info_session_refresh' 'END'
 }
 
 core_info_session_handle()
 {
-  debug 'core_info_session_handle' 'START'
+  param_output_json="$1"
 
-  _pn "handle: ${SESSION_HANDLE}"
+  debug 'core_info_session_handle' 'START'
+  debug 'core_info_session_handle' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"handle\":\"${SESSION_HANDLE}\""
+  else
+    _pn "handle: ${SESSION_HANDLE}"
+  fi
 
   debug 'core_info_session_handle' 'END'
 }
 
 core_info_session_did()
 {
-  debug 'core_info_session_did' 'START'
+  param_output_json="$1"
 
-  _pn "did: ${SESSION_DID}"
+  debug 'core_info_session_did' 'START'
+  debug 'core_info_session_did' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"did\":\"${SESSION_DID}\""
+  else
+    _pn "did: ${SESSION_DID}"
+  fi
 
   debug 'core_info_session_did' 'END'
 }
@@ -2925,16 +3931,23 @@ core_info_session_did()
 core_info_session_index()
 {
   param_output_id="$1"
+  param_output_json="$2"
 
   debug 'core_info_session_index' 'START'
   debug 'core_info_session_index' "param_output_id:${param_output_id}"
+  debug 'core_info_session_index' "param_output_json:${param_output_json}"
 
-  _pn '[index]'
-  if [ -n "${param_output_id}" ]
+  if [ -n "${param_output_json}" ]
   then
-    _pn '[[view indexes: <index> <uri> <cid>]]'
+    _p "\"viewIndex\":["
   else
-    _pn '[[view indexes: <index>]]'
+    _pn '[index]'
+    if [ -n "${param_output_id}" ]
+    then
+      _pn '[[view indexes: <index> <uri> <cid>]]'
+    else
+      _pn '[[view indexes: <index>]]'
+    fi
   fi
 
   if [ -n "${SESSION_FEED_VIEW_INDEX}" ]
@@ -2957,15 +3970,29 @@ core_info_session_index()
         # shellcheck disable=SC2154,SC2034
         session_cid="${RESULT_slice_3}"
         
-        if [ -n "${param_output_id}" ]
+        if [ -n "${param_output_json}" ]
         then
-          printf "%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}"
+          if [ $chunk_index -gt 1 ]
+          then
+            _p ','
+          fi
+          _p "{\"index\":${session_index},\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\"}"
         else
-          _pn "${session_index}"
+          if [ -n "${param_output_id}" ]
+          then
+            printf "%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}"
+          else
+            _pn "${session_index}"
+          fi
         fi
       )
       chunk_index=`expr "${chunk_index}" + 1`
     done
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "]"
   fi
 
   debug 'core_info_session_index' 'END'
@@ -2973,107 +4000,326 @@ core_info_session_index()
 
 core_info_session_cursor()
 {
-  debug 'core_info_session_cursor' 'START'
+  param_output_json="$1"
 
-  _pn '[cursor]'
-  _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
-  _pn "feed cursor: ${SESSION_GETFEED_CURSOR}"
-  _pn "author-feed cursor: ${SESSION_GETAUTHORFEED_CURSOR}"
+  debug 'core_info_session_cursor' 'START'
+  debug 'core_info_session_cursor' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "\"cursor\":{\"timeline\":\"${SESSION_GETTIMELINE_CURSOR}\",\"feed\":\"${SESSION_GETFEED_CURSOR}\",\"authorFeed\":\"${SESSION_GETAUTHORFEED_CURSOR}\"}"
+  else
+    _pn '[cursor]'
+    _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
+    _pn "feed cursor: ${SESSION_GETFEED_CURSOR}"
+    _pn "author-feed cursor: ${SESSION_GETAUTHORFEED_CURSOR}"
+  fi
 
   debug 'core_info_session_cursor' 'END'
 }
 
 core_info_meta_path()
 {
-  debug 'core_info_meta_path' 'START'
+  param_output_json="$1"
 
-  _pn "Run Commands (BSKYSHCLI_RUN_COMMANDS_PATH): ${BSKYSHCLI_RUN_COMMANDS_PATH}"
-  _pn "work for session, debug log, etc. (BSKYSHCLI_TOOLS_WORK_DIR): ${BSKYSHCLI_TOOLS_WORK_DIR}"
-  _pn "library (BSKYSHCLI_LIB_PATH): ${BSKYSHCLI_LIB_PATH}"
-  _pn "api (BSKYSHCLI_API_PATH): ${BSKYSHCLI_API_PATH}"
+  debug 'core_info_meta_path' 'START'
+  debug 'core_info_meta_path' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    # TODO: escape double quote in value
+    _p '"path":{'
+    _p "\"BSKYSHCLI_RUN_COMMANDS_PATH\":\"${BSKYSHCLI_RUN_COMMANDS_PATH}\","
+    _p "\"BSKYSHCLI_TOOLS_WORK_DIR\":\"${BSKYSHCLI_TOOLS_WORK_DIR}\","
+    _p "\"BSKYSHCLI_LIB_PATH\":\"${BSKYSHCLI_LIB_PATH}\","
+    _p "\"BSKYSHCLI_API_PATH\":\"${BSKYSHCLI_API_PATH}\""
+    _p '}'
+  else
+    _pn "Run Commands (BSKYSHCLI_RUN_COMMANDS_PATH): ${BSKYSHCLI_RUN_COMMANDS_PATH}"
+    _pn "work for session, debug log, etc. (BSKYSHCLI_TOOLS_WORK_DIR): ${BSKYSHCLI_TOOLS_WORK_DIR}"
+    _pn "library (BSKYSHCLI_LIB_PATH): ${BSKYSHCLI_LIB_PATH}"
+    _pn "api (BSKYSHCLI_API_PATH): ${BSKYSHCLI_API_PATH}"
+  fi
 
   debug 'core_info_meta_path' 'END'
 }
 
 core_info_meta_config()
 {
-  debug 'core_info_meta_config' 'START'
+  param_output_json="$1"
 
-  _pn "BSKYSHCLI_DEBUG=${BSKYSHCLI_DEBUG}"
-  _pn "BSKYSHCLI_LIB_PATH=${BSKYSHCLI_LIB_PATH}"
-  _pn "BSKYSHCLI_TZ=${BSKYSHCLI_TZ}"
-  _pn "BSKYSHCLI_PROFILE=${BSKYSHCLI_PROFILE}"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_META}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE='${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_IMAGE='${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}'"
-  _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}'"
+  debug 'core_info_meta_config' 'START'
+  debug 'core_info_meta_config' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    # TODO: escape double quote in value
+    _p '"config":{'
+    create_json_keyvalue_variable 'BSKYSHCLI_DEBUG'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_LIB_PATH'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_TZ'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_PROFILE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_BODY'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_QUOTE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_IMAGE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT'
+    _p '}'
+  else
+    _pn "BSKYSHCLI_DEBUG=${BSKYSHCLI_DEBUG}"
+    _pn "BSKYSHCLI_LIB_PATH=${BSKYSHCLI_LIB_PATH}"
+    _pn "BSKYSHCLI_TZ=${BSKYSHCLI_TZ}"
+    _pn "BSKYSHCLI_PROFILE=${BSKYSHCLI_PROFILE}"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE='${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_IMAGE='${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}'"
+  fi
 
   debug 'core_info_meta_config' 'END'
 }
 
 core_info_meta_profile()
 {
-  debug 'core_info_meta_profile' 'START'
+  param_output_json="$1"
 
-  _pn '[profile (active session)]'
+  debug 'core_info_meta_profile' 'START'
+  debug 'core_info_meta_profile' "param_output_json:${param_output_json}"
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p '"profile":['
+    profile_stack=''
+  else
+    _pn '[profile (active session)]'
+  fi
   session_files=`(cd "${SESSION_DIR}" && ls -- *"${SESSION_FILENAME_SUFFIX}" 2>/dev/null)`
   for session_file in $session_files
   do
     if [ "${session_file}" = "${SESSION_FILENAME_DEFAULT_PREFIX}${SESSION_FILENAME_SUFFIX}" ]
     then
-      _pn '(default)'
+      output_work='(default)'
     else
-      _pn "${session_file}" | sed "s/${SESSION_FILENAME_SUFFIX}$//g"
+      output_work=`_p "${session_file}" | sed "s/${SESSION_FILENAME_SUFFIX}$//g"`
+    fi
+    if [ -n "${param_output_json}" ]
+    then
+      if [ -n "${profile_stack}" ]
+      then
+        profile_stack="${profile_stack},"
+      fi
+      profile_stack="${profile_stack}\"${output_work}\""
+    else
+      _pn "${output_work}"
     fi
   done
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${profile_stack}]"
+  fi
 
   debug 'core_info_meta_profile' 'END'
 }
 
 core_size()
 {
-  param_text="$1"
-  param_text_files="$2"
-  param_count_only="$3"
+  param_stdin_text="$1"
+  param_specified_text="$2"
+  param_text_files="$3"
+  param_separator_prefix="$4"
+  param_count_only="$5"
+  param_output_json="$6"
 
   debug 'core_size' 'START'
-  debug 'core_post' "param_text:${param_text}"
+  debug 'core_post' "param_stdin_text:${param_stdin_text}"
+  debug 'core_post' "param_specified_text:${param_specified_text}"
   debug 'core_post' "param_text_files:${param_text_files}"
+  debug 'core_post' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_post' "param_count_only:${param_count_only}"
+  debug 'core_post' "param_output_json:${param_output_json}"
 
-  if [ -n "${param_text}" ]
+  json_stack=''
+  status=0
+  # standard input
+  if [ -n "${param_stdin_text}" ]
   then
-    core_text_size "${param_text}"
-    text_size=$?
-    if [ -n "${param_count_only}" ]
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    if [ -n "${json_stack}" ]
     then
-      _pn "${text_size}"
-    else
-      if [ $text_size -le 300 ]
-      then
-        status='OK'
-      else
-        status='NG:over 300'
-      fi
-      _pn "text character count: ${text_size} [${status}]"
+      json_stack="${json_stack},"
     fi
+    json_stack="${json_stack}\"stdin\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
+      then
+        status=0
+      else
+        status=1
+      fi
+      if [ -n "${param_output_json}" ]
+      then
+        if [ $status -eq 0 ]
+        then
+          status_value='true'
+        else
+          status_value='false'
+        fi
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "standard input character count: ${text_size} [${status_message}]"
+          else
+            _pn "standard input character count (section #${section_index}): ${text_size} [${status_message}]"
+          fi
+        fi
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]"
   fi
+  # parameter specified text
+  if [ -n "${param_specified_text}" ]
+  then
+    # unescaped
+    unescaped_text=`echo "${param_specified_text}" | sed 's/\\\\"/"/g'`
+    core_text_size_lines "${unescaped_text}" "${param_separator_prefix}"
+    section_count=$?
+    section_index=1
+    if [ -n "${json_stack}" ]
+    then
+      json_stack="${json_stack},"
+    fi
+    json_stack="${json_stack}\"text\":["
+    while [ $section_index -le $section_count ]
+    do
+      text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
+      if [ "${text_size}" -le 300 ]
+      then
+        status=0
+      else
+        status=1
+      fi
+      if [ -n "${param_output_json}" ]
+      then
+        if [ $status -eq 0 ]
+        then
+          status_value='true'
+        else
+          status_value='false'
+        fi
+        if [ $section_index -gt 1 ]
+        then
+          json_stack="${json_stack},"
+        fi
+        json_stack="${json_stack}{\"size\":${text_size},\"status\":${status_value}}"
+      else
+        if [ -n "${param_count_only}" ]
+        then
+          _pn "${text_size}"
+        else
+          if [ $status -eq 0 ]
+          then
+            status_message='OK'
+          else
+            status_message='NG:over 300'
+          fi
+          if [ $section_count -eq 1 ]
+          then
+            _pn "text character count: ${text_size} [${status_message}]"
+          else
+            _pn "text character count (section #${section_index}): ${text_size} [${status_message}]"
+          fi
+        fi
+      fi
+      section_index=`expr "${section_index}" + 1`
+    done
+    json_stack="${json_stack}]"
+  fi
+  # text files
   if [ -n "${param_text_files}" ]
   then
-    core_process_files "${param_text_files}" 'core_output_text_file_size' "${param_count_only}"
+    if [ -n "${param_output_json}" ]
+    then
+      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}"`
+      json_files=`_p "${json_files}" | jq --slurp -c '.'`
+      json_files="\"files\":${json_files}"
+      if [ -n "${json_stack}" ]
+      then
+        json_stack="${json_stack},"
+      fi
+      json_stack="${json_stack}${json_files}"
+    else
+      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}"
+    fi
+  fi
+  json_stack="{${json_stack}}"
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${json_stack}"
   fi
 
   debug 'core_size' 'END'
