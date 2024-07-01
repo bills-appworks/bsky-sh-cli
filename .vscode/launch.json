@@ -148,6 +148,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post --text-file '<file path>' [--linkcard-index <link index>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text-file '${input:text_file}' ${input:linkcard_index}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (posts [--mode <posts mode>] --text '<text>' [--langs '<language code>[,...]'])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -780,6 +788,12 @@
             "type": "promptString",
             "id": "text_files",
             "description": "separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt')",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "text_file",
+            "description": "text file (e.g. --text-file '/path/to/a.txt')",
             "default": ""
         },
         {
