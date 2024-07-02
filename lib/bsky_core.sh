@@ -1060,15 +1060,17 @@ core_build_text_rels_line()
   debug 'core_build_text_rels_line' "param_core_build_text_rels_line_url_long:${param_core_build_text_rels_line_url_long}"
 
   original_line_text="${param_core_build_text_rels_line_text}"
+  evacuated_CORE_BUILD_TEXT_RELS_accum_display_length=$CORE_BUILD_TEXT_RELS_accum_display_length
+  display_line_text=''
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $url
   while [ -n "${original_line_text}" ]
   do
     # URL
-    url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
-    # no double quote for use word splitting
-    # shellcheck disable=SC2086
-    set -- $url
     url=$1
-    # TODO: remove basic authorization part from facet and display URL - http(s)://<username>:<password>@...
     if [ -n "${url}" ]
     then
       # extract link card target url
@@ -1108,7 +1110,7 @@ core_build_text_rels_line()
       else
         display_text_before_url=''
       fi
-      RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}${display_text_before_url}${display_url_literal}"
+      display_line_text="${display_line_text}${display_text_before_url}${display_url_literal}"
 
       # original text next part
       # until end of url (cut command is 1 start index)
@@ -1121,11 +1123,55 @@ core_build_text_rels_line()
       # shift to next url
       shift
     else
-      RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}${original_line_text}"
+      display_line_text="${display_line_text}${original_line_text}"
       # accumulate display length
       _strlen "${original_line_text}"
       original_line_text_length=$?
       CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${original_line_text_length}"`
+      # break to next line
+      break
+    fi
+  done
+  RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}${display_line_text}"
+
+  # hash tag
+  tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
+  text_work="${display_line_text}"
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  # sed not required at use grep -P, but do not use for campatibility
+  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $hash_tag
+  while [ -n "${text_work}" ]
+  do
+    hash_tag=$1
+    if [ -n "${hash_tag}" ]
+    then
+      _strlen "${hash_tag}"
+      hash_tag_length=$?
+      # cheat (use jq) for shortest match (countermeasure to same hash tag string in text)
+      hash_tag_index=`_p "${text_work}" | jq -R 'index("'"${hash_tag}"'")'`
+      # remove first hash (#)
+      tag=`_p "${hash_tag}" | cut -c 2-`
+      # tag facet
+      # overall index of hash tag start
+      overall_hash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}"`
+      # overall index of hash tag end
+      overall_hash_tag_end=`expr "${overall_hash_tag_start}" + "${hash_tag_length}"`
+      # stack on result set (tag, actual index of hash tag start, actual index of hash tag end)
+      CORE_BUILD_TEXT_RELS_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element} ${tag} ${overall_hash_tag_start} ${overall_hash_tag_end}"
+      # text work next part
+      # until end of hash tag (cut command is 1 start index)
+      text_work_cut_index=`expr "${hash_tag_index}" + "${hash_tag_length}" + 1`
+      # cut until target hash tag
+      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+
+      # accumulate display length
+      tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}" + "${hash_tag_length}"`
+      # shift to next hash tag
+      shift
+    else  # hash tag not exist
       # break to next line
       break
     fi
@@ -1148,9 +1194,11 @@ core_build_text_rels()
   CORE_BUILD_TEXT_RELS_accum_display_length=0
   CORE_BUILD_TEXT_RELS_extract_link_count=0
   CORE_BUILD_TEXT_RELS_link_facets_element=''
+  CORE_BUILD_TEXT_RELS_tag_facets_element=''
   RESULT_core_build_text_rels_display_text=''
   RESULT_core_build_text_rels_linkcard_url=''
   RESULT_core_build_text_rels_link_facets_element=''
+  RESULT_core_build_text_rels_tag_facets_element=''
 
   # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
   evacuated_IFS=$IFS
@@ -1178,6 +1226,7 @@ core_build_text_rels()
   RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | sed -z 's/\(\n\)*$//g'`
 
   RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
+  RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
 
   debug 'core_build_text_rels' 'END'
 }
@@ -1190,6 +1239,7 @@ core_build_link_facets_fragment()
   debug 'core_build_link_facets_fragment' "param_core_build_link_facets_element:${param_core_build_link_facets_element}"
 
   element_count=0
+  link_facets_fragment=''
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $param_core_build_link_facets_element
@@ -1214,6 +1264,41 @@ core_build_link_facets_fragment()
   fi
 
   debug 'core_build_link_facets_fragment' 'END'
+}
+
+core_build_tag_facets_fragment()
+{
+  param_core_build_tag_facets_element="$1"
+
+  debug 'core_build_tag_facets_fragment' 'START'
+  debug 'core_build_tag_facets_fragment' "param_core_build_tag_facets_element:${param_core_build_tag_facets_element}"
+
+  element_count=0
+  tag_facets_fragment=''
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_core_build_tag_facets_element
+  while [ $# -gt 0 ]
+  do
+    tag=$1
+    tag_start=$2
+    tag_end=$3
+    if [ $element_count -gt 0 ]
+    then
+      tag_facets_fragment="${tag_facets_fragment},"
+    fi
+    tag_facets_fragment="${tag_facets_fragment}{\"features\":[{\"\$type\":\"app.bsky.richtext.facet#tag\",\"tag\":\"${tag}\"}],\"index\":{\"byteEnd\":${tag_end},\"byteStart\":${tag_start}}}"
+    shift
+    shift
+    shift
+    element_count=`expr "${element_count}" + 1`
+  done
+  if [ "${element_count}" -gt 0 ]
+  then
+    _p "${tag_facets_fragment}"
+  fi
+
+  debug 'core_build_tag_facets_fragment' 'END'
 }
 
 core_build_external_fragment()
@@ -2591,7 +2676,8 @@ core_post()
   core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url_long}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}"`
+  tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
 
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
@@ -4376,8 +4462,9 @@ core_size()
   if [ -n "${param_specified_text}" ]
   then
     # unescaped
-    unescaped_text=`echo "${param_specified_text}" | sed 's/\\\\"/"/g'`
-    core_text_size_lines "${unescaped_text}" "${param_separator_prefix}"
+#    unescaped_text=`echo "${param_specified_text}" | sed 's/\\\\"/"/g'`
+#    core_text_size_lines "${unescaped_text}" "${param_separator_prefix}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
     section_count=$?
     section_index=1
     if [ -n "${json_stack}" ]
