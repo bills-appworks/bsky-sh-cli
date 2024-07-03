@@ -337,30 +337,16 @@ core_parse_at_uri()
   return "${at_uri_element_count}"
 }
 
-core_text_size()
-{
-  param_text_size_text="$1"
-
-  debug 'core_text_size' 'START'
-  debug 'core_text_size' "param_text_size_text:${param_text_size_text}"
-
-  unescaped_text=`echo "${param_text_size_text}" | sed 's/\\\\"/"/g'`
-  debug 'core_text_size' "unescaped_text:${unescaped_text}"
-  text_size=`_p "${unescaped_text}" | wc -m`
-
-  debug 'core_text_size' 'END'
-
-  return "${text_size}"
-}
-
 core_text_size_lines()
 {
   param_core_text_size_lines_text="$1"
   param_core_text_size_lines_separator_prefix="$2"
+  param_core_text_size_lines_url_long="$3"
 
   debug 'core_text_size_lines' 'START'
   debug 'core_text_size_lines' "param_core_text_size_lines_text:${param_core_text_size_lines_text}"
   debug 'core_text_size_lines' "param_core_text_size_lines_separator_prefix:${param_core_text_size_lines_separator_prefix}"
+  debug 'core_text_size_lines' "param_core_text_size_lines_url_long:${param_core_text_size_lines_url_long}"
 
   count=0
   lines=''
@@ -382,7 +368,8 @@ core_text_size_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          size=`_p "${lines}" | wc -m`
+          core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url_long}"
+          size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
           eval "RESULT_core_text_size_lines_${count}=${size}"
           debug 'core_text_size_lines' "count:${count} size:${size}"
         fi
@@ -404,13 +391,15 @@ core_text_size_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      size=`_p "${lines}" | wc -m`
+      core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url_long}"
+      size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
       eval "RESULT_core_text_size_lines_${count}=${size}"
       debug 'core_text_size_lines' "remain part count:${count} size:${size}"
     fi
   else  # separator not specified : all lines as single content
     count=1
-    size=`_p "${param_core_text_size_lines_text}" | wc -m`
+    core_build_text_rels "${param_core_text_size_lines_text}" 0 "${param_core_text_size_lines_url_long}"
+    size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     eval "RESULT_core_text_size_lines_${count}=${size}"
     debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
   fi
@@ -430,9 +419,10 @@ core_get_text_file()
   status_core_get_text_file=0
   if [ -r "${param_text_file_path}" ]
   then
-    # escape (newline) -> \n
-    # using GNU sed -z option
-    < "${param_text_file_path}" sed -z 's/\n/\\n/g'
+#    # escape (newline) -> \n
+#    # using GNU sed -z option
+#    < "${param_text_file_path}" sed -z 's/\n/\\n/g'
+    cat "${param_text_file_path}"
   else
     check_comma=`_p "${param_text_file_path}" | sed 's/[^,]//g'`
     if [ -n "${check_comma}" ]
@@ -448,72 +438,25 @@ core_get_text_file()
   return $status_core_get_text_file
 }
 
-core_output_text_file_size()
-{
-  param_text_file_path="$1"
-  param_count_only="$2"
-  param_output_json="$3"
-
-  debug 'core_output_text_file_size' 'START'
-  debug 'core_output_text_file_size' "param_text_file_path:${param_text_file_path}"
-  debug 'core_output_text_file_size' "param_count_only:${param_count_only}"
-  debug 'core_output_text_file_size' "param_output_json:${param_output_json}"
-
-  if text_file=`core_get_text_file "${param_text_file_path}"`
-  then
-    # unescape \n -> (newline)
-    text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
-    if [ "${text_size}" -le 300 ]
-    then
-      status=0
-    else
-      status=1
-    fi
-    if [ -n "${param_output_json}" ]
-    then
-      if [ $status -eq 0 ]
-      then
-        status_value='true'
-      else
-        status_value='false'
-      fi
-      _p "{\"size\":${text_size},\"status\":${status_value},\"file\":\"${param_text_file_path}\"}"
-    else
-      if [ -n "${param_count_only}" ]
-      then
-        _pn "${text_size}"
-      else
-        if [ $status -eq 0 ]
-        then
-          status_message='OK'
-        else
-          status_message='NG:over 300'
-        fi
-        _pn "text file character count: ${text_size} [${status_message}] [file:${param_text_file_path}]"
-      fi
-    fi
-  fi
-
-  debug 'core_output_text_file_size' 'END'
-}
-
 core_output_text_file_size_lines()
 {
   param_text_file_path="$1"
   param_separator_prefix="$2"
   param_count_only="$3"
   param_output_json="$4"
+  param_url_long="$5"
 
   debug 'core_output_text_file_size_lines' 'START'
   debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
   debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
+  debug 'core_output_text_file_size_lines' "param_url_long:${param_url_long}"
 
   if [ -r "${param_text_file_path}" ]
   then
     file_content=`cat "${param_text_file_path}"`
-    core_text_size_lines "${file_content}" "${param_separator_prefix}"
+    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
@@ -580,15 +523,20 @@ core_output_text_file_size_lines()
 core_verify_text_file_size()
 {
   param_text_file_path="$1"
+  param_url_long="$2"
 
   debug 'core_verify_text_file_size' 'START'
   debug 'core_verify_text_file_size' "param_text_file_path:${param_text_file_path}"
+  debug 'core_verify_text_file_size' "param_url_long:${param_url_long}"
 
   status_core_verify_text_file_size=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    # unescape \n -> (newline)
-    text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
+##    # unescape \n -> (newline)
+##    text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
+#    text_size=`_p "${text_file}" | wc -m`
+    core_build_text_rels "${text_file}" 0 "${param_url_long}"
+    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     if [ "${text_size}" -gt 300 ]
     then
       error_msg "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters: ${param_text_file_path}"
@@ -607,6 +555,7 @@ core_verify_text_file_size_lines()
 {
   param_text_file_path="$1"
   param_separator_prefix="$2"
+  param_url_long="$3"
 
   debug 'core_verify_text_file_size_lines' 'START'
   debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
@@ -615,9 +564,9 @@ core_verify_text_file_size_lines()
   status_core_verify_text_file_size_lines=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    # unescape \n -> (newline)
-    text_file=`_p "${text_file}" | sed 's/\\\\n/\n/g'`
-    core_text_size_lines "${text_file}" "${param_separator_prefix}"
+#    # unescape \n -> (newline)
+#    text_file=`_p "${text_file}" | sed 's/\\\\n/\n/g'`
+    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -674,7 +623,7 @@ core_process_files()
   return $status_core_process_files
 }
 
-core_verify_text_size()
+_core_verify_text_size()
 {
   param_core_verify_text_size_text="$1"
   param_text_files="$2"
@@ -719,18 +668,20 @@ core_verify_text_size_lines()
   param_specified_text="$2"
   param_text_files="$3"
   param_separator_prefix="$4"
+  param_url_long="$5"
 
   debug 'core_verify_text_size_lines' 'START'
   debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
   debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
   debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
   debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_verify_text_size_lines' "param_url_long:${param_url_long}"
 
   status_core_verify_text_size_lines=0
 
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -747,7 +698,7 @@ core_verify_text_size_lines()
 
   if [ -n "${param_specified_text}" ]
   then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -764,7 +715,7 @@ core_verify_text_size_lines()
 
   if [ -n "${param_text_files}" ]
   then
-    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}"
+    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}" "${param_url_long}"
     then
       :
     else
@@ -2771,8 +2722,9 @@ core_posts_thread_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-          if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#          if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2809,8 +2761,9 @@ core_posts_thread_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-      if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#      if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2830,8 +2783,9 @@ core_posts_thread_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-    text=`_p "${param_core_posts_thread_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-    if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+#    text=`_p "${param_core_posts_thread_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#    if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2992,8 +2946,9 @@ core_posts_sibling_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-          if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#          if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -3036,8 +2991,9 @@ core_posts_sibling_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-      if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#      if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -3063,8 +3019,9 @@ core_posts_sibling_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-    text=`_p "${param_core_posts_sibling_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-    if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+#    text=`_p "${param_core_posts_sibling_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#    if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -3249,8 +3206,9 @@ core_posts_independence_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-          if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#          if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -3287,8 +3245,9 @@ core_posts_independence_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-      if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#      if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -3308,8 +3267,9 @@ core_posts_independence_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-    text=`_p "${param_core_posts_independence_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-    if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+#    text=`_p "${param_core_posts_independence_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
+#    if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -4391,21 +4351,23 @@ core_size()
   param_separator_prefix="$4"
   param_count_only="$5"
   param_output_json="$6"
+  param_url_long="$7"
 
   debug 'core_size' 'START'
-  debug 'core_post' "param_stdin_text:${param_stdin_text}"
-  debug 'core_post' "param_specified_text:${param_specified_text}"
-  debug 'core_post' "param_text_files:${param_text_files}"
-  debug 'core_post' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_post' "param_count_only:${param_count_only}"
-  debug 'core_post' "param_output_json:${param_output_json}"
+  debug 'core_size' "param_stdin_text:${param_stdin_text}"
+  debug 'core_size' "param_specified_text:${param_specified_text}"
+  debug 'core_size' "param_text_files:${param_text_files}"
+  debug 'core_size' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_size' "param_count_only:${param_count_only}"
+  debug 'core_size' "param_output_json:${param_output_json}"
+  debug 'core_size' "param_url_long:${param_url_long}"
 
   json_stack=''
   status=0
   # standard input
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     if [ -n "${json_stack}" ]
@@ -4461,10 +4423,7 @@ core_size()
   # parameter specified text
   if [ -n "${param_specified_text}" ]
   then
-    # unescaped
-#    unescaped_text=`echo "${param_specified_text}" | sed 's/\\\\"/"/g'`
-#    core_text_size_lines "${unescaped_text}" "${param_separator_prefix}"
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url_long}"
     section_count=$?
     section_index=1
     if [ -n "${json_stack}" ]
@@ -4522,7 +4481,7 @@ core_size()
   then
     if [ -n "${param_output_json}" ]
     then
-      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}"`
+      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url_long}"`
       json_files=`_p "${json_files}" | jq --slurp -c '.'`
       json_files="\"files\":${json_files}"
       if [ -n "${json_stack}" ]
@@ -4531,7 +4490,7 @@ core_size()
       fi
       json_stack="${json_stack}${json_files}"
     else
-      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}"
+      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url_long}"
     fi
   fi
   json_stack="{${json_stack}}"

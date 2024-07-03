@@ -1834,7 +1834,7 @@ command_size()
   then
     output_help_size
   else
-    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1' "$@"
+    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1 --url-long:0' "$@"
 
     separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
     if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
@@ -1851,7 +1851,7 @@ command_size()
     fi
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}"
+    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYONLY_url_long}"
   fi
 
   debug 'command_size' 'END'
