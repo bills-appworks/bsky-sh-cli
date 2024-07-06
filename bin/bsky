@@ -571,9 +571,9 @@ output_help_quote()
   cat << 'EOS'
 bsky quote help
 
-usage: bsky quote --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky quote --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+       bsky quote --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <view index>
@@ -607,6 +607,12 @@ parameters:
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --url <display mode>
+    Specify URL display (shortening) mode.
+      omit-tail (default)
+      omit-middle
+      full
 
   --langs '<language code>[,...]'
     Specify the languages to include in the post.
@@ -1496,7 +1502,7 @@ command_quote()
   then
     output_help_quote
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0 --url:1' "$@"
 
     verify_exclusive 1 '--text --text-file' "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"
     verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
@@ -1546,7 +1552,8 @@ command_quote()
     else
       linkcard_index=1
     fi
-    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_verify_param_url_omit "${PARSED_PARAM_KEYVALUE_url}"
+    core_quote "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_quote' 'END'

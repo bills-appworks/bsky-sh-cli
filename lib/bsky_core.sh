@@ -2748,7 +2748,7 @@ core_post()
   debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_post' "param_langs:${param_langs}"
   debug 'core_post' "param_output_json:${param_output_json}"
-  debug 'core_post' "param_url_long:${param_url}"
+  debug 'core_post' "param_url:${param_url}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -3700,8 +3700,10 @@ core_quote()
   param_linkcard_index="$4"
   param_langs="$5"
   param_output_json="$6"
-  if [ $# -gt 6 ]
+  param_url="$7"
+  if [ $# -gt 7 ]
   then
+    shift
     shift
     shift
     shift
@@ -3717,6 +3719,7 @@ core_quote()
   debug 'core_quote' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_quote' "param_langs:${param_langs}"
   debug 'core_quote' "param_output_json:${param_output_json}"
+  debug 'core_quote' "param_url:${param_url}"
   debug 'core_quote' "param_image_alt:$*"
 
   read_session_file
@@ -3728,12 +3731,19 @@ core_quote()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+#  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+#  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
+  core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
+  text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
+  link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
+  tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
-      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\""
+      record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\""
       # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -eq 0 ]
       then
@@ -3746,9 +3756,9 @@ core_quote()
       else
         record="${record},\"embed\":{\"\$type\":\"app.bsky.embed.recordWithMedia\",\"media\":${images_fragment},\"record\":${quote_record_fragment}}"
       fi
-      if [ -n "${link_facets_fragment}" ]
+      if [ -n "${facets_fragment}" ]
       then
-        record="${record},\"facets\":${link_facets_fragment}"
+        record="${record},\"facets\":${facets_fragment}"
       fi
       if [ -n "${langs_fragment}" ]
       then
@@ -3760,15 +3770,20 @@ core_quote()
       fi
       record="${record}}"
 
-      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-      status=$?
-      debug_single 'core_quote'
-      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-      if [ $status -eq 0 ]
+      if [ "${BSKYSHCLI_DEBUG_OFFLINE}" = 'ON' ]
       then
-        core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+        _p "${record}"
       else
-        error 'quote command failed'
+        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+        status=$?
+        debug_single 'core_quote'
+        _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+        if [ $status -eq 0 ]
+        then
+          core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+        else
+          error 'quote command failed'
+        fi
       fi
       ;;
   esac
