@@ -963,12 +963,21 @@ is_stdin_exist()
 
 interactive_input_post_lines()
 {
+  param_interactive_input_post_lines_progress=$1
+
   debug 'interactive_input_post_lines' 'START'
+  debug 'interactive_input_post_lines' "param_interactive_input_post_lines_progress:${param_interactive_input_post_lines_progress}"
+
+  progress='Posting...'
+  if [ -n "${param_interactive_input_post_lines_progress}" ]
+  then
+    progress="${param_interactive_input_post_lines_progress}"
+  fi
 
   # interactive input
   _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
   cat -
-  _pn '[Posting...]' 1>&2
+  _pn "[${progress}]" 1>&2
 
   debug 'interactive_input_post_lines' 'END'
 }
@@ -977,6 +986,7 @@ standard_input_lines()
 {
   param_standard_input_lines_text=$1
   param_standard_input_lines_text_file=$2
+  param_standard_input_lines_progress=$3
 
   debug 'standard_input_lines' 'START'
   debug 'standard_input_lines' "param_standard_input_lines_text:${param_standard_input_lines_text}"
@@ -989,7 +999,7 @@ standard_input_lines()
   elif [ -z "${param_standard_input_lines_text}" ] && [ -z "${param_standard_input_lines_text_file}" ]
   then
     # interactive input
-    interactive_input_post_lines
+    interactive_input_post_lines "${param_standard_input_lines_progress}"
   else
     # --text or --text-file(s) parameter
     :

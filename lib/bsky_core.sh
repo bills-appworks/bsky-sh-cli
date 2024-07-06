@@ -77,7 +77,7 @@ GENERAL_DUMP_PROCEDURE='
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 #FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
-# reffered to https://qiita.com/shimataro999/items/fced9665fa970c009c1e
+# based on https://qiita.com/shimataro999/items/fced9665fa970c009c1e
 PATTERN_URL='https?:\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'\''()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=])*)(:\d*)?(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@]))*)*(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?'
 PATTERN_URL_BEFORE_HOST='https?:\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?'
 
@@ -337,16 +337,387 @@ core_parse_at_uri()
   return "${at_uri_element_count}"
 }
 
+core_verify_param_url_omit()
+{
+  param_core_verify_param_url_omit_url="$1"
+
+  debug 'core_verify_param_url_omit' 'START'
+  debug 'core_verify_param_url_omit' "param_core_verify_param_url_omit_url:${param_core_verify_param_url_omit_url}"
+
+  if [ -n "${param_core_verify_param_url_omit_url}" ]
+  then
+    case $param_core_verify_param_url_omit_url in
+      full|omit-middle|omit-tail)
+        ;;
+      *)
+        error "--url parameter value ${param_core_verify_param_url_omit_url} is invalid."
+        ;;
+    esac
+  fi
+
+  debug 'core_verify_param_url_omit' 'END'
+}
+
+core_url_shortening_middle()
+{
+  param_core_url_shortening_middle_url="$1"
+
+  debug 'core_url_shortening_middle' 'START'
+  debug 'core_url_shortening_middle' "param_core_url_shortening_middle_url:${param_core_url_shortening_middle_url}"
+
+  modified_url="${param_core_url_shortening_middle_url}"
+
+  # remove before host
+  before_host=`echo "${modified_url}" | grep -o -i -E "${PATTERN_URL_BEFORE_HOST}"`
+  _strlen "${before_host}"
+  before_host_length=$?
+  if [ $before_host_length -gt 0 ]
+  then
+    # cut before host (cut command is 1 start index)
+    cut_index=`expr "${before_host_length}" + 1`
+    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+  fi
+
+  host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
+  if [ -n "${host_only_verify}" ]
+  then  # not host only
+    # $ is not variable (line terminate)
+    # shellcheck disable=SC2016
+    path_root_verify=`_p "${modified_url}" | sed 's_^[^/]*/$__'`
+    if [ -n "${path_root_verify}" ]
+    then  # path is not root
+      _strlen "${modified_url}"
+      modified_url_length=$?
+      if [ $modified_url_length -gt "${BSKYSHCLI_URL_SHORT_BASELINE}" ]
+      then  # url length is over than baseline
+        # host/
+        host_part=`_p "${modified_url}" | sed 's_^\([^/]*/\).*_\1_'`
+        # path
+        # shellcheck disable=SC2016
+        path_part=`_p "${modified_url}" | sed 's_^'"${host_part}"'__'`
+        # tail of path
+        # '$' is not variable use
+        # shellcheck disable=SC2016
+        tail_path=`_p "${path_part}" | sed -E 's_.+(/[^/]+/?)$_\1_'`
+        _strlen "${host_part}"
+        host_part_length=$?
+        _strlen "${BSKYSHCLI_URL_SHORT_ABBREV}"
+        abbrev_length=$?
+        if [ "${tail_path}" = "${path_part}" ]
+        then  # path level is single
+          # host/path
+          temporary_modified_url="${modified_url}"
+        else  # path level is multiple
+          # host/.../tail
+          temporary_modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}"
+        fi
+        _strlen "${temporary_modified_url}"
+        temporary_modified_url_length=$?
+        if [ $temporary_modified_url_length -gt "${BSKYSHCLI_URL_SHORT_BASELINE}" ]
+        then  # url length is over than baseline
+          # baseline - abbrev (...) - host_part
+          cut_base_length=`expr "${BSKYSHCLI_URL_SHORT_BASELINE}" - "${abbrev_length}" - "${host_part_length}"`
+          if [ "${cut_base_length}" -gt 0 ]
+          then
+            # host/...(cut)tail
+            tail_path=`_p "${tail_path}" | cut -c "${cut_base_length}"-`
+            modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}"
+          else
+            # host/...
+            modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}"
+          fi
+        else  # url length is equal or under than baseline
+          modified_url="${temporary_modified_url}"
+        fi
+      fi
+    else  # path is root ('example.com/')
+      # remove '/'
+      modified_url=`_p "${modified_url}" | sed 's_/__'`
+      # keep full host part
+    fi
+  else  # host only ('example.com')
+    # keep full host part
+    :
+  fi
+
+  _strlen "${modified_url}"
+  modified_url_length=$?
+  _p "${modified_url}"
+
+  debug 'core_url_shortening_tail' 'END'
+
+  return $modified_url_length
+}
+
+core_url_shortening_tail()
+{
+  param_core_url_shortening_tail_url="$1"
+
+  debug 'core_url_shortening_tail' 'START'
+  debug 'core_url_shortening_tail' "param_core_url_shortening_tail_url:${param_core_url_shortening_tail_url}"
+
+  modified_url="${param_core_url_shortening_tail_url}"
+
+  # remove before host
+  before_host=`echo "${modified_url}" | grep -o -i -E "${PATTERN_URL_BEFORE_HOST}"`
+  _strlen "${before_host}"
+  before_host_length=$?
+  if [ $before_host_length -gt 0 ]
+  then
+    # cut before host (cut command is 1 start index)
+    cut_index=`expr "${before_host_length}" + 1`
+    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+  fi
+
+  host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
+  if [ -n "${host_only_verify}" ]
+  then  # not host only
+    # $ is not variable (line terminate)
+    # shellcheck disable=SC2016
+    path_root_verify=`_p "${modified_url}" | sed 's_^[^/]*/$__'`
+    if [ -n "${path_root_verify}" ]
+    then  # path is not root
+      _strlen "${modified_url}"
+      modified_url_length=$?
+      if [ $modified_url_length -gt "${BSKYSHCLI_URL_SHORT_BASELINE}" ]
+      then  # url length is over than baseline
+        # host/
+        host_part=`_p "${modified_url}" | sed 's_^\([^/]*/\).*_\1_'`
+        _strlen "${host_part}"
+        host_part_length=$?
+        _strlen "${BSKYSHCLI_URL_SHORT_ABBREV}"
+        abbrev_length=$?
+        # baseline - abbrev (...)
+        cut_base_length=`expr "${BSKYSHCLI_URL_SHORT_BASELINE}" - "${abbrev_length}"`
+        if [ $host_part_length -gt "${cut_base_length}" ]
+        then  # host/ length is over than cut base length (baseline - abbrev (...))
+          # keep full host part
+          modified_url="${host_part}"
+        else
+          # cut to baseline (include abbrev length)
+          modified_url=`_p "${modified_url}" | cut -c -"${cut_base_length}"`
+        fi
+        modified_url="${modified_url}${BSKYSHCLI_URL_SHORT_ABBREV}"
+      fi
+    else  # path is root ('example.com/')
+      # remove '/'
+      modified_url=`_p "${modified_url}" | sed 's_/__'`
+      # keep full host part
+    fi
+  else  # host only ('example.com')
+    # keep full host part
+    :
+  fi
+
+  _strlen "${modified_url}"
+  modified_url_length=$?
+  _p "${modified_url}"
+
+  debug 'core_url_shortening_tail' 'END'
+
+  return $modified_url_length
+}
+
+core_build_text_rels_line()
+{
+  param_core_build_text_rels_line_text="$1"
+  param_core_build_text_rels_line_linkcard_index="$2"
+  param_core_build_text_rels_line_url="$3"
+
+  debug 'core_build_text_rels_line' 'START'
+  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_text:${param_core_build_text_rels_line_text}"
+  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_linkcard_index:${param_core_build_text_rels_line_linkcard_index}"
+  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_url:${param_core_build_text_rels_line_url}"
+
+  original_line_text="${param_core_build_text_rels_line_text}"
+  evacuated_CORE_BUILD_TEXT_RELS_accum_display_length=$CORE_BUILD_TEXT_RELS_accum_display_length
+  display_line_text=''
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $url
+  while [ -n "${original_line_text}" ]
+  do
+    # URL
+    url=$1
+    if [ -n "${url}" ]
+    then
+      # extract link card target url
+      CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
+      if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
+      then
+        RESULT_core_build_text_rels_linkcard_url="${url}"
+      fi
+
+      # URL modify
+      _strlen "${url}"
+      original_url_length=$?
+      case $param_core_build_text_rels_line_url in
+        full)
+          display_url_literal="${url}"
+          display_url_length=$original_url_length
+          ;;
+        omit-middle)
+          display_url_literal=`core_url_shortening_middle "${url}"`
+          display_url_length=$?
+          ;;
+        omit-tail|*)
+          display_url_literal=`core_url_shortening_tail "${url}"`
+          display_url_length=$?
+          ;;
+      esac
+
+      # cheat (use jq) for shortest match (countermeasure to same URL string in text)
+      url_index=`_p "${original_line_text}" | jq -R 'index("'"${url}"'")'`
+
+      # link facet
+      # overall index of url start
+      overall_url_start=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}"`
+      # overall index of url end
+      overall_url_end=`expr "${overall_url_start}" + "${display_url_length}"`
+      # stack on result set (url, actual index of url start, actual index of url end)
+      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${url} ${overall_url_start} ${overall_url_end}"
+
+      # display text
+      # until begin of url
+      if [ "${url_index}" -gt 0 ]
+      then
+        display_text_before_url=`_p "${original_line_text}" | cut -c "-${url_index}"`
+      else
+        display_text_before_url=''
+      fi
+      display_line_text="${display_line_text}${display_text_before_url}${display_url_literal}"
+
+      # original text next part
+      # until end of url (cut command is 1 start index)
+      original_cut_index=`expr "${url_index}" + "${original_url_length}" + 1`
+      # cut until target url
+      original_line_text=`_p "${original_line_text}" | cut -c "${original_cut_index}"-`
+
+      # accumulate display length
+      CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
+      # shift to next url
+      shift
+    else
+      display_line_text="${display_line_text}${original_line_text}"
+      # accumulate display length
+      _strlen "${original_line_text}"
+      original_line_text_length=$?
+      CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${original_line_text_length}"`
+      # break to next line
+      break
+    fi
+  done
+  RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}${display_line_text}"
+
+  # hash tag
+  tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
+  text_work="${display_line_text}"
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  # sed not required at use grep -P, but do not use for compatibility
+  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $hash_tag
+  while [ -n "${text_work}" ]
+  do
+    hash_tag=$1
+    if [ -n "${hash_tag}" ]
+    then
+      _strlen "${hash_tag}"
+      hash_tag_length=$?
+      # cheat (use jq) for shortest match (countermeasure to same hash tag string in text)
+      hash_tag_index=`_p "${text_work}" | jq -R 'index("'"${hash_tag}"'")'`
+      # remove first hash (#)
+      tag=`_p "${hash_tag}" | cut -c 2-`
+      # tag facet
+      # overall index of hash tag start
+      overall_hash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}"`
+      # overall index of hash tag end
+      overall_hash_tag_end=`expr "${overall_hash_tag_start}" + "${hash_tag_length}"`
+      # stack on result set (tag, actual index of hash tag start, actual index of hash tag end)
+      CORE_BUILD_TEXT_RELS_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element} ${tag} ${overall_hash_tag_start} ${overall_hash_tag_end}"
+      # text work next part
+      # until end of hash tag (cut command is 1 start index)
+      text_work_cut_index=`expr "${hash_tag_index}" + "${hash_tag_length}" + 1`
+      # cut until target hash tag
+      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+
+      # accumulate display length
+      tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}" + "${hash_tag_length}"`
+      # shift to next hash tag
+      shift
+    else  # hash tag not exist
+      # break to next line
+      break
+    fi
+  done
+
+  debug 'core_build_text_rels_line' 'END'
+}
+
+core_build_text_rels()
+{
+  param_core_build_text_rels_text="$1"
+  param_core_build_text_rels_linkcard_index="$2"
+  param_core_build_text_rels_url="$3"
+
+  debug 'core_build_text_rels' 'START'
+  debug 'core_build_text_rels' "param_core_build_text_rels_text:${param_core_build_text_rels_text}"
+  debug 'core_build_text_rels' "param_core_build_text_rels_linkcard_index:${param_core_build_text_rels_linkcard_index}"
+  debug 'core_build_text_rels' "param_core_build_text_rels_url:${param_core_build_text_rels_url}"
+
+  CORE_BUILD_TEXT_RELS_accum_display_length=0
+  CORE_BUILD_TEXT_RELS_extract_link_count=0
+  CORE_BUILD_TEXT_RELS_link_facets_element=''
+  CORE_BUILD_TEXT_RELS_tag_facets_element=''
+  RESULT_core_build_text_rels_display_text=''
+  RESULT_core_build_text_rels_linkcard_url=''
+  RESULT_core_build_text_rels_link_facets_element=''
+  RESULT_core_build_text_rels_tag_facets_element=''
+
+  # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
+  evacuated_IFS=$IFS
+  # each line separated by newline
+  IFS='
+'
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_core_build_text_rels_text
+  IFS=$evacuated_IFS
+  while [ $# -gt 0 ]
+  do
+    # separate line processing for conflict position parameter (set)
+    core_build_text_rels_line "$1" "${param_core_build_text_rels_linkcard_index}" "${param_core_build_text_rels_url}"
+    # shift to next line
+    shift
+    # increment newline(\n) length
+    CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + 1`
+    # add newline
+    RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}
+"
+  done
+  # (newline)... at tail -> (null)
+  # using GNU sed -z option
+  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | sed -z 's/\(\n\)*$//g'`
+
+  RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
+  RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
+
+  debug 'core_build_text_rels' 'END'
+}
+
 core_text_size_lines()
 {
   param_core_text_size_lines_text="$1"
   param_core_text_size_lines_separator_prefix="$2"
-  param_core_text_size_lines_url_long="$3"
+  param_core_text_size_lines_url="$3"
 
   debug 'core_text_size_lines' 'START'
   debug 'core_text_size_lines' "param_core_text_size_lines_text:${param_core_text_size_lines_text}"
   debug 'core_text_size_lines' "param_core_text_size_lines_separator_prefix:${param_core_text_size_lines_separator_prefix}"
-  debug 'core_text_size_lines' "param_core_text_size_lines_url_long:${param_core_text_size_lines_url_long}"
+  debug 'core_text_size_lines' "param_core_text_size_lines_url:${param_core_text_size_lines_url}"
 
   count=0
   lines=''
@@ -368,7 +739,7 @@ core_text_size_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url_long}"
+          core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url}"
           size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
           eval "RESULT_core_text_size_lines_${count}=${size}"
           debug 'core_text_size_lines' "count:${count} size:${size}"
@@ -391,14 +762,14 @@ core_text_size_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url_long}"
+      core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url}"
       size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
       eval "RESULT_core_text_size_lines_${count}=${size}"
       debug 'core_text_size_lines' "remain part count:${count} size:${size}"
     fi
   else  # separator not specified : all lines as single content
     count=1
-    core_build_text_rels "${param_core_text_size_lines_text}" 0 "${param_core_text_size_lines_url_long}"
+    core_build_text_rels "${param_core_text_size_lines_text}" 0 "${param_core_text_size_lines_url}"
     size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     eval "RESULT_core_text_size_lines_${count}=${size}"
     debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
@@ -444,19 +815,19 @@ core_output_text_file_size_lines()
   param_separator_prefix="$2"
   param_count_only="$3"
   param_output_json="$4"
-  param_url_long="$5"
+  param_url="$5"
 
   debug 'core_output_text_file_size_lines' 'START'
   debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
   debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
-  debug 'core_output_text_file_size_lines' "param_url_long:${param_url_long}"
+  debug 'core_output_text_file_size_lines' "param_url:${param_url}"
 
   if [ -r "${param_text_file_path}" ]
   then
     file_content=`cat "${param_text_file_path}"`
-    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
@@ -518,6 +889,22 @@ core_output_text_file_size_lines()
   fi
 
   debug 'core_output_text_file_size_lines' 'END'
+}
+
+core_verify_display_text_size()
+{
+  param_core_verify_display_text="$1"
+
+  debug 'core_verify_display_text_size' 'START'
+  debug 'core_verify_display_text_size' "param_core_verify_display_text:${param_core_verify_display_text}"
+
+  text_size=`_p "${param_core_verify_display_text}" | wc -m`
+  if [ "${text_size}" -gt 300 ]
+  then
+    error "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters."
+  fi
+
+  debug 'core_verify_display_text_size' 'END'
 }
 
 core_verify_text_file_size()
@@ -871,11 +1258,11 @@ core_build_images_fragment()
       actual_image_count=$precheck_result
       ;;
     255)
-      # error occured
+      # error occurred
       precheck_status=1
       ;;
     *)
-      error_msg "core_buid_images_fragment internal error: ${precheck_result}"
+      error_msg "core_build_images_fragment internal error: ${precheck_result}"
       precheck_status=1
       ;;
   esac
@@ -928,258 +1315,6 @@ core_build_images_fragment()
   debug 'core_build_images_fragment' 'END'
 
   return $actual_image_count
-}
-
-core_url_shortening()
-{
-  param_core_url_shortening_url="$1"
-
-  debug 'core_url_shortening' 'START'
-  debug 'core_url_shortening' "param_core_url_shortening_url:${param_core_url_shortening_url}"
-
-  modified_url="${param_core_url_shortening_url}"
-
-  # remove before host
-  before_host=`echo "${modified_url}" | grep -o -i -E "${PATTERN_URL_BEFORE_HOST}"`
-  _strlen "${before_host}"
-  before_host_length=$?
-  if [ $before_host_length -gt 0 ]
-  then
-    # cut before host (cut command is 1 start index)
-    cut_index=`expr "${before_host_length}" + 1`
-    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
-  fi
-
-  host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
-  if [ -n "${host_only_verify}" ]
-  then  # not host only
-    # $ is not variable (line terminate)
-    # shellcheck disable=SC2016
-    path_root_verify=`_p "${modified_url}" | sed 's_^[^/]*/$__'`
-    if [ -n "${path_root_verify}" ]
-    then  # path is not root
-      _strlen "${modified_url}"
-      modified_url_length=$?
-      if [ $modified_url_length -gt "${BSKYSHCLI_URL_SHORT_BASELINE}" ]
-      then  # url length is over than baseline
-        # host/
-        host_part=`_p "${modified_url}" | sed 's_^\([^/]*/\).*_\1_'`
-        _strlen "${host_part}"
-        host_part_length=$?
-        _strlen "${BSKYSHCLI_URL_SHORT_ABBREV}"
-        abbrev_length=$?
-        # baseline - abbrev (...)
-        cut_base_length=`expr "${BSKYSHCLI_URL_SHORT_BASELINE}" - "${abbrev_length}"`
-        if [ $host_part_length -gt "${cut_base_length}" ]
-        then  # host/ length is over than cut base length (baseline - abbrev (...))
-          # keep full host part
-          modified_url="${host_part}"
-        else
-          # cut to baseline (include abbrev length)
-          modified_url=`_p "${modified_url}" | cut -c -"${cut_base_length}"`
-        fi
-        modified_url="${modified_url}${BSKYSHCLI_URL_SHORT_ABBREV}"
-      fi
-    else  # path is root ('example.com/')
-      # remove '/'
-      modified_url=`_p "${modified_url}" | sed 's_/__'`
-      # keep full host part
-    fi
-  else  # host only ('example.com')
-    # keep full host part
-    :
-  fi
-
-  _strlen "${modified_url}"
-  modified_url_length=$?
-  _p "${modified_url}"
-
-  debug 'core_url_shortening' 'END'
-
-  return $modified_url_length
-}
-
-core_build_text_rels_line()
-{
-  param_core_build_text_rels_line_text="$1"
-  param_core_build_text_rels_line_linkcard_index="$2"
-  param_core_build_text_rels_line_url_long="$3"
-
-  debug 'core_build_text_rels_line' 'START'
-  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_text:${param_core_build_text_rels_line_text}"
-  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_linkcard_index:${param_core_build_text_rels_line_linkcard_index}"
-  debug 'core_build_text_rels_line' "param_core_build_text_rels_line_url_long:${param_core_build_text_rels_line_url_long}"
-
-  original_line_text="${param_core_build_text_rels_line_text}"
-  evacuated_CORE_BUILD_TEXT_RELS_accum_display_length=$CORE_BUILD_TEXT_RELS_accum_display_length
-  display_line_text=''
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $url
-  while [ -n "${original_line_text}" ]
-  do
-    # URL
-    url=$1
-    if [ -n "${url}" ]
-    then
-      # extract link card target url
-      CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
-      if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
-      then
-        RESULT_core_build_text_rels_linkcard_url="${url}"
-      fi
-
-      # URL modify
-      _strlen "${url}"
-      original_url_length=$?
-      if [ -n "${param_core_build_text_rels_line_url_long}" ]
-      then
-        display_url_literal="${url}"
-        display_url_length=$original_url_length
-      else
-        display_url_literal=`core_url_shortening "${url}"`
-        display_url_length=$?
-      fi
-      # cheat (use jq) for shortest match (countermeasure to same URL string in text)
-      url_index=`_p "${original_line_text}" | jq -R 'index("'"${url}"'")'`
-
-      # link facet
-      # overall index of url start
-      overall_url_start=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}"`
-      # overall index of url end
-      overall_url_end=`expr "${overall_url_start}" + "${display_url_length}"`
-      # stack on result set (url, actual index of url start, actual index of url end)
-      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${url} ${overall_url_start} ${overall_url_end}"
-
-      # display text
-      # until begin of url
-      if [ "${url_index}" -gt 0 ]
-      then
-        display_text_before_url=`_p "${original_line_text}" | cut -c "-${url_index}"`
-      else
-        display_text_before_url=''
-      fi
-      display_line_text="${display_line_text}${display_text_before_url}${display_url_literal}"
-
-      # original text next part
-      # until end of url (cut command is 1 start index)
-      original_cut_index=`expr "${url_index}" + "${original_url_length}" + 1`
-      # cut until target url
-      original_line_text=`_p "${original_line_text}" | cut -c "${original_cut_index}"-`
-
-      # accumulate display length
-      CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
-      # shift to next url
-      shift
-    else
-      display_line_text="${display_line_text}${original_line_text}"
-      # accumulate display length
-      _strlen "${original_line_text}"
-      original_line_text_length=$?
-      CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${original_line_text_length}"`
-      # break to next line
-      break
-    fi
-  done
-  RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}${display_line_text}"
-
-  # hash tag
-  tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
-  text_work="${display_line_text}"
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  # sed not required at use grep -P, but do not use for campatibility
-  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $hash_tag
-  while [ -n "${text_work}" ]
-  do
-    hash_tag=$1
-    if [ -n "${hash_tag}" ]
-    then
-      _strlen "${hash_tag}"
-      hash_tag_length=$?
-      # cheat (use jq) for shortest match (countermeasure to same hash tag string in text)
-      hash_tag_index=`_p "${text_work}" | jq -R 'index("'"${hash_tag}"'")'`
-      # remove first hash (#)
-      tag=`_p "${hash_tag}" | cut -c 2-`
-      # tag facet
-      # overall index of hash tag start
-      overall_hash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}"`
-      # overall index of hash tag end
-      overall_hash_tag_end=`expr "${overall_hash_tag_start}" + "${hash_tag_length}"`
-      # stack on result set (tag, actual index of hash tag start, actual index of hash tag end)
-      CORE_BUILD_TEXT_RELS_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element} ${tag} ${overall_hash_tag_start} ${overall_hash_tag_end}"
-      # text work next part
-      # until end of hash tag (cut command is 1 start index)
-      text_work_cut_index=`expr "${hash_tag_index}" + "${hash_tag_length}" + 1`
-      # cut until target hash tag
-      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
-
-      # accumulate display length
-      tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}" + "${hash_tag_length}"`
-      # shift to next hash tag
-      shift
-    else  # hash tag not exist
-      # break to next line
-      break
-    fi
-  done
-
-  debug 'core_build_text_rels_line' 'END'
-}
-
-core_build_text_rels()
-{
-  param_core_build_text_rels_text="$1"
-  param_core_build_text_rels_linkcard_index="$2"
-  param_core_build_text_rels_url_long="$3"
-
-  debug 'core_build_text_rels' 'START'
-  debug 'core_build_text_rels' "param_core_build_text_rels_text:${param_core_build_text_rels_text}"
-  debug 'core_build_text_rels' "param_core_build_text_rels_linkcard_index:${param_core_build_text_rels_linkcard_index}"
-  debug 'core_build_text_rels' "param_core_build_text_rels_url_long:${param_core_build_text_rels_url_long}"
-
-  CORE_BUILD_TEXT_RELS_accum_display_length=0
-  CORE_BUILD_TEXT_RELS_extract_link_count=0
-  CORE_BUILD_TEXT_RELS_link_facets_element=''
-  CORE_BUILD_TEXT_RELS_tag_facets_element=''
-  RESULT_core_build_text_rels_display_text=''
-  RESULT_core_build_text_rels_linkcard_url=''
-  RESULT_core_build_text_rels_link_facets_element=''
-  RESULT_core_build_text_rels_tag_facets_element=''
-
-  # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
-  evacuated_IFS=$IFS
-  # each line separated by newline
-  IFS='
-'
-  # no double quote for use word splitting
-  # shellcheck disable=SC2086
-  set -- $param_core_build_text_rels_text
-  IFS=$evacuated_IFS
-  while [ $# -gt 0 ]
-  do
-    # separate line processing for conflict position parameter (set)
-    core_build_text_rels_line "$1" "${param_core_build_text_rels_linkcard_index}" "${param_core_build_text_rels_url_long}"
-    # shift to next line
-    shift
-    # increment newline(\n) length
-    CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + 1`
-    # add newline
-    RESULT_core_build_text_rels_display_text="${RESULT_core_build_text_rels_display_text}
-"
-  done
-  # (newline)... at tail -> (null)
-  # using GNU sed -z option
-  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | sed -z 's/\(\n\)*$//g'`
-
-  RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
-  RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
-
-  debug 'core_build_text_rels' 'END'
 }
 
 core_build_link_facets_fragment()
@@ -1288,7 +1423,7 @@ core_build_external_fragment()
           then
             image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
             mktemp_status=$?
-            debug 'core_build_externa_fragment' "image_temporary_path:${image_temporary_path}"
+            debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
             if [ $mktemp_status -eq 0 ]
             then
               curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
@@ -1340,7 +1475,7 @@ core_build_external_fragment()
         error_msg "site access failed: ${url}"
         status=1
       fi
-    else  # url is not specfied
+    else  # url is not specified
       status=0
     fi
   else  # param_linkcard_index is 0
@@ -1613,7 +1748,7 @@ core_create_post_chunk()
         "'"${view_template_post_feed_generator_head}"'",
         "'"${view_template_post_feed_generator_tail}"'"
       ;
-      def output_post_external(view_idnex; post_fragment):
+      def output_post_external(view_index; post_fragment):
         post_fragment.external.uri as $EXTERNAL_URI |
         post_fragment.external.title as $EXTERNAL_TITLE |
         post_fragment.external.description as $EXTERNAL_DESCRIPTION |
@@ -1984,7 +2119,7 @@ core_verify_pref_item_parameter()
   done
   if [ "${all_status}" -ne 0 ]
   then
-    error 'preference item parameter error occured'
+    error 'preference item parameter error occurred'
   fi
 
   debug 'core_verify_pref_item_parameter' 'END'
@@ -2551,7 +2686,7 @@ core_thread()
     output_post($view_index; $post_fragment)
   '
   # shellcheck disable=SC2016
-  thread_parse_prodecure_replies='
+  thread_parse_procedure_replies='
     def output_replies(node; sibling_index; index_str):
       node as $node |
       sibling_index as $sibling_index |
@@ -2578,13 +2713,13 @@ core_thread()
   else
     _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
     _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
-    _p "${result}" | jq -r "${view_post_functions}${thread_parse_prodecure_replies}"
+    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_replies}"
   fi
 
   view_session_functions=`core_create_session_chunk`
   feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
   feed_view_index_target=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_target}"`
-  feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_prodecure_replies}" | sed 's/.$//'`
+  feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_replies}" | sed 's/.$//'`
   feed_view_index="${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}"
   # CAUTION: key=value pairs are separated by tab characters
   update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
@@ -2598,7 +2733,7 @@ core_post()
   param_linkcard_index="$2"
   param_langs="$3"
   param_output_json="$4"
-  param_url_long="$5"
+  param_url="$5"
   if [ $# -gt 5 ]
   then
     shift
@@ -2613,7 +2748,7 @@ core_post()
   debug 'core_post' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_post' "param_langs:${param_langs}"
   debug 'core_post' "param_output_json:${param_output_json}"
-  debug 'core_post' "param_url_long:${param_url_long}"
+  debug 'core_post' "param_url_long:${param_url}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -2624,13 +2759,13 @@ core_post()
   actual_image_count=$?
 #  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
 #  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
-  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url_long}"
+  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
+  core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
-
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -3393,7 +3528,7 @@ core_posts()
   debug 'core_posts' "param_mode:${param_mode}"
   debug 'core_posts' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts' "param_specified_text:${param_specified_text}"
-  debug 'core_posts' "param_text_fies:${param_text_files}"
+  debug 'core_posts' "param_text_files:${param_text_files}"
   debug 'core_posts' "param_langs:${param_langs}"
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
@@ -3428,8 +3563,10 @@ core_reply()
   param_linkcard_index="$4"
   param_langs="$5"
   param_output_json="$6"
-  if [ $# -gt 6 ]
+  param_url_long="$7"
+  if [ $# -gt 7 ]
   then
+    shift
     shift
     shift
     shift
@@ -3445,6 +3582,7 @@ core_reply()
   debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_reply' "param_langs:${param_langs}"
   debug 'core_reply' "param_output_json:${param_output_json}"
+  debug 'core_reply' "param_url_long:${param_url_long}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -3456,12 +3594,19 @@ core_reply()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
-  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+#  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
+#  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
+  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url_long}"
+  core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
+  text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
+  link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
+  tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
-      record="{\"text\":\"${param_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+      record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
       # image and external (link card) are exclusive, prioritize image specification
       if [ $actual_image_count -gt 0 ]
       then
@@ -3470,9 +3615,9 @@ core_reply()
       then
         record="${record},\"embed\":${external_fragment}"
       fi
-      if [ -n "${link_facets_fragment}" ]
+      if [ -n "${facets_fragment}" ]
       then
-        record="${record},\"facets\":${link_facets_fragment}"
+        record="${record},\"facets\":${facets_fragment}"
       fi
       if [ -n "${langs_fragment}" ]
       then
@@ -3484,15 +3629,20 @@ core_reply()
       fi
       record="${record}}"
 
-      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-      status=$?
-      debug_single 'core_reply'
-      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-      if [ $status -eq 0 ]
+      if [ "${BSKYSHCLI_DEBUG_OFFLINE}" = 'ON' ]
       then
-        core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+        _p "${record}"
       else
-        error 'reply command failed'
+        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+        status=$?
+        debug_single 'core_reply'
+        _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+        if [ $status -eq 0 ]
+        then
+          core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+        else
+          error 'reply command failed'
+        fi
       fi
       ;;
   esac
@@ -4351,7 +4501,7 @@ core_size()
   param_separator_prefix="$4"
   param_count_only="$5"
   param_output_json="$6"
-  param_url_long="$7"
+  param_url="$7"
 
   debug 'core_size' 'START'
   debug 'core_size' "param_stdin_text:${param_stdin_text}"
@@ -4360,14 +4510,14 @@ core_size()
   debug 'core_size' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_size' "param_count_only:${param_count_only}"
   debug 'core_size' "param_output_json:${param_output_json}"
-  debug 'core_size' "param_url_long:${param_url_long}"
+  debug 'core_size' "param_url:${param_url}"
 
   json_stack=''
   status=0
   # standard input
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     if [ -n "${json_stack}" ]
@@ -4423,7 +4573,7 @@ core_size()
   # parameter specified text
   if [ -n "${param_specified_text}" ]
   then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     if [ -n "${json_stack}" ]
@@ -4481,7 +4631,7 @@ core_size()
   then
     if [ -n "${param_output_json}" ]
     then
-      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url_long}"`
+      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url}"`
       json_files=`_p "${json_files}" | jq --slurp -c '.'`
       json_files="\"files\":${json_files}"
       if [ -n "${json_stack}" ]
@@ -4490,7 +4640,7 @@ core_size()
       fi
       json_stack="${json_stack}${json_files}"
     else
-      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url_long}"
+      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url}"
     fi
   fi
   json_stack="{${json_stack}}"

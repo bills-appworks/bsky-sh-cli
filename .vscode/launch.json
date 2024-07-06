@@ -108,6 +108,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post <any>)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post ${input:any}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (post --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -809,5 +817,11 @@
             "options": ["", "--mode thread", "--mode sibling", "--mode independence"],
             "default": ""
         }
+        {
+            "type": "promptString",
+            "id": "any",
+            "description": "any parameters",
+            "default": ""
+        },
     ]
 }

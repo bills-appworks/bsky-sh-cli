@@ -82,7 +82,7 @@ fi
 export BSKYSHCLI_RUN_COMMANDS_PATH
 if [ -r "${BSKYSHCLI_RUN_COMMANDS_PATH}" ]
 then
-  # SC1090 disable for Run Commands file generize on runtime
+  # SC1090 disable for Run Commands file generate on runtime
   # shellcheck source=/dev/null
   . "${BSKYSHCLI_RUN_COMMANDS_PATH}"
 fi
@@ -149,7 +149,7 @@ global options:
       specify session profile name. sessions coexist independently for each profile.
 
   --session-refresh
-      forces a session refresh on command exectuion.
+      forces a session refresh on command execution.
 
   --version
       show bsky CLI version. other options/command/parameters are ignored.
@@ -163,7 +163,7 @@ commands:
   post         post text.
   posts        multiple text posts.
   reply        reply to existing post.
-  repost       reopst of existing post.
+  repost       repost of existing post.
   quote        post by quoting an existing post.
   like         like on existing post.
   thread       show thread of specified post.
@@ -374,17 +374,17 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --text '<text>'
     Specify text for post.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --image<N> <path to image file>
     Specify image file path.
@@ -399,6 +399,12 @@ parameters:
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --url <display mode>
+    Specify URL display (shortening) mode.
+      omit-tail (default)
+      omit-middle
+      full
 
   --langs '<language code>[,...]'
     Specify the languages to include in the post.
@@ -467,9 +473,9 @@ output_help_reply()
   cat << 'EOS'
 bsky reply help
 
-usage: bsky reply --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+usage: bsky reply --index <view index> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--output-json]
        or
-       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--langs '<language code>[,...]'] [--output-json]
+       bsky reply --uri <uri> --cid <cid> [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--output-json]
 
 parameters:
   --index <index>
@@ -483,12 +489,12 @@ parameters:
 
   --text '<text>'
     Specify text for post.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --image<N> <path to image file>
     Specify image file path.
@@ -503,6 +509,12 @@ parameters:
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --url <display mode>
+    Specify URL display (shortening) mode.
+      omit-tail (default)
+      omit-middle
+      full
 
   --langs '<language code>[,...]'
     Specify the languages to include in the post.
@@ -575,12 +587,12 @@ parameters:
 
   --text '<text>'
     Specify text for post.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --text-file '<path to text file>'
     Specify the path of text file to post.
     Only a single file can be specified.
-    If you specifiy standard input (pipe/redirect), this option is ignored.
+    If you specify standard input (pipe/redirect), this option is ignored.
 
   --image<N> <path to image file>
     Specify image file path.
@@ -829,7 +841,7 @@ parameters:
     show current cursor for paginate.
   
   --output-id
-    output IDs for some paramaters.
+    output IDs for some parameters.
 
   --output-json
     Output JSON format. Other parameters are ignored.
@@ -880,7 +892,7 @@ output_help_size()
   cat << 'EOS'
 bsky size help
 
-usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--separator-prefix '<delimiter string>'] [--count-only] [--output-json]
+usage: bsky size [--text '<text>'] [--text-files '<file path>[:...]'] [--separator-prefix '<delimiter string>'] [--count-only] [--url <display mode>] [--output-json]
 
 parameters:
   --text '<text>'
@@ -896,6 +908,12 @@ parameters:
   --count-only
     Output only number of characters.
 
+  --url <display mode>
+    Specify URL display (shortening) mode.
+      omit-tail (default)
+      omit-middle
+      full
+
   --output-json
     Output JSON format. Following parameter is ignored:
       --count-only
@@ -904,7 +922,6 @@ note:
   Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-files option, and standard input (pipe/redirect) are specified, input will be interactive.
   Standard input (pipe/redirect), --text option, and --text-files option can be specified at the same time. The order of multiple submissions will be text specified in standard input -> text specified in --text -> files specified in --text-files.
   Newlines at the end of text are ignored.
-  URL shortening is not supported at this time.
 EOS
 
   debug 'output_help_size' 'END'
@@ -1177,7 +1194,7 @@ command_feed()
     status=$?
     if [ $status -ne 0 ]
     then
-      error 'feed command error occured'
+      error 'feed command error occurred'
     fi
 
     if [ -n "${did}" ] && [ -z "${PARSED_PARAM_KEYVALUE_record_key}" ]
@@ -1215,7 +1232,7 @@ command_author_feed()
     status=$?
     if [ $status -ne 0 ]
     then
-      error 'author-feed command error occured'
+      error 'author-feed command error occurred'
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
@@ -1257,7 +1274,7 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0 --url-long:0' "$@"
+    parse_parameters '--text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0 --url:1' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1293,9 +1310,10 @@ command_post()
     else
       linkcard_index=1
     fi
+    core_verify_param_url_omit "${PARSED_PARAM_KEYVALUE_url}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYONLY_url_long}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'
@@ -1376,7 +1394,7 @@ command_reply()
   then
     output_help_reply
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --output-json:0 --url:1' "$@"
 
     verify_exclusive 1 '--text --text-file' "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_file}"
     verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
@@ -1426,7 +1444,8 @@ command_reply()
     else
       linkcard_index=1
     fi
-    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_verify_param_url_omit "${PARSED_PARAM_KEYVALUE_url}"
+    core_reply "${uri}" "${cid}" "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_reply' 'END'
@@ -1650,7 +1669,7 @@ command_profile()
     status=$?
     if [ $status -ne 0 ]
     then
-      error 'profile command error occured'
+      error 'profile command error occurred'
     fi
 
     # dynamic assignment in parse_parameters
@@ -1834,7 +1853,7 @@ command_size()
   then
     output_help_size
   else
-    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1 --url-long:0' "$@"
+    parse_parameters '--text:1 --text-files:1 --count-only:0 --output-json:0 --separator-prefix:1 --url:1' "$@"
 
     separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
     if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
@@ -1843,15 +1862,16 @@ command_size()
     fi
 
     # standard input
-    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}"`
+    stdin_text=`standard_input_lines "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" 'Calculating...'`
 
     if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
     then
       error 'parameter specify required --text or --text-files or standard input'
     fi
+    core_verify_param_url_omit "${PARSED_PARAM_KEYVALUE_url}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYONLY_url_long}"
+    core_size "${stdin_text}" "${PARSED_PARAM_KEYVALUE_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_count_only}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}"
   fi
 
   debug 'command_size' 'END'
