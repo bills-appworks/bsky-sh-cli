@@ -256,6 +256,14 @@ check_required_command()
   return $status
 }
 
+escape_text_json_value()
+{
+  param_escape_json_value=$1
+
+  # using GNU sed -z option
+  _p "${param_escape_json_value}" | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+}
+
 decode_keyvalue_list()
 {
   param_keyvalue_list="$1"
@@ -516,9 +524,8 @@ parse_parameters()
         then  # this parameter is single option
           evaluate="PARSED_PARAM_KEYONLY_${canonical_key}='defined'"
         else  # this parameter is value specified option
-          # escape \ -> \\, ' -> '\'', " -> \", (newline) -> \n
-          # using GNU sed -z option
-          escaped_value=`_p "${PARSED_VALUE}" | sed -z 's/\\\\/\\\\\\\\/g'";s/'/'\\\\\\\\''/g"';s/"/\\\\"/g;s/\n/\\\\n/g'`
+          # escape ' -> '\''
+          escaped_value=`_p "${PARSED_VALUE}" | sed "s/'/'\\\\\\\\''/g"`
           evaluate="PARSED_PARAM_KEYVALUE_${canonical_key}='${escaped_value}'"
         fi
         if [ $skip_count -eq 1 ]
@@ -584,6 +591,40 @@ create_json_keyvalue_variable()
   create_json_keyvalue "${param_variable}" "${value}" "${param_quote}"
 
   debug 'create_json_keyvalue_variable' 'END'
+}
+
+create_json_array()
+{
+  param_array_elements="$@"
+
+  debug 'create_json_array' 'START'
+
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_array_elements
+  if [ $# -gt 0 ]
+  then
+    json_array=''
+    while [ $# -gt 0 ]
+    do
+      element="$1"
+      if [ -n "${element}" ]
+      then
+        if [ -n "${json_array}" ]
+        then
+          json_array="${json_array},"
+        fi
+        json_array="${json_array}${element}"
+      fi
+      shift
+    done
+    if [ -n "${json_array}" ]
+    then
+      _p "[${json_array}]"
+    fi
+  fi
+
+  debug 'create_json_array' 'START'
 }
 
 api_core()
@@ -920,79 +961,32 @@ is_stdin_exist()
   return $status
 }
 
-get_stdin_simple()
-{
-  debug 'get_stdin_simple' 'START'
-
-  # standard input filtered: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
-  cat - | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
-
-  debug 'get_stdin_simple' 'END'
-}
-
-get_stdin_simple_lines()
-{
-  debug 'get_stdin_simple' 'START'
-
-  # standard input filtered: newline... at tail -> (null)
-  cat - | sed -z 's/\(\n\)*$//g'
-
-  debug 'get_stdin_simple' 'END'
-}
-
-interactive_input_post()
-{
-  debug 'interactive_input_post' 'START'
-
-  # interactive input
-  _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
-  get_stdin_simple
-  _pn '[Posting...]' 1>&2
-
-  debug 'interactive_input_post' 'END'
-}
-
 interactive_input_post_lines()
 {
+  param_interactive_input_post_lines_progress=$1
+
   debug 'interactive_input_post_lines' 'START'
+  debug 'interactive_input_post_lines' "param_interactive_input_post_lines_progress:${param_interactive_input_post_lines_progress}"
+
+  progress='Posting...'
+  if [ -n "${param_interactive_input_post_lines_progress}" ]
+  then
+    progress="${param_interactive_input_post_lines_progress}"
+  fi
 
   # interactive input
   _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
-  get_stdin_simple_lines
-  _pn '[Posting...]' 1>&2
+  cat -
+  _pn "[${progress}]" 1>&2
 
   debug 'interactive_input_post_lines' 'END'
-}
-
-standard_input()
-{
-  param_standard_input_text=$1
-  param_standard_input_text_file=$2
-
-  debug 'standard_input' 'START'
-  debug 'standard_input' "param_standard_input_text:${param_standard_input_text}"
-  debug 'standard_input' "param_standard_input_text_file:${param_standard_input_text_file}"
-
-  if is_stdin_exist
-  then
-    # standard input (pipe or redirect)
-    get_stdin_simple
-  elif [ -z "${param_standard_input_text}" ] && [ -z "${param_standard_input_text_file}" ]
-  then
-    # interactive input
-    interactive_input_post
-  else
-    # --text or --text-file(s) parameter
-    :
-  fi
-
-  debug 'standard_input' 'END'
 }
 
 standard_input_lines()
 {
   param_standard_input_lines_text=$1
   param_standard_input_lines_text_file=$2
+  param_standard_input_lines_progress=$3
 
   debug 'standard_input_lines' 'START'
   debug 'standard_input_lines' "param_standard_input_lines_text:${param_standard_input_lines_text}"
@@ -1001,11 +995,11 @@ standard_input_lines()
   if is_stdin_exist
   then
     # standard input (pipe or redirect)
-    get_stdin_simple_lines
+    cat -
   elif [ -z "${param_standard_input_lines_text}" ] && [ -z "${param_standard_input_lines_text_file}" ]
   then
     # interactive input
-    interactive_input_post_lines
+    interactive_input_post_lines "${param_standard_input_lines_progress}"
   else
     # --text or --text-file(s) parameter
     :
@@ -1027,7 +1021,7 @@ resolve_post_text()
   if is_stdin_exist
   then
     # standard input (pipe or redirect)
-    get_stdin_simple
+    cat -
   elif [ -n "${param_resolve_post_text}" ]
   then
     # --text parameter
@@ -1037,18 +1031,14 @@ resolve_post_text()
     # --text-file parameter
     if [ -r "${param_resolve_post_text_file}" ]
     then
-      # escape: \ -> \\,  " -> \",  newline... at tail -> (null), newline -> \n
-      # using GNU sed -z option
-      < "${param_resolve_post_text_file}" sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+      cat "${param_resolve_post_text_file}"
     else
       error_msg "specified text file is not readable: ${param_resolve_post_text_file}"
       status_resolve_post_text=1
     fi
   else
     # interactive input
-    _pn '[Input post text (Ctrl-D to post, Ctrl-C to interruption)]' 1>&2
-    get_stdin_simple
-    _pn '[Posting...]' 1>&2
+    interactive_input_post_lines
   fi
 
   debug 'resolve_post_text' 'END'
