@@ -790,9 +790,6 @@ core_get_text_file()
   status_core_get_text_file=0
   if [ -r "${param_text_file_path}" ]
   then
-#    # escape (newline) -> \n
-#    # using GNU sed -z option
-#    < "${param_text_file_path}" sed -z 's/\n/\\n/g'
     cat "${param_text_file_path}"
   else
     check_comma=`_p "${param_text_file_path}" | sed 's/[^,]//g'`
@@ -919,9 +916,6 @@ core_verify_text_file_size()
   status_core_verify_text_file_size=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-##    # unescape \n -> (newline)
-##    text_size=`_p "${text_file}" | sed 's/\\\\n/\n/g' | wc -m`
-#    text_size=`_p "${text_file}" | wc -m`
     core_build_text_rels "${text_file}" 0 "${param_url_long}"
     text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     if [ "${text_size}" -gt 300 ]
@@ -942,18 +936,17 @@ core_verify_text_file_size_lines()
 {
   param_text_file_path="$1"
   param_separator_prefix="$2"
-  param_url_long="$3"
+  param_url="$3"
 
   debug 'core_verify_text_file_size_lines' 'START'
   debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_verify_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_verify_text_file_size_lines' "param_url:${param_url}"
 
   status_core_verify_text_file_size_lines=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-#    # unescape \n -> (newline)
-#    text_file=`_p "${text_file}" | sed 's/\\\\n/\n/g'`
-    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -1010,65 +1003,26 @@ core_process_files()
   return $status_core_process_files
 }
 
-_core_verify_text_size()
-{
-  param_core_verify_text_size_text="$1"
-  param_text_files="$2"
-
-  debug 'core_verify_text_size' 'START'
-  debug 'core_verify_text_size' "param_core_verify_text_size_text:${param_core_verify_text_size_text}"
-  debug 'core_verify_text_size' "param_text_files:${param_text_files}"
-
-  status_core_verify_text_size=0
-  if [ -n "${param_core_verify_text_size_text}" ]
-  then
-    core_text_size "${param_core_verify_text_size_text}"
-    size=$?
-    if [ $size -gt 300 ]
-    then
-      error_msg "The number of characters is ${size}, which exceeds the upper limit of 300 characters: --text parameter value"
-      status_core_verify_text_size=1
-    fi
-  fi
-
-  if [ -n "${param_text_files}" ]
-  then
-    if core_process_files "${param_text_files}" 'core_verify_text_file_size'
-    then
-      :
-    else
-      status_core_verify_text_size=1
-    fi
-  fi
-
-  if [ $status_core_verify_text_size -ne 0 ]
-  then
-    error 'Processing has been canceled'
-  fi
-
-  debug 'core_verify_text_size' 'END'
-}
-
 core_verify_text_size_lines()
 {
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
   param_separator_prefix="$4"
-  param_url_long="$5"
+  param_url="$5"
 
   debug 'core_verify_text_size_lines' 'START'
   debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
   debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
   debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
   debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_verify_text_size_lines' "param_url_long:${param_url_long}"
+  debug 'core_verify_text_size_lines' "param_url_long:${param_url}"
 
   status_core_verify_text_size_lines=0
 
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -1085,7 +1039,7 @@ core_verify_text_size_lines()
 
   if [ -n "${param_specified_text}" ]
   then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url_long}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url}"
     section_count=$?
     section_index=1
     while [ $section_index -le $section_count ]
@@ -1102,7 +1056,7 @@ core_verify_text_size_lines()
 
   if [ -n "${param_text_files}" ]
   then
-    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}" "${param_url_long}"
+    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}" "${param_url}"
     then
       :
     else
@@ -2431,27 +2385,30 @@ core_output_post()
   debug 'core_output_post' "param_output_via:${param_output_via}"
   debug 'core_output_post' "param_output_json:${param_output_json}"
 
-  result=`api app.bsky.feed.getPosts "${param_post_uri_list}"`
-  status=$?
-  debug_single 'core_output_post'
-  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-
-  if [ $status -eq 0 ]
+  if [ "${BSKYSHCLI_DEBUG_OFFLINE}" != 'ON' ]
   then
-    feed_struct_posts=`_p "${result}" | jq -c '{"feed":[.[] | {"post":.[]}]}'`
-    if [ -n "${param_output_json}" ]
-    then
-      _p "${result}"
-    else
-      # parameter: output-id, output-via
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-      _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
-    fi
+    result=`api app.bsky.feed.getPosts "${param_post_uri_list}"`
+    status=$?
+    debug_single 'core_output_post'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
 
-    view_session_functions=`core_create_session_chunk`
-    feed_view_index=`_p "${feed_struct_posts}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
-    # CAUTION: key=value pairs are separated by tab characters
-    update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    if [ $status -eq 0 ]
+    then
+      feed_struct_posts=`_p "${result}" | jq -c '{"feed":[.[] | {"post":.[]}]}'`
+      if [ -n "${param_output_json}" ]
+      then
+        _p "${result}"
+      else
+        # parameter: output-id, output-via
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+      fi
+
+      view_session_functions=`core_create_session_chunk`
+      feed_view_index=`_p "${feed_struct_posts}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
+      # CAUTION: key=value pairs are separated by tab characters
+      update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    fi
   fi
 
   debug 'core_output_post' 'END'
@@ -2463,12 +2420,14 @@ core_posts_single()
   param_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
+  param_url="$5"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
   debug 'core_posts_single' "param_langs:${param_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
+  debug 'core_posts_single' "param_url:${param_url}"
 
   created_at=`get_ISO8601UTCbs`
   if [ -n "${param_parent_uri}" ] && [ -n "${param_parent_cid}" ]
@@ -2477,22 +2436,27 @@ core_posts_single()
   else
     reply_fragment=''
   fi
-  link_facets_fragment=`core_build_link_facets_fragment "${param_core_posts_single_text}"`
-  external_fragment=`core_build_external_fragment "${param_core_posts_single_text}" 1`
+  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_url}"
+  core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
+  text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
+  link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
+  tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   if [ -n "${reply_fragment}" ]
   then
-    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
+    record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
   else
-    record="{\"text\":\"${param_core_posts_single_text}\",\"createdAt\":\"${created_at}\""
+    record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\""
   fi
   if [ -n "${external_fragment}" ]
   then
     record="${record},\"embed\":${external_fragment}"
   fi
-  if [ -n "${link_facets_fragment}" ]
+  if [ -n "${facets_fragment}" ]
   then
-    record="${record},\"facets\":${link_facets_fragment}"
+    record="${record},\"facets\":${facets_fragment}"
   fi
   if [ -n "${langs_fragment}" ]
   then
@@ -2504,17 +2468,23 @@ core_posts_single()
   fi
   record="${record}}"
   
-  result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-  status=$?
-  debug_single 'core_posts'
-  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-  if [ $status -eq 0 ]
+  if [ "${BSKYSHCLI_DEBUG_OFFLINE}" = 'ON' ]
   then
-    RESULT_core_posts_single_uri=`_p "${result}" | jq -r '.uri'`
-    RESULT_core_posts_single_cid=`_p "${result}" | jq -r '.cid'`
+    _p "${record}"
     status_core_posts_single=0
   else
-    status_core_posts_single=1
+    result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+    status=$?
+    debug_single 'core_posts'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+    if [ $status -eq 0 ]
+    then
+      RESULT_core_posts_single_uri=`_p "${result}" | jq -r '.uri'`
+      RESULT_core_posts_single_cid=`_p "${result}" | jq -r '.cid'`
+      status_core_posts_single=0
+    else
+      status_core_posts_single=1
+    fi
   fi
 
   debug 'core_posts_single' 'END'
@@ -2655,74 +2625,78 @@ core_thread()
   debug 'core_thread' "param_output_json:${param_output_json}"
 
   debug_single 'core_thread'
-  result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-  view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
-  # $<variables> want to pass through for jq
-  # shellcheck disable=SC2016
-  thread_parse_procedure_parents='
-    def output_parents:
-      .parent |
-      [recurse(.parent; . != null)] |
-      to_entries |
-      reverse |
-      foreach .[] as $feed_entry (0; 0;
-        ($feed_entry.key * -1 - 1) as $view_index |
-        $feed_entry.value.post as $post_fragment |
-        output_post($view_index; $post_fragment)
-      );
-    .thread |
-    if has("parent")
-    then
-      output_parents
-    else
-      empty
-    end
-  '
-  # shellcheck disable=SC2016
-  thread_parse_procedure_target='
-    0 as $view_index |
-    .thread.post as $post_fragment |
-    output_post($view_index; $post_fragment)
-  '
-  # shellcheck disable=SC2016
-  thread_parse_procedure_replies='
-    def output_replies(node; sibling_index; index_str):
-      node as $node |
-      sibling_index as $sibling_index |
-      index_str as $index_str |
-      $node.post as $post_fragment |
-      $index_str[1:] as $view_index |
-      $node.replies |
-      reverse |
-      if $sibling_index == 0
-      then
-        empty
-      else
-        output_post($view_index; $post_fragment)
-      end,
-      foreach .[] as $reply (0; . + 1;
-        output_replies($reply; .; "\($index_str)-\(.)")
-      )
-    ;
-    output_replies(.thread; 0; "")
-  '
-  if [ -n "${param_output_json}" ]
+  if [ "${BSKYSHCLI_DEBUG_OFFLINE}" != 'ON' ]
   then
-    _p "${result}"
-  else
-    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
-    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
-    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_replies}"
-  fi
+    result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-  view_session_functions=`core_create_session_chunk`
-  feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
-  feed_view_index_target=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_target}"`
-  feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_replies}" | sed 's/.$//'`
-  feed_view_index="${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}"
-  # CAUTION: key=value pairs are separated by tab characters
-  update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+    # $<variables> want to pass through for jq
+    # shellcheck disable=SC2016
+    thread_parse_procedure_parents='
+      def output_parents:
+        .parent |
+        [recurse(.parent; . != null)] |
+        to_entries |
+        reverse |
+        foreach .[] as $feed_entry (0; 0;
+          ($feed_entry.key * -1 - 1) as $view_index |
+          $feed_entry.value.post as $post_fragment |
+          output_post($view_index; $post_fragment)
+        );
+      .thread |
+      if has("parent")
+      then
+        output_parents
+      else
+        empty
+      end
+    '
+    # shellcheck disable=SC2016
+    thread_parse_procedure_target='
+      0 as $view_index |
+      .thread.post as $post_fragment |
+      output_post($view_index; $post_fragment)
+    '
+    # shellcheck disable=SC2016
+    thread_parse_procedure_replies='
+      def output_replies(node; sibling_index; index_str):
+        node as $node |
+        sibling_index as $sibling_index |
+        index_str as $index_str |
+        $node.post as $post_fragment |
+        $index_str[1:] as $view_index |
+        $node.replies |
+        reverse |
+        if $sibling_index == 0
+        then
+          empty
+        else
+          output_post($view_index; $post_fragment)
+        end,
+        foreach .[] as $reply (0; . + 1;
+          output_replies($reply; .; "\($index_str)-\(.)")
+        )
+      ;
+      output_replies(.thread; 0; "")
+    '
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    else
+      _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_parents}"
+      _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
+      _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_replies}"
+    fi
+
+    view_session_functions=`core_create_session_chunk`
+    feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
+    feed_view_index_target=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_target}"`
+    feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_replies}" | sed 's/.$//'`
+    feed_view_index="${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}"
+    # CAUTION: key=value pairs are separated by tab characters
+    update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+  fi
 
   debug 'core_thread' 'END'
 }
@@ -2757,8 +2731,6 @@ core_post()
   created_at=`get_ISO8601UTCbs`
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
-#  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-#  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
@@ -2820,6 +2792,7 @@ core_posts_thread_lines()
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
+  param_url="$6"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
@@ -2827,6 +2800,7 @@ core_posts_thread_lines()
   debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_thread_lines' "param_url:${param_url}"
 
   core_posts_thread_lines_parent_uri="${param_parent_uri}"
   core_posts_thread_lines_parent_cid="${param_parent_cid}"
@@ -2857,9 +2831,7 @@ core_posts_thread_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#          if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2896,9 +2868,7 @@ core_posts_thread_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#      if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2918,9 +2888,7 @@ core_posts_thread_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-#    text=`_p "${param_core_posts_thread_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#    if core_posts_single "${text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2953,6 +2921,7 @@ core_posts_thread()
   param_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
+  param_url="$7"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
@@ -2961,6 +2930,7 @@ core_posts_thread()
   debug 'core_posts_thread' "param_langs:${param_langs}"
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
+  debug 'core_posts_thread' "param_url:${param_url}"
 
   parent_uri=''
   parent_cid=''
@@ -2969,7 +2939,7 @@ core_posts_thread()
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -2984,7 +2954,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3016,7 +2986,7 @@ core_posts_thread()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3044,6 +3014,7 @@ core_posts_sibling_lines()
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
+  param_url="$6"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
@@ -3051,6 +3022,7 @@ core_posts_sibling_lines()
   debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_sibling_lines' "param_url:${param_url}"
 
   core_posts_sibling_lines_parent_uri="${param_parent_uri}"
   core_posts_sibling_lines_parent_cid="${param_parent_cid}"
@@ -3081,9 +3053,7 @@ core_posts_sibling_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#          if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -3126,9 +3096,7 @@ core_posts_sibling_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#      if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -3154,9 +3122,7 @@ core_posts_sibling_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-#    text=`_p "${param_core_posts_sibling_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#    if core_posts_single "${text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -3195,6 +3161,7 @@ core_posts_sibling()
   param_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
+  param_url="$7"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
@@ -3203,6 +3170,7 @@ core_posts_sibling()
   debug 'core_posts_sibling' "param_langs:${param_langs}"
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
+  debug 'core_posts_sibling' "param_url:${param_url}"
 
   parent_uri=''
   parent_cid=''
@@ -3211,7 +3179,7 @@ core_posts_sibling()
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3232,7 +3200,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3270,7 +3238,7 @@ core_posts_sibling()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}"
+      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -3304,6 +3272,7 @@ core_posts_independence_lines()
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
+  param_url="$6"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
@@ -3311,6 +3280,7 @@ core_posts_independence_lines()
   debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
+  debug 'core_posts_independence_lines' "param_url:${param_url}"
 
   core_posts_independence_parent_uri=''
   core_posts_independence_parent_cid=''
@@ -3341,9 +3311,7 @@ core_posts_independence_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-#          text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#          if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -3380,9 +3348,7 @@ core_posts_independence_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-#      text=`_p "${lines}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#      if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -3402,9 +3368,7 @@ core_posts_independence_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-#    text=`_p "${param_core_posts_independence_lines_text}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\(\n\)*$//g; s/\n/\\\\n/g'`
-#    if core_posts_single "${text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -3437,6 +3401,7 @@ core_posts_independence()
   param_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
+  param_url="$7"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
@@ -3445,6 +3410,7 @@ core_posts_independence()
   debug 'core_posts_independence' "param_langs:${param_langs}"
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
+  debug 'core_posts_independence' "param_url:${param_url}"
 
   parent_uri=''
   parent_cid=''
@@ -3453,7 +3419,7 @@ core_posts_independence()
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}"
+    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
     then
       #parent_uri=''
       #parent_cid=''
@@ -3466,7 +3432,7 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}"
+    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
     then
       #parent_uri=''
       #parent_cid=''
@@ -3496,7 +3462,7 @@ core_posts_independence()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}"
+      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
       then
         #parent_uri=''
         #parent_cid=''
@@ -3523,6 +3489,7 @@ core_posts()
   param_langs="$5"
   param_separator_prefix="$6"
   param_output_json="$7"
+  param_url="$8"
 
   debug 'core_posts' 'START'
   debug 'core_posts' "param_mode:${param_mode}"
@@ -3532,23 +3499,24 @@ core_posts()
   debug 'core_posts' "param_langs:${param_langs}"
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
+  debug 'core_posts' "param_url:${param_url}"
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
 
   # size check
-  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}"
+  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
       ;;
   esac
 
@@ -3563,7 +3531,7 @@ core_reply()
   param_linkcard_index="$4"
   param_langs="$5"
   param_output_json="$6"
-  param_url_long="$7"
+  param_url="$7"
   if [ $# -gt 7 ]
   then
     shift
@@ -3582,7 +3550,7 @@ core_reply()
   debug 'core_reply' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_reply' "param_langs:${param_langs}"
   debug 'core_reply' "param_output_json:${param_output_json}"
-  debug 'core_reply' "param_url_long:${param_url_long}"
+  debug 'core_reply' "param_url:${param_url}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -3594,9 +3562,7 @@ core_reply()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
-#  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-#  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
-  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url_long}"
+  core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
@@ -3731,8 +3697,6 @@ core_quote()
   # shellcheck disable=SC2086
   images_fragment=`core_build_images_fragment "$@"`
   actual_image_count=$?
-#  link_facets_fragment=`core_build_link_facets_fragment "${param_text}"`
-#  external_fragment=`core_build_external_fragment "${param_text}" "${param_linkcard_index}"`
   core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
