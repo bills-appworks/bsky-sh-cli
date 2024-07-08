@@ -24,6 +24,7 @@ VIEW_TEMPLATE_CREATED_AT='
   try fromdate catch $raw |
   try strflocaltime("%F %X(%Z)") catch $raw
 '
+VIEW_TEMPLATE_INDEXED_AT="${VIEW_TEMPLATE_CREATED_AT}"
 # shellcheck disable=SC2016
 FEED_PARSE_PROCEDURE='
   .feed |
@@ -1636,6 +1637,7 @@ core_create_post_chunk()
         post_fragment.replyCount as $REPLY_COUNT |
         post_fragment.repostCount as $REPOST_COUNT |
         post_fragment.likeCount as $LIKE_COUNT |
+        post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         if is_quoted
         then
           ([view_index, "1"] | join("-")) as $VIEW_INDEX |
@@ -1698,6 +1700,7 @@ core_create_post_chunk()
         post_fragment.description as $DESCRIPTION |
         post_fragment.avatar as $AVATAR |
         post_fragment.likeCount as $LIKECOUNT |
+        post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         "'"${view_template_post_feed_generator_meta}"'",
         "'"${view_template_post_feed_generator_head}"'",
         "'"${view_template_post_feed_generator_tail}"'"
