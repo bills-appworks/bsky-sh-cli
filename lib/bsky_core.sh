@@ -421,8 +421,12 @@ core_url_shortening_middle()
           if [ "${cut_base_length}" -gt 0 ]
           then
             # host/...(cut)tail
-            tail_path=`_p "${tail_path}" | cut -c "${cut_base_length}"-`
-            modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}"
+            _strlen "${tail_path}"
+            tail_length=$?
+            over_length=`expr "${temporary_modified_url_length}" - "${BSKYSHCLI_URL_SHORT_BASELINE}"`
+            remain_length=`expr "${tail_length}" - "${over_length}" - "${abbrev_length}"`
+            tail_path=`_p "${tail_path}" | cut -c -"${remain_length}"`
+            modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}${BSKYSHCLI_URL_SHORT_ABBREV}"
           else
             # host/...
             modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}"
