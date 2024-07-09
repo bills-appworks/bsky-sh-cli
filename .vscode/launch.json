@@ -108,6 +108,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post <any>)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post ${input:any}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (post --text '<text>')",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -144,6 +152,14 @@
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
             "argsString": "${input:profile} post --text '${input:post_text}' --image1 ${input:post_image} --alt1 '${input:post_alt}' --image2 ${input:post_image} --alt2 '${input:post_alt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (post --text-file '<file path>' [--linkcard-index <link index>])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text-file '${input:text_file}' ${input:linkcard_index}"
         },
         {
             "type": "bashdb",
@@ -784,6 +800,12 @@
         },
         {
             "type": "promptString",
+            "id": "text_file",
+            "description": "text file (e.g. --text-file '/path/to/a.txt')",
+            "default": ""
+        },
+        {
+            "type": "promptString",
             "id": "count_only",
             "description": "display only number of size (delete if unnecessary)",
             "default": "--count-only"
@@ -795,5 +817,11 @@
             "options": ["", "--mode thread", "--mode sibling", "--mode independence"],
             "default": ""
         }
+        {
+            "type": "promptString",
+            "id": "any",
+            "description": "any parameters",
+            "default": ""
+        },
     ]
 }

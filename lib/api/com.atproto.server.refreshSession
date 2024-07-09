@@ -27,8 +27,14 @@ param_refresh_jwt=$1
 
 debug "${FILENAME}" 'START'
 
+# debug mode turn off (prevent password recording)
+debug_mode_suppress
+
 debug_single "${FILENAME}"
 result=`api_post_bearer 'com.atproto.server.refreshSession' "${param_refresh_jwt}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+
+# restore debug mode
+debug_mode_restore
 
 error_element=`_p "${result}" | jq -r '.error_element // empty'`
 
