@@ -6,6 +6,7 @@
 - Changed post display date and time field from createdAt to indexedAt
 ## Fix
 - Removed JWT tokens that were output as part of the log in debug mode
+- Other minor fixes
 
 # v0.6.0
 ## Add
