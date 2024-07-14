@@ -32,8 +32,10 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
 # template for output via field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
+# template for output langs field in post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS=' [langs:\($LANGS)]'
 # template for meta field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)]<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)]<VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 # template for head field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \($INDEXED_AT)'
 # template for body field in post
@@ -46,6 +48,8 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
 # template for output via placeholder to post templates (meta/head/body/tail/separator)
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
+# template for output langs placeholder to post templates (meta/head/body/tail/separator)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER>'
 # template for quoted field prefix in post
 #BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
 # template for output id field in post feed generator

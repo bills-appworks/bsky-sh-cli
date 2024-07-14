@@ -1568,10 +1568,12 @@ core_create_post_chunk()
 {
   param_output_id="$1"
   param_output_via="$2"
+  param_output_langs="$3"
 
   debug 'core_create_post_chunk' 'START'
   debug 'core_create_post_chunk' "param_output_id:${param_output_id}"
   debug 'core_create_post_chunk' "param_output_via:${param_output_via}"
+  debug 'core_create_post_chunk' "param_output_langs:${param_output_langs}"
 
   if [ -n "${param_output_id}" ]
   then
@@ -1588,24 +1590,30 @@ core_create_post_chunk()
   else
     view_post_output_via=''
   fi
-  view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
+  if [ -n "${param_output_langs}" ]
+  then
+    view_post_output_langs=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS}" | sed 's/\\\\/\\\\\\\\/g'`
+  else
+    view_post_output_langs=''
+  fi
+  view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # disable via to quoted
-  view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
+  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image_index; image; is_quoted):
@@ -1636,6 +1644,7 @@ core_create_post_chunk()
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
         "" as $VIA |
+        "" as $LANGS |
         post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
         post_fragment.author.handle as $AUTHOR_HANDLE |
         post_fragment.replyCount as $REPLY_COUNT |
@@ -1647,6 +1656,8 @@ core_create_post_chunk()
           ([view_index, "1"] | join("-")) as $VIEW_INDEX |
           post_fragment.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
           (post_fragment.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
+          (post_fragment.value.via // "") as $VIA |
+          (post_fragment.value.langs | join(",")?) as $LANGS |
           if is_before_embed
           then
             "'"${view_template_quoted_post_meta}"'",
@@ -1660,6 +1671,7 @@ core_create_post_chunk()
           post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
           post_fragment.record.text as $TEXT |
           (post_fragment.record.via // "") as $VIA |
+          (post_fragment.record.langs | join(",")?) as $LANGS |
           if is_before_embed
           then
             "'"${view_template_post_meta}"'",
@@ -2195,6 +2207,7 @@ core_get_timeline()
   param_output_id="$4"
   param_output_via="$5"
   param_output_json="$6"
+  param_output_langs="$7"
 
   debug 'core_get_timeline' 'START'
   debug 'core_get_timeline' "param_algorithm:${param_algorithm}"
@@ -2203,6 +2216,7 @@ core_get_timeline()
   debug 'core_get_timeline' "param_output_id:${param_output_id}"
   debug 'core_get_timeline' "param_output_via:${param_output_via}"
   debug 'core_get_timeline' "param_output_json:${param_output_json}"
+  debug 'core_get_timeline' "param_output_langs:${param_output_langs}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -2228,7 +2242,7 @@ core_get_timeline()
     then
       _p "${result}"
     else
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
       _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
     fi
 
@@ -2254,6 +2268,7 @@ core_get_feed()
   param_output_id="$6"
   param_output_via="$7"
   param_output_json="$8"
+  param_output_langs="$9"
 
   debug 'core_get_feed' 'START'
   debug 'core_get_feed' "param_did:${param_did}"
@@ -2264,6 +2279,7 @@ core_get_feed()
   debug 'core_get_feed' "param_output_id:${param_output_id}"
   debug 'core_get_feed' "param_output_via:${param_output_via}"
   debug 'core_get_feed' "param_output_json:${param_output_json}"
+  debug 'core_get_feed' "param_output_langs:${param_output_langs}"
 
   if [ -n "${param_did}" ]
   then
@@ -2303,7 +2319,7 @@ core_get_feed()
       then
         _p "${result}"
       else
-        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
         _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
       fi
 
@@ -2329,6 +2345,7 @@ core_get_author_feed()
   param_output_id="$5"
   param_output_via="$6"
   param_output_json="$7"
+  param_output_langs="$8"
 
   debug 'core_get_author_feed' 'START'
   debug 'core_get_author_feed' "param_did:${param_did}"
@@ -2338,6 +2355,7 @@ core_get_author_feed()
   debug 'core_get_author_feed' "param_output_id:${param_output_id}"
   debug 'core_get_author_feed' "param_output_via:${param_output_via}"
   debug 'core_get_author_feed' "param_output_json:${param_output_json}"
+  debug 'core_get_author_feed' "param_output_langs:${param_output_langs}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -2363,7 +2381,7 @@ core_get_author_feed()
     then
       _p "${result}"
     else
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
       _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
     fi
 
@@ -2385,12 +2403,14 @@ core_output_post()
   param_output_id="$2"
   param_output_via="$3"
   param_output_json="$4"
+  param_output_langs="$5"
 
   debug 'core_output_post' 'START'
   debug 'core_output_post' "param_post_uri_list:${param_post_uri_list}"
   debug 'core_output_post' "param_output_id:${param_output_id}"
   debug 'core_output_post' "param_output_via:${param_output_via}"
   debug 'core_output_post' "param_output_json:${param_output_json}"
+  debug 'core_output_post' "param_output_langs:${param_output_langs}"
 
   if [ "${BSKYSHCLI_DEBUG_OFFLINE}" != 'ON' ]
   then
@@ -2406,8 +2426,8 @@ core_output_post()
       then
         _p "${result}"
       else
-        # parameter: output-id, output-via
-        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        # parameter: output-id, output-via, output-langs(force output)
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
         _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
       fi
 
@@ -2622,6 +2642,7 @@ core_thread()
   param_output_id="$4"
   param_output_via="$5"
   param_output_json="$6"
+  param_output_langs="$7"
 
   debug 'core_thread' 'START'
   debug 'core_thread' "param_target_uri:${param_target_uri}"
@@ -2630,6 +2651,7 @@ core_thread()
   debug 'core_thread' "param_output_id:${param_output_id}"
   debug 'core_thread' "param_output_via:${param_output_via}"
   debug 'core_thread' "param_output_json:${param_output_json}"
+  debug 'core_thread' "param_output_langs:${param_output_langs}"
 
   debug_single 'core_thread'
 
@@ -2637,7 +2659,7 @@ core_thread()
   then
     result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
     # $<variables> want to pass through for jq
     # shellcheck disable=SC2016
     thread_parse_procedure_parents='
