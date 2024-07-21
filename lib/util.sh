@@ -519,7 +519,7 @@ parse_parameters()
         canonical_key=`_strleft "${canonical_key}" '='`
         # opt-foo -> opt_foo
         canonical_key=`_p "${canonical_key}" | sed 's/-/_/g'`
-        # options value requirement is checked at parse_parameter_lement
+        # options value requirement is checked at parse_parameter_element
         if [ -z "${PARSED_VALUE}" ]
         then  # this parameter is single option
           evaluate="PARSED_PARAM_KEYONLY_${canonical_key}='defined'"
@@ -654,7 +654,7 @@ api_core()
         api_error="${error_element}"
         api_error_message=`_p "${result}" | jq -r '.message // empty'`
         debug 'api_core' "${api_error} / ${api_error_message}"
-        error_msg "${api_error} / ${api_error_message}"
+        #error_msg "${api_error} / ${api_error_message}"
         api_core_status=1
         ;;
     esac
@@ -849,7 +849,7 @@ read_session_file()
   session_filepath=`get_session_filepath`
   if [ -e "${session_filepath}" ]
   then
-    # SC1090 disable for dynamical(variable) path source(.) using and generize on runtime
+    # SC1090 disable for dynamical(variable) path source(.) using and generate on runtime
     # shellcheck source=/dev/null
     . "${session_filepath}"
     status=0

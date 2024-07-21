@@ -659,6 +659,53 @@ core_build_text_rels_line()
     fi
   done
 
+  # mention
+  mention_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
+  text_work="${display_line_text}"
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  # sed not required at use grep -P, but do not use for compatibility
+  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $mention
+  while [ -n "${text_work}" ]
+  do
+    mention=$1
+    if [ -n "${mention}" ]
+    then
+      _strlen "${mention}"
+      mention_length=$?
+      # cheat (use jq) for shortest match (countermeasure to same mention string in text)
+      mention_index=`_p "${text_work}" | jq -R 'index("'"${mention}"'")'`
+      # remove first at (@)
+      mention_handle=`_p "${mention}" | cut -c 2-`
+      # mention facet
+      # overall index of mention start
+      overall_mention_start=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}"`
+      # overall index of mention end
+      overall_mention_end=`expr "${overall_mention_start}" + "${mention_length}"`
+      # handle validation
+      if did=`core_handle_to_did "${mention_handle}"`
+      then
+        # stack on result set (did, actual index of mention start, actual index of mention end)
+        CORE_BUILD_TEXT_RELS_mention_facets_element="${CORE_BUILD_TEXT_RELS_mention_facets_element} ${did} ${overall_mention_start} ${overall_mention_end}"
+      fi
+      # text work next part
+      # until end of mention (cut command is 1 start index)
+      text_work_cut_index=`expr "${mention_index}" + "${mention_length}" + 1`
+      # cut until target mention
+      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+
+      # accumulate display length
+      mention_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}" + "${mention_length}"`
+      # shift to next mention
+      shift
+    else  # mention not exist
+      # break to next line
+      break
+    fi
+  done
+
   debug 'core_build_text_rels_line' 'END'
 }
 
@@ -677,10 +724,12 @@ core_build_text_rels()
   CORE_BUILD_TEXT_RELS_extract_link_count=0
   CORE_BUILD_TEXT_RELS_link_facets_element=''
   CORE_BUILD_TEXT_RELS_tag_facets_element=''
+  CORE_BUILD_TEXT_RELS_mention_facets_element=''
   RESULT_core_build_text_rels_display_text=''
   RESULT_core_build_text_rels_linkcard_url=''
   RESULT_core_build_text_rels_link_facets_element=''
   RESULT_core_build_text_rels_tag_facets_element=''
+  RESULT_core_build_text_rels_mention_facets_element=''
 
   # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
   evacuated_IFS=$IFS
@@ -709,6 +758,7 @@ core_build_text_rels()
 
   RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
   RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
+  RESULT_core_build_text_rels_mention_facets_element="${CORE_BUILD_TEXT_RELS_mention_facets_element}"
 
   debug 'core_build_text_rels' 'END'
 }
@@ -1346,6 +1396,41 @@ core_build_tag_facets_fragment()
   debug 'core_build_tag_facets_fragment' 'END'
 }
 
+core_build_mention_facets_fragment()
+{
+  param_core_build_mention_facets_element="$1"
+
+  debug 'core_build_mention_facets_fragment' 'START'
+  debug 'core_build_mention_facets_fragment' "param_core_build_mention_facets_element:${param_core_build_mention_facets_element}"
+
+  element_count=0
+  mention_facets_fragment=''
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_core_build_mention_facets_element
+  while [ $# -gt 0 ]
+  do
+    did=$1
+    mention_start=$2
+    mention_end=$3
+    if [ $element_count -gt 0 ]
+    then
+      mention_facets_fragment="${mention_facets_fragment},"
+    fi
+    mention_facets_fragment="${mention_facets_fragment}{\"features\":[{\"\$type\":\"app.bsky.richtext.facet#mention\",\"did\":\"${did}\"}],\"index\":{\"byteEnd\":${mention_end},\"byteStart\":${mention_start}}}"
+    shift
+    shift
+    shift
+    element_count=`expr "${element_count}" + 1`
+  done
+  if [ "${element_count}" -gt 0 ]
+  then
+    _p "${mention_facets_fragment}"
+  fi
+
+  debug 'core_build_mention_facets_fragment' 'END'
+}
+
 core_build_external_fragment()
 {
   param_core_build_external_fragment_linkcard_url="$1"
@@ -1615,6 +1700,7 @@ core_create_post_chunk()
   view_template_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_tag=`_p "${BSKYSHCLI_VIEW_TEMPLATE_TAG}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_mention=`_p "${BSKYSHCLI_VIEW_TEMPLATE_MENTION}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_quoted_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
@@ -1648,6 +1734,12 @@ core_create_post_chunk()
         tag_index as $TAG_INDEX |
         tag as $TAG |
         "'"${view_template_tag}"'"
+      ;
+      def output_facets_features_mention(mention_index; did; mention_text):
+        mention_index as $MENTION_INDEX |
+        did as $DID |
+        mention_text as $MENTION_TEXT |
+        "'"${view_template_mention}"'"
       ;
       def output_post_feed_generator(view_index; post_fragment):
         post_fragment.uri as $URI |
@@ -1756,6 +1848,7 @@ core_create_post_chunk()
               post_fragment.record |
               if has("facets")
               then
+                post_fragment.record.text as $text |
                 post_fragment.record.facets |
                 (
                   # link
@@ -1785,6 +1878,23 @@ core_create_post_chunk()
                   ) |
                   foreach .[] as $facet (0; . + 1;
                     output_facets_features_tag(.; $facet.features[].tag)
+                  )
+                ),
+                (
+                  # mention
+                  # post_fragment.record/facets[]/features[]/$type == app.bsky.richtext.facet#mention
+                  map(
+                    if .features[]."$type" == "app.bsky.richtext.facet#mention"
+                    then
+                      .
+                    else
+                      empty
+                    end
+                  ) |
+                  foreach .[] as $facet (0; . + 1;
+                    # TODO: support for multi byte text
+                    $text[$facet.index.byteStart:$facet.index.byteEnd] as $mention_text |
+                    output_facets_features_mention(.; $facet.features[].did; $mention_text)
                   )
                 )
               else
@@ -2925,7 +3035,8 @@ core_posts_single()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   if [ -n "${reply_fragment}" ]
@@ -3232,7 +3343,8 @@ core_post()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
@@ -4170,7 +4282,8 @@ core_reply()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
@@ -4315,7 +4428,8 @@ core_quote()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
