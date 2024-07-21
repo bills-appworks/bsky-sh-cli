@@ -1792,7 +1792,7 @@ core_create_post_chunk()
           post_fragment.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
           (post_fragment.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
           (post_fragment.value.via // "") as $VIA |
-          (post_fragment.value.langs | join(",")?) as $LANGS |
+          ((post_fragment.value.langs // []) | join(",")) as $LANGS |
           if is_before_embed
           then
             "'"${view_template_quoted_post_meta}"'",
@@ -1838,7 +1838,7 @@ core_create_post_chunk()
           post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
           post_fragment.record.text as $TEXT |
           (post_fragment.record.via // "") as $VIA |
-          (post_fragment.record.langs | join(",")?) as $LANGS |
+          ((post_fragment.record.langs // []) | join(",")) as $LANGS |
           if is_before_embed
           then
             "'"${view_template_post_meta}"'",
