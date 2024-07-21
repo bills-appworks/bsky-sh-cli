@@ -704,11 +704,18 @@ api()
       # session expired
       read_session_file
       api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
-      # refresh runtime information
-      read_session_file
-      debug_single 'api-3'
-      api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       api_status=$?
+      if [ "${api_status}" -eq 0 ]
+      then
+        # refresh runtime information
+        read_session_file
+        debug_single 'api-3'
+        api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+        api_status=$?
+      else
+        error_msg 'session expired and failed to refresh session. please login again.'
+        api_status=1
+      fi
       ;;
     3)
       # 2FA token required
