@@ -1,7 +1,7 @@
 # v0.8.0
 ## Add
 - Preview function support for posting functions (posts/posts/reply/quote command) (--preview option)
-- Mention support in post text #1
+- Mention support in post text [#1](https://github.com/bills-appworks/bsky-sh-cli/issues/1)
 - Added output option to specify language when posting (--output-langs option)
 - Supports hashtag extraction display when displaying posts
 ## Modify
