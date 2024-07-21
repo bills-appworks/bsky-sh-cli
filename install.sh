@@ -228,7 +228,7 @@ fi
 # shellcheck source=SCRIPTDIR/lib/util.sh
 . "${lib_util_path}"
 
-# parameter parse & cehck
+# parameter parse & check
 parse_parameters '--install-dir:1 --config-path-file:1 --skip-config-path:0 --skip-rcfile-copy:0 --config-langs:1 --skip-confirm:0' "$@"
 
 # install source files verification
@@ -311,7 +311,7 @@ fi
 _pn '>>>> Configure PATH environment variable'
 if [ -n "${PARSED_PARAM_KEYONLY_skip_config_path}" ]
 then
-  _pn 'Skip configure the environemnt variable PATH.'
+  _pn 'Skip configure the environment variable PATH.'
   config_path=1
 else
   if is_already_set_path "${install_dir}/bin"
@@ -330,7 +330,7 @@ else
         _pn 'Configure the environment variable PATH.'
         config_path=0
       else
-        _pn 'Skip configure the environemnt variable PATH.'
+        _pn 'Skip configure the environment variable PATH.'
         config_path=1
       fi
     fi
@@ -442,7 +442,7 @@ else
         _pn "Configure post default languages: ${config_langs_value}"
         config_langs=0
       else
-        _pn "Skip to confgure post default languages."
+        _pn "Skip to configure post default languages."
         config_langs=1
       fi
     fi
@@ -516,7 +516,7 @@ if mkdir -p "${install_dir}"
 then
   _pn 'Complete'
 else
-  _pn 'Faied'
+  _pn 'Failed'
   exit 1
 fi
 _p "Copying files to '${install_dir}' ... "
@@ -524,7 +524,7 @@ if cp -rp "${FILE_DIR}/bin" "${FILE_DIR}/lib" "${install_dir}/"
 then
   _pn 'Complete'
 else
-  _pn 'Faied'
+  _pn 'Failed'
   exit 1
 fi
 if [ $config_path -eq 0 ]
@@ -534,7 +534,7 @@ then
   then
     _pn 'Complete'
   else
-    _pn 'Faied'
+    _pn 'Failed'
     exit 1
   fi
 fi
