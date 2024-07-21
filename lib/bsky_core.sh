@@ -659,6 +659,53 @@ core_build_text_rels_line()
     fi
   done
 
+  # mention
+  mention_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
+  text_work="${display_line_text}"
+  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+  # sed not required at use grep -P, but do not use for compatibility
+  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $mention
+  while [ -n "${text_work}" ]
+  do
+    mention=$1
+    if [ -n "${mention}" ]
+    then
+      _strlen "${mention}"
+      mention_length=$?
+      # cheat (use jq) for shortest match (countermeasure to same mention string in text)
+      mention_index=`_p "${text_work}" | jq -R 'index("'"${mention}"'")'`
+      # remove first at (@)
+      mention_handle=`_p "${mention}" | cut -c 2-`
+      # mention facet
+      # overall index of mention start
+      overall_mention_start=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}"`
+      # overall index of mention end
+      overall_mention_end=`expr "${overall_mention_start}" + "${mention_length}"`
+      # handle validation
+      if did=`core_handle_to_did "${mention_handle}"`
+      then
+        # stack on result set (did, actual index of mention start, actual index of mention end)
+        CORE_BUILD_TEXT_RELS_mention_facets_element="${CORE_BUILD_TEXT_RELS_mention_facets_element} ${did} ${overall_mention_start} ${overall_mention_end}"
+      fi
+      # text work next part
+      # until end of mention (cut command is 1 start index)
+      text_work_cut_index=`expr "${mention_index}" + "${mention_length}" + 1`
+      # cut until target mention
+      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+
+      # accumulate display length
+      mention_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}" + "${mention_length}"`
+      # shift to next mention
+      shift
+    else  # mention not exist
+      # break to next line
+      break
+    fi
+  done
+
   debug 'core_build_text_rels_line' 'END'
 }
 
@@ -677,10 +724,12 @@ core_build_text_rels()
   CORE_BUILD_TEXT_RELS_extract_link_count=0
   CORE_BUILD_TEXT_RELS_link_facets_element=''
   CORE_BUILD_TEXT_RELS_tag_facets_element=''
+  CORE_BUILD_TEXT_RELS_mention_facets_element=''
   RESULT_core_build_text_rels_display_text=''
   RESULT_core_build_text_rels_linkcard_url=''
   RESULT_core_build_text_rels_link_facets_element=''
   RESULT_core_build_text_rels_tag_facets_element=''
+  RESULT_core_build_text_rels_mention_facets_element=''
 
   # "while read -r <variable>" is more smart, but "read -r" can not use in Bourne shell (Solaris sh)
   evacuated_IFS=$IFS
@@ -709,6 +758,7 @@ core_build_text_rels()
 
   RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
   RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
+  RESULT_core_build_text_rels_mention_facets_element="${CORE_BUILD_TEXT_RELS_mention_facets_element}"
 
   debug 'core_build_text_rels' 'END'
 }
@@ -1346,6 +1396,41 @@ core_build_tag_facets_fragment()
   debug 'core_build_tag_facets_fragment' 'END'
 }
 
+core_build_mention_facets_fragment()
+{
+  param_core_build_mention_facets_element="$1"
+
+  debug 'core_build_mention_facets_fragment' 'START'
+  debug 'core_build_mention_facets_fragment' "param_core_build_mention_facets_element:${param_core_build_mention_facets_element}"
+
+  element_count=0
+  mention_facets_fragment=''
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $param_core_build_mention_facets_element
+  while [ $# -gt 0 ]
+  do
+    did=$1
+    mention_start=$2
+    mention_end=$3
+    if [ $element_count -gt 0 ]
+    then
+      mention_facets_fragment="${mention_facets_fragment},"
+    fi
+    mention_facets_fragment="${mention_facets_fragment}{\"features\":[{\"\$type\":\"app.bsky.richtext.facet#mention\",\"did\":\"${did}\"}],\"index\":{\"byteEnd\":${mention_end},\"byteStart\":${mention_start}}}"
+    shift
+    shift
+    shift
+    element_count=`expr "${element_count}" + 1`
+  done
+  if [ "${element_count}" -gt 0 ]
+  then
+    _p "${mention_facets_fragment}"
+  fi
+
+  debug 'core_build_mention_facets_fragment' 'END'
+}
+
 core_build_external_fragment()
 {
   param_core_build_external_fragment_linkcard_url="$1"
@@ -1568,10 +1653,12 @@ core_create_post_chunk()
 {
   param_output_id="$1"
   param_output_via="$2"
+  param_output_langs="$3"
 
   debug 'core_create_post_chunk' 'START'
   debug 'core_create_post_chunk' "param_output_id:${param_output_id}"
   debug 'core_create_post_chunk' "param_output_via:${param_output_via}"
+  debug 'core_create_post_chunk' "param_output_langs:${param_output_langs}"
 
   if [ -n "${param_output_id}" ]
   then
@@ -1588,24 +1675,35 @@ core_create_post_chunk()
   else
     view_post_output_via=''
   fi
-  view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
-  view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
+  if [ -n "${param_output_langs}" ]
+  then
+    view_post_output_langs=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS}" | sed 's/\\\\/\\\\\\\\/g'`
+  else
+    view_post_output_langs=''
+  fi
+  view_template_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # disable via to quoted
-  view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
-  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g'`
+  view_template_link=`_p "${BSKYSHCLI_VIEW_TEMPLATE_LINK}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_tag=`_p "${BSKYSHCLI_VIEW_TEMPLATE_TAG}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_mention=`_p "${BSKYSHCLI_VIEW_TEMPLATE_MENTION}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_quoted_post_external_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_external_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_post_external_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}" | sed 's/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_image(image_index; image; is_quoted):
@@ -1632,64 +1730,16 @@ core_create_post_chunk()
         uri as $URI |
         "'"${view_template_link}"'"
       ;
-      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
-        post_fragment.uri as $URI |
-        post_fragment.cid as $CID |
-        "" as $VIA |
-        post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
-        post_fragment.author.handle as $AUTHOR_HANDLE |
-        post_fragment.replyCount as $REPLY_COUNT |
-        post_fragment.repostCount as $REPOST_COUNT |
-        post_fragment.likeCount as $LIKE_COUNT |
-        post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
-        if is_quoted
-        then
-          ([view_index, "1"] | join("-")) as $VIEW_INDEX |
-          post_fragment.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
-          (post_fragment.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
-          if is_before_embed
-          then
-            "'"${view_template_quoted_post_meta}"'",
-            "'"${view_template_quoted_post_head}"'",
-            "'"${view_template_quoted_post_body}"'"
-          else
-            empty
-          end
-        else
-          view_index as $VIEW_INDEX |
-          post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
-          post_fragment.record.text as $TEXT |
-          (post_fragment.record.via // "") as $VIA |
-          if is_before_embed
-          then
-            "'"${view_template_post_meta}"'",
-            "'"${view_template_post_head}"'",
-            "'"${view_template_post_body}"'",
-            (
-              post_fragment.record |
-              if has("facets")
-              then
-                post_fragment.record.facets |
-                map(
-                  if .features[]."$type" == "app.bsky.richtext.facet#link"
-                  then
-                    .
-                  else
-                    empty
-                  end
-                ) |
-                foreach .[] as $facet (0; . + 1;
-                  output_facets_features_link(.; $facet.features[].uri)
-                )
-              else
-                empty
-              end
-            )
-          else
-            "'"${view_template_post_tail}"'",
-            "'"${view_template_post_separator}"'"
-          end
-        end
+      def output_facets_features_tag(tag_index; tag):
+        tag_index as $TAG_INDEX |
+        tag as $TAG |
+        "'"${view_template_tag}"'"
+      ;
+      def output_facets_features_mention(mention_index; did; mention_text):
+        mention_index as $MENTION_INDEX |
+        did as $DID |
+        mention_text as $MENTION_TEXT |
+        "'"${view_template_mention}"'"
       ;
       def output_post_feed_generator(view_index; post_fragment):
         post_fragment.uri as $URI |
@@ -1709,14 +1759,153 @@ core_create_post_chunk()
         "'"${view_template_post_feed_generator_head}"'",
         "'"${view_template_post_feed_generator_tail}"'"
       ;
-      def output_post_external(view_index; post_fragment):
+      def output_post_external(view_index; post_fragment; is_quoted):
         post_fragment.external.uri as $EXTERNAL_URI |
         post_fragment.external.title as $EXTERNAL_TITLE |
         post_fragment.external.description as $EXTERNAL_DESCRIPTION |
         post_fragment.external.thumb as $EXTERNAL_THUMB |
-        "'"${view_template_post_external_meta}"'",
-        "'"${view_template_post_external_head}"'",
-        "'"${view_template_post_external_body}"'"
+        if is_quoted
+        then
+          "'"${view_template_quoted_post_external_meta}"'",
+          "'"${view_template_quoted_post_external_head}"'",
+          "'"${view_template_quoted_post_external_body}"'"
+        else
+          "'"${view_template_post_external_meta}"'",
+          "'"${view_template_post_external_head}"'",
+          "'"${view_template_post_external_body}"'"
+        end
+      ;
+      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
+        post_fragment.uri as $URI |
+        post_fragment.cid as $CID |
+        "" as $VIA |
+        "" as $LANGS |
+        post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
+        post_fragment.author.handle as $AUTHOR_HANDLE |
+        post_fragment.replyCount as $REPLY_COUNT |
+        post_fragment.repostCount as $REPOST_COUNT |
+        post_fragment.likeCount as $LIKE_COUNT |
+        post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
+        if is_quoted
+        then
+          ([view_index, "1"] | join("-")) as $VIEW_INDEX |
+          post_fragment.value.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+          (post_fragment.value.text | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $TEXT |
+          (post_fragment.value.via // "") as $VIA |
+          ((post_fragment.value.langs // []) | join(",")) as $LANGS |
+          if is_before_embed
+          then
+            "'"${view_template_quoted_post_meta}"'",
+            "'"${view_template_quoted_post_head}"'",
+            "'"${view_template_quoted_post_body}"'",
+            (
+              # embeds in quoted post
+              post_fragment |
+              if has("embeds")
+              then
+                select(.embeds) |
+                .embeds |
+                foreach .[] as $embed (0; . + 1;
+                  (
+                    # quoted image
+                    # post_fragment/embeds[]/$type == app.bsky.embed.images#view
+                    select($embed."$type" == "app.bsky.embed.images#view") |
+                    output_images($embed.images; true)
+                  ),
+                  (
+                    # quoted image (with linkcard etc.)
+                    # post_fragment/embeds[]/$type == app.bsky.embed.recordWithMedia#view
+                    select($embed."$type" == "app.bsky.embed.recordWithMedia#view") |
+                    select($embed.media."$type" == "app.bsky.embed.images#view") |
+                    output_images($embed.media.images; true)
+                  ),
+                  (
+                    # quoted linkcard
+                    # post_fragment/embeds[]/$type == app.bsky.embed.external#view
+                    select($embed."$type" == "app.bsky.embed.external#view") |
+                    output_post_external(view_index; $embed; true)
+                  )
+                )
+              else
+                empty
+              end
+            )
+          else
+            empty
+          end
+        else
+          view_index as $VIEW_INDEX |
+          post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+          post_fragment.record.text as $TEXT |
+          (post_fragment.record.via // "") as $VIA |
+          ((post_fragment.record.langs // []) | join(",")) as $LANGS |
+          if is_before_embed
+          then
+            "'"${view_template_post_meta}"'",
+            "'"${view_template_post_head}"'",
+            "'"${view_template_post_body}"'",
+            (
+              post_fragment.record |
+              if has("facets")
+              then
+                post_fragment.record.text as $text |
+                post_fragment.record.facets |
+                (
+                  # link
+                  # post_fragment.record/facets[]/features[]/$type == app.bsky.richtext.facet#link
+                  map(
+                    if .features[]."$type" == "app.bsky.richtext.facet#link"
+                    then
+                      .
+                    else
+                      empty
+                    end
+                  ) |
+                  foreach .[] as $facet (0; . + 1;
+                    output_facets_features_link(.; $facet.features[].uri)
+                  )
+                ),
+                (
+                  # tag
+                  # post_fragment.record/facets[]/features[]/$type == app.bsky.richtext.facet#tag
+                  map(
+                    if .features[]."$type" == "app.bsky.richtext.facet#tag"
+                    then
+                      .
+                    else
+                      empty
+                    end
+                  ) |
+                  foreach .[] as $facet (0; . + 1;
+                    output_facets_features_tag(.; $facet.features[].tag)
+                  )
+                ),
+                (
+                  # mention
+                  # post_fragment.record/facets[]/features[]/$type == app.bsky.richtext.facet#mention
+                  map(
+                    if .features[]."$type" == "app.bsky.richtext.facet#mention"
+                    then
+                      .
+                    else
+                      empty
+                    end
+                  ) |
+                  foreach .[] as $facet (0; . + 1;
+                    # TODO: support for multi byte text
+                    $text[$facet.index.byteStart:$facet.index.byteEnd] as $mention_text |
+                    output_facets_features_mention(.; $facet.features[].did; $mention_text)
+                  )
+                )
+              else
+                empty
+              end
+            )
+          else
+            "'"${view_template_post_tail}"'",
+            "'"${view_template_post_separator}"'"
+          end
+        end
       ;
       def output_post(view_index; post_fragment):
         output_post_part(true; view_index; post_fragment; false),
@@ -1737,14 +1926,6 @@ core_create_post_chunk()
               (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
                 output_post_part(true; view_index; post_fragment.embed.record.record; true)
-              ),
-              (
-                select(.embed.record.record.embeds) |
-                .embed.record.record.embeds |
-                foreach .[] as $embed (0; . + 1;
-                  select($embed."$type" == "app.bsky.embed.images#view") |
-                  output_images($embed.images; true)
-                )
               )
             ),
             (
@@ -1760,7 +1941,7 @@ core_create_post_chunk()
             ),
             (
               select(.embed."$type" == "app.bsky.embed.external#view") |
-              output_post_external(view_index; post_fragment.embed)
+              output_post_external(view_index; post_fragment.embed; false)
             )
           else
             empty
@@ -2195,6 +2376,7 @@ core_get_timeline()
   param_output_id="$4"
   param_output_via="$5"
   param_output_json="$6"
+  param_output_langs="$7"
 
   debug 'core_get_timeline' 'START'
   debug 'core_get_timeline' "param_algorithm:${param_algorithm}"
@@ -2203,6 +2385,7 @@ core_get_timeline()
   debug 'core_get_timeline' "param_output_id:${param_output_id}"
   debug 'core_get_timeline' "param_output_via:${param_output_via}"
   debug 'core_get_timeline' "param_output_json:${param_output_json}"
+  debug 'core_get_timeline' "param_output_langs:${param_output_langs}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -2228,7 +2411,7 @@ core_get_timeline()
     then
       _p "${result}"
     else
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
       _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
     fi
 
@@ -2254,6 +2437,7 @@ core_get_feed()
   param_output_id="$6"
   param_output_via="$7"
   param_output_json="$8"
+  param_output_langs="$9"
 
   debug 'core_get_feed' 'START'
   debug 'core_get_feed' "param_did:${param_did}"
@@ -2264,6 +2448,7 @@ core_get_feed()
   debug 'core_get_feed' "param_output_id:${param_output_id}"
   debug 'core_get_feed' "param_output_via:${param_output_via}"
   debug 'core_get_feed' "param_output_json:${param_output_json}"
+  debug 'core_get_feed' "param_output_langs:${param_output_langs}"
 
   if [ -n "${param_did}" ]
   then
@@ -2303,7 +2488,7 @@ core_get_feed()
       then
         _p "${result}"
       else
-        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
         _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
       fi
 
@@ -2329,6 +2514,7 @@ core_get_author_feed()
   param_output_id="$5"
   param_output_via="$6"
   param_output_json="$7"
+  param_output_langs="$8"
 
   debug 'core_get_author_feed' 'START'
   debug 'core_get_author_feed' "param_did:${param_did}"
@@ -2338,6 +2524,7 @@ core_get_author_feed()
   debug 'core_get_author_feed' "param_output_id:${param_output_id}"
   debug 'core_get_author_feed' "param_output_via:${param_output_via}"
   debug 'core_get_author_feed' "param_output_json:${param_output_json}"
+  debug 'core_get_author_feed' "param_output_langs:${param_output_langs}"
 
   read_session_file
   if [ -n "${param_next}" ]
@@ -2363,7 +2550,7 @@ core_get_author_feed()
     then
       _p "${result}"
     else
-      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
       _p "${result}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
     fi
 
@@ -2379,18 +2566,414 @@ core_get_author_feed()
   return $status
 }
 
+core_preview_post()
+{
+  param_record="$1"
+  param_output_id="$2"
+  param_output_via="$3"
+  param_output_json="$4"
+  param_output_langs="$5"
+
+  debug 'core_preview_post' 'START'
+  debug 'core_preview_post' "param_record:${param_record}"
+  debug 'core_preview_post' "param_output_id:${param_output_id}"
+  debug 'core_preview_post' "param_output_via:${param_output_via}"
+  debug 'core_preview_post' "param_output_json:${param_output_json}"
+  debug 'core_preview_post' "param_output_langs:${param_output_langs}"
+
+  result=`api app.bsky.actor.getProfile "${SESSION_DID}"`
+  status=$?
+  if [ $status -eq 0 ]
+  then
+    display_name=`_p "${result}" | jq -r '.displayName'`
+    handle=`_p "${result}" | jq -r '.handle'`
+  else
+    display_name='(unknown)'
+    handle="${SESSION_HANDLE}"
+  fi
+
+  feed_struct_posts=`_p "${param_record}" | jq -c '
+    # record wraps by feed/post/
+    {
+      "feed": [
+        {
+          "post": {
+            "uri": "(dummy)",
+            "cid": "(dummy)",
+            "author": {
+              "did": "'"${SESSION_DID}"'",
+              "handle": "'"${handle}"'",
+              "displayName": "'"${display_name}"'",
+            },
+            "record": .,
+            "replyCount": 0,
+            "repostCount": 0,
+            "likeCount": 0,
+            "indexedAt": .createdAt
+          }
+        }
+      ]
+    } |
+    # add suffix to lexicon
+    walk(
+      if type == "object" and has("$type")
+      then
+        if (."$type" == "app.bsky.embed.images")
+          or (."$type" == "app.bsky.embed.external")
+        then
+          ."$type" |= . + "#view"
+        else
+          .
+        end
+      else
+        .
+      end
+    ) |
+    # embed/
+    # duplicate embed element from record/ to post/
+    .feed[0].post.embed = .feed[0].post.record.embed |
+    # modify post/embed/images
+    .feed[0].post.embed.images[]?.thumb = "(URL is not yet)" |
+    .feed[0].post.embed.images[]?.fullsize = "(URL is not yet)" |
+    .
+  '`
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${feed_struct_posts}"
+  else
+    # parameter: output-id, output-via, output-langs(force output)
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
+    _pn '[This is preview. Index is not updated.]'
+    _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+  fi
+  
+  debug 'core_preview_post' 'END'
+}
+
+core_preview_posts_single()
+{
+  param_parent_uri="$1"
+  param_record="$2"
+  param_output_id="$3"
+  param_output_via="$4"
+  param_output_json="$5"
+  param_output_langs="$6"
+  param_view_index="$7"
+
+  debug 'core_preview_posts_single' 'START'
+  debug 'core_preview_posts_single' "param_parent_uri:${param_parent_uri}"
+  debug 'core_preview_posts_single' "param_record:${param_record}"
+  debug 'core_preview_posts_single' "param_output_id:${param_output_id}"
+  debug 'core_preview_posts_single' "param_output_via:${param_output_via}"
+  debug 'core_preview_posts_single' "param_output_json:${param_output_json}"
+  debug 'core_preview_posts_single' "param_output_langs:${param_output_langs}"
+  debug 'core_preview_posts_single' "param_view_index:${param_view_index}"
+
+  result=`api app.bsky.actor.getProfile "${SESSION_DID}"`
+  status=$?
+  if [ $status -eq 0 ]
+  then
+    display_name=`_p "${result}" | jq -r '.displayName'`
+    handle=`_p "${result}" | jq -r '.handle'`
+  else
+    display_name='(unknown)'
+    handle="${SESSION_HANDLE}"
+  fi
+
+  feed_struct_posts=`_p "${param_record}" | jq -c '
+    # record wraps by feed/post/
+    {
+      "feed": [
+        {
+          "post": {
+            "uri": "(dummy)",
+            "cid": "(dummy)",
+            "author": {
+              "did": "'"${SESSION_DID}"'",
+              "handle": "'"${handle}"'",
+              "displayName": "'"${display_name}"'",
+            },
+            "record": .,
+            "replyCount": 0,
+            "repostCount": 0,
+            "likeCount": 0,
+            "indexedAt": .createdAt
+          }
+        }
+      ]
+    } |
+    # add suffix to lexicon
+    walk(
+      if type == "object" and has("$type")
+      then
+        if (."$type" == "app.bsky.embed.images")
+          or (."$type" == "app.bsky.embed.external")
+        then
+          ."$type" |= . + "#view"
+        else
+          .
+        end
+      else
+        .
+      end
+    ) |
+    # embed/
+    # duplicate embed element from record/ to post/
+    .feed[0].post.embed = .feed[0].post.record.embed |
+    # modify post/embed/images
+    .feed[0].post.embed.images[]?.thumb = "(URL is not yet)" |
+    .feed[0].post.embed.images[]?.fullsize = "(URL is not yet)" |
+    .
+  '`
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${feed_struct_posts}"
+  else
+    # parameter: output-id, output-via, output-langs(force output)
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
+    if [ -n "${param_view_index}" ]
+    then
+      # $<variables> want to pass through for jq
+      # shellcheck disable=SC2016
+      feed_parse_procedure=`_p "${FEED_PARSE_PROCEDURE}" | sed 's/output_post($view_index;/output_post("'"${param_view_index}"'";/'`
+    else
+      feed_parse_procedure="${FEED_PARSE_PROCEDURE}"
+    fi
+    _pn '[This is preview. Index is not updated.]'
+    _p "${feed_struct_posts}" | jq -r "${view_post_functions}${feed_parse_procedure}"
+  fi
+  
+  debug 'core_preview_posts_single' 'END'
+}
+
+core_preview_reply()
+{
+  param_target_uri="$1"
+  param_record="$2"
+  param_output_id="$3"
+  param_output_via="$4"
+  param_output_json="$5"
+  param_output_langs="$6"
+
+  debug 'core_preview_reply' 'START'
+  debug 'core_preview_reply' "param_target_uri:${param_target_uri}"
+  debug 'core_preview_reply' "param_record:${param_record}"
+  debug 'core_preview_reply' "param_output_id:${param_output_id}"
+  debug 'core_preview_reply' "param_output_via:${param_output_via}"
+  debug 'core_preview_reply' "param_output_json:${param_output_json}"
+  debug 'core_preview_reply' "param_output_langs:${param_output_langs}"
+
+  result=`api app.bsky.actor.getProfile "${SESSION_DID}"`
+  status=$?
+  if [ $status -eq 0 ]
+  then
+    display_name=`_p "${result}" | jq -r '.displayName'`
+    handle=`_p "${result}" | jq -r '.handle'`
+  else
+    display_name='(unknown)'
+    handle="${SESSION_HANDLE}"
+  fi
+
+  # shellcheck disable=SC2016
+  thread_parse_procedure_target='
+    "-1" as $view_index |
+    .thread.post as $post_fragment |
+    output_post($view_index; $post_fragment)
+  '
+  # depth='', parent_height=0
+  result=`api app.bsky.feed.getPostThread "${param_target_uri}" '' 0`
+
+  feed_struct_posts=`_p "${param_record}" | jq -c '
+    # record wraps by feed/post/
+    {
+      "feed": [
+        {
+          "post": {
+            "uri": "(dummy)",
+            "cid": "(dummy)",
+            "author": {
+              "did": "'"${SESSION_DID}"'",
+              "handle": "'"${handle}"'",
+              "displayName": "'"${display_name}"'",
+            },
+            "record": .,
+            "replyCount": 0,
+            "repostCount": 0,
+            "likeCount": 0,
+            "indexedAt": .createdAt
+          }
+        }
+      ]
+    } |
+    # add suffix to lexicon
+    walk(
+      if type == "object" and has("$type")
+      then
+        if (."$type" == "app.bsky.embed.images")
+          or (."$type" == "app.bsky.embed.external")
+        then
+          ."$type" |= . + "#view"
+        else
+          .
+        end
+      else
+        .
+      end
+    ) |
+    # embed/
+    # duplicate embed element from record/ to post/
+    .feed[0].post.embed = .feed[0].post.record.embed |
+    # modify post/embed/images
+    .feed[0].post.embed.images[]?.thumb = "(URL is not yet)" |
+    .feed[0].post.embed.images[]?.fullsize = "(URL is not yet)" |
+    .
+  '`
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "{\"parent\":${result},\"reply\":${feed_struct_posts}}"
+  else
+    # parameter: output-id, output-via, output-langs(force output)
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
+    # $<variables> want to pass through for jq
+    # shellcheck disable=SC2016
+    feed_parse_procedure=`_p "${FEED_PARSE_PROCEDURE}" | sed 's/output_post($view_index;/output_post("0";/'`
+    _pn '[This is preview. Index is not updated.]'
+    _p "${result}" | jq -r "${view_post_functions}${thread_parse_procedure_target}"
+    _p "${feed_struct_posts}" | jq -r "${view_post_functions}${feed_parse_procedure}"
+  fi
+  
+  debug 'core_preview_reply' 'END'
+}
+
+core_preview_quote()
+{
+  param_target_uri="$1"
+  param_record="$2"
+  param_record_include_image="$3"
+  param_output_id="$4"
+  param_output_via="$5"
+  param_output_json="$6"
+  param_output_langs="$7"
+
+  debug 'core_preview_quote' 'START'
+  debug 'core_preview_quote' "param_target_uri:${param_target_uri}"
+  debug 'core_preview_quote' "param_record:${param_record}"
+  debug 'core_preview_quote' "param_record_include_image:${param_record_include_image}"
+  debug 'core_preview_quote' "param_output_id:${param_output_id}"
+  debug 'core_preview_quote' "param_output_via:${param_output_via}"
+  debug 'core_preview_quote' "param_output_json:${param_output_json}"
+  debug 'core_preview_quote' "param_output_langs:${param_output_langs}"
+
+  result=`api app.bsky.actor.getProfile "${SESSION_DID}"`
+  status=$?
+  if [ $status -eq 0 ]
+  then
+    display_name=`_p "${result}" | jq -r '.displayName'`
+    handle=`_p "${result}" | jq -r '.handle'`
+  else
+    display_name='(unknown)'
+    handle="${SESSION_HANDLE}"
+  fi
+
+  result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  combined_posts="{\"post\":${param_record},\"quote\":${result}}"
+
+
+  feed_struct_posts=`_p "${combined_posts}" | jq --arg record_include_image "${param_record_include_image}" -c '
+    # record wraps by feed/post/
+    {
+      "feed": [
+        {
+          "post": {
+            "uri": "(dummy)",
+            "cid": "(dummy)",
+            "author": {
+              "did": "'"${SESSION_DID}"'",
+              "handle": "'"${handle}"'",
+              "displayName": "'"${display_name}"'",
+            },
+            "record": .post,
+            "replyCount": 0,
+            "repostCount": 0,
+            "likeCount": 0,
+            "indexedAt": .post.createdAt
+          }
+        },
+        .
+      ]
+    } |
+    # add suffix to lexicon
+    walk(
+      if type == "object" and has("$type")
+      then
+        if (."$type" == "app.bsky.embed.images")
+          or (."$type" == "app.bsky.embed.external")
+        then
+          ."$type" |= . + "#view"
+        else
+          .
+        end
+      else
+        .
+      end
+    ) |
+    # embed/
+    if $record_include_image == "0"
+    then  # original post includes image
+      # embed original post images
+      .feed[0].post.embed."$type" = "app.bsky.embed.recordWithMedia#view" |
+      .feed[0].post.embed.media."$type" = "app.bsky.embed.images#view" |
+      .feed[0].post.embed.media.images = .feed[1].post.embed.media.images |
+      .feed[0].post.embed.media.images[]?.thumb = "(URL is not yet)" |
+      .feed[0].post.embed.media.images[]?.fullsize = "(URL is not yet)" |
+      # embed quote post
+      .feed[0].post.embed.record.record."$type" = "app.bsky.embed.record#viewRecord" |
+      .feed[0].post.embed.record.record += .feed[1].quote.posts[0] |
+      .feed[0].post.embed.record.record.value = .feed[1].quote.posts[0].record |
+      .feed[0].post.embed.record.record.embeds[0] = .feed[1].quote.posts[0].embed |
+      del(.feed[0].post.embed.record.record.embed) |
+      del(.feed[1])
+    else  # original post not includes image
+      # embed quote post
+      .feed[0].post.embed."$type" = "app.bsky.embed.record#view" |
+      .feed[0].post.embed.record."$type" = "app.bsky.embed.record#viewRecord" |
+      .feed[0].post.embed.record += .feed[1].quote.posts[0] |
+      .feed[0].post.embed.record.value = .feed[1].quote.posts[0].record |
+      .feed[0].post.embed.record.embeds[0] = .feed[1].quote.posts[0].embed |
+      del(.feed[1])
+    end
+  '`
+
+  if [ -n "${param_output_json}" ]
+  then
+    _p "${feed_struct_posts}"
+  else
+    # parameter: output-id, output-via, output-langs(force output)
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
+    _pn '[This is preview. Index is not updated.]'
+    _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
+  fi
+  
+  debug 'core_preview_quote' 'END'
+}
+
 core_output_post()
 {
   param_post_uri_list="$1"
   param_output_id="$2"
   param_output_via="$3"
   param_output_json="$4"
+  param_output_langs="$5"
 
   debug 'core_output_post' 'START'
   debug 'core_output_post' "param_post_uri_list:${param_post_uri_list}"
   debug 'core_output_post' "param_output_id:${param_output_id}"
   debug 'core_output_post' "param_output_via:${param_output_via}"
   debug 'core_output_post' "param_output_json:${param_output_json}"
+  debug 'core_output_post' "param_output_langs:${param_output_langs}"
 
   if [ "${BSKYSHCLI_DEBUG_OFFLINE}" != 'ON' ]
   then
@@ -2406,8 +2989,8 @@ core_output_post()
       then
         _p "${result}"
       else
-        # parameter: output-id, output-via
-        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+        # parameter: output-id, output-via, output-langs(force output)
+        view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" '(defined)'`
         _p "${feed_struct_posts}" | jq -r "${view_post_functions}${FEED_PARSE_PROCEDURE}"
       fi
 
@@ -2428,6 +3011,8 @@ core_posts_single()
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_url="$5"
+  param_preview="$6"
+  param_view_index="$7"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
@@ -2435,6 +3020,8 @@ core_posts_single()
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_single' "param_url:${param_url}"
+  debug 'core_posts_single' "param_preview:${param_preview}"
+  debug 'core_posts_single' "param_view_index:${param_view_index}"
 
   created_at=`get_ISO8601UTCbs`
   if [ -n "${param_parent_uri}" ] && [ -n "${param_parent_cid}" ]
@@ -2448,7 +3035,8 @@ core_posts_single()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   if [ -n "${reply_fragment}" ]
@@ -2480,17 +3068,24 @@ core_posts_single()
     _p "${record}"
     status_core_posts_single=0
   else
-    result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-    status=$?
-    debug_single 'core_posts'
-    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-    if [ $status -eq 0 ]
+    if [ -n "${param_preview}" ]
     then
-      RESULT_core_posts_single_uri=`_p "${result}" | jq -r '.uri'`
-      RESULT_core_posts_single_cid=`_p "${result}" | jq -r '.cid'`
+      # parent uri, record json, output-id, output-via, output-json, output-langs
+      core_preview_posts_single "${param_parent_uri}" "${record}" '' '' "${param_output_json}" '' "${param_view_index}"
       status_core_posts_single=0
     else
-      status_core_posts_single=1
+      result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+      status=$?
+      debug_single 'core_posts'
+      _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+      if [ $status -eq 0 ]
+      then
+        RESULT_core_posts_single_uri=`_p "${result}" | jq -r '.uri'`
+        RESULT_core_posts_single_cid=`_p "${result}" | jq -r '.cid'`
+        status_core_posts_single=0
+      else
+        status_core_posts_single=1
+      fi
     fi
   fi
 
@@ -2622,6 +3217,7 @@ core_thread()
   param_output_id="$4"
   param_output_via="$5"
   param_output_json="$6"
+  param_output_langs="$7"
 
   debug 'core_thread' 'START'
   debug 'core_thread' "param_target_uri:${param_target_uri}"
@@ -2630,6 +3226,7 @@ core_thread()
   debug 'core_thread' "param_output_id:${param_output_id}"
   debug 'core_thread' "param_output_via:${param_output_via}"
   debug 'core_thread' "param_output_json:${param_output_json}"
+  debug 'core_thread' "param_output_langs:${param_output_langs}"
 
   debug_single 'core_thread'
 
@@ -2637,7 +3234,7 @@ core_thread()
   then
     result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
 
-    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}"`
+    view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
     # $<variables> want to pass through for jq
     # shellcheck disable=SC2016
     thread_parse_procedure_parents='
@@ -2715,8 +3312,10 @@ core_post()
   param_langs="$3"
   param_output_json="$4"
   param_url="$5"
+  param_preview="$6"
   if [ $# -gt 5 ]
   then
+    shift
     shift
     shift
     shift
@@ -2730,6 +3329,7 @@ core_post()
   debug 'core_post' "param_langs:${param_langs}"
   debug 'core_post' "param_output_json:${param_output_json}"
   debug 'core_post' "param_url:${param_url}"
+  debug 'core_post' "param_preview:${param_preview}"
   debug 'core_post' "param_image_alt:$*"
 
   read_session_file
@@ -2743,7 +3343,8 @@ core_post()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
@@ -2775,15 +3376,21 @@ core_post()
       then
         _p "${record}"
       else
-        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-        status=$?
-        debug_single 'core_post'
-        _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-        if [ $status -eq 0 ]
+        if [ -n "${param_preview}" ]
         then
-          core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+          # record json, output-id, output-via, output-json, output-langs
+          core_preview_post "${record}" '' '' "${param_output_json}" ''
         else
-          error 'post command failed'
+          result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+          status=$?
+          debug_single 'core_post'
+          _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+          if [ $status -eq 0 ]
+          then
+            core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+          else
+            error 'post command failed'
+          fi
         fi
       fi
       ;;
@@ -2800,6 +3407,8 @@ core_posts_thread_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_url="$6"
+  param_preview="$7"
+  param_view_index_lines="$8"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
@@ -2808,6 +3417,8 @@ core_posts_thread_lines()
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread_lines' "param_url:${param_url}"
+  debug 'core_posts_thread_lines' "param_preview:${param_preview}"
+  debug 'core_posts_thread_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_thread_lines_parent_uri="${param_parent_uri}"
   core_posts_thread_lines_parent_cid="${param_parent_cid}"
@@ -2816,7 +3427,7 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_cid=''
   RESULT_core_posts_thread_lines_root_uri=''
   #RESULT_core_posts_thread_lines_uri_list=''
-  #RESULT_core_posts_thread_lines_count=0
+  RESULT_core_posts_thread_lines_count=0
   status_core_posts_thread_lines=0
   count=0
   lines=''
@@ -2837,8 +3448,20 @@ core_posts_thread_lines()
       then  # separator line detected
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
+          if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+          then
+            specify_index="0"
+          else
+            specify_index="1"
+            thread_remain_count=`expr "${param_view_index_lines}" + "${count}" - 1`
+            while [ "${thread_remain_count}" -gt 0 ]
+            do
+              specify_index="${specify_index}-1"
+              thread_remain_count=`expr "${thread_remain_count}" - 1`
+            done
+          fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2874,8 +3497,20 @@ core_posts_thread_lines()
     # process after than last separator
     if core_is_post_text_meaningful "${lines}"
     then
+      if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+      then
+        specify_index="0"
+      else
+        specify_index="1"
+        thread_remain_count=`expr "${param_view_index_lines}" + "${count}" - 1`
+        while [ "${thread_remain_count}" -gt 0 ]
+        do
+          specify_index="${specify_index}-1"
+          thread_remain_count=`expr "${thread_remain_count}" - 1`
+        done
+      fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2894,8 +3529,20 @@ core_posts_thread_lines()
       fi
     fi
   else  # separator not specified : all lines as single content
+    if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+    then
+      specify_index="0"
+    else
+      specify_index="1"
+      thread_remain_count=`expr "${param_view_index_lines}" + "${count}" - 1`
+      while [ "${thread_remain_count}" -gt 0 ]
+      do
+        specify_index="${specify_index}-1"
+        thread_remain_count=`expr "${thread_remain_count}" - 1`
+      done
+    fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -2913,7 +3560,7 @@ core_posts_thread_lines()
       status_core_posts_thread_lines=1
     fi
   fi
-  #RESULT_core_posts_thread_lines_count="${count}"
+  RESULT_core_posts_thread_lines_count="${count}"
 
   debug 'core_posts_thread_lines' 'END'
 
@@ -2929,6 +3576,7 @@ core_posts_thread()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_url="$7"
+  param_preview="$8"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
@@ -2938,15 +3586,17 @@ core_posts_thread()
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
   debug 'core_posts_thread' "param_url:${param_url}"
+  debug 'core_posts_thread' "param_preview:${param_preview}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   #post_uri_list=''
+  view_index_posts=0
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -2954,6 +3604,7 @@ core_posts_thread()
       then
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -2961,7 +3612,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -2969,6 +3620,7 @@ core_posts_thread()
       then
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -2993,7 +3645,7 @@ core_posts_thread()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3001,6 +3653,7 @@ core_posts_thread()
         then
           thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
+        view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
       else
         error 'Processing has been canceled'
       fi
@@ -3008,8 +3661,11 @@ core_posts_thread()
     done
   fi
 
-  # depth='', parent-height=0
-  core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+  if [ -z "${param_preview}" ]
+  then
+    # depth='', parent-height=0
+    core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+  fi
 
   debug 'core_posts_thread' 'END'
 }
@@ -3022,6 +3678,8 @@ core_posts_sibling_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_url="$6"
+  param_preview="$7"
+  param_view_index_lines="$8"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
@@ -3030,6 +3688,8 @@ core_posts_sibling_lines()
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling_lines' "param_url:${param_url}"
+  debug 'core_posts_sibling_lines' "param_preview:${param_preview}"
+  debug 'core_posts_sibling_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_sibling_lines_parent_uri="${param_parent_uri}"
   core_posts_sibling_lines_parent_cid="${param_parent_cid}"
@@ -3038,7 +3698,7 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_cid=''
   RESULT_core_posts_sibling_lines_root_uri=''
   #RESULT_core_posts_sibling_lines_uri_list=''
-  #RESULT_core_posts_sibling_lines_count=0
+  RESULT_core_posts_sibling_lines_count=0
   status_core_posts_sibling_lines=0
   count=0
   lines=''
@@ -3059,8 +3719,14 @@ core_posts_sibling_lines()
       then  # separator line detected
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
+          if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+          then
+            specify_index="1"
+          else
+            specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+          fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -3102,8 +3768,14 @@ core_posts_sibling_lines()
     # process after than last separator
     if core_is_post_text_meaningful "${lines}"
     then
+      if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+      then
+        specify_index="1"
+      else
+        specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+      fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -3128,8 +3800,14 @@ core_posts_sibling_lines()
       fi
     fi
   else  # separator not specified : all lines as single content
+    if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
+    then
+      specify_index="1"
+    else
+      specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+    fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -3153,7 +3831,7 @@ core_posts_sibling_lines()
       status_core_posts_sibling_lines=1
     fi
   fi
-  #RESULT_core_posts_sibling_lines_count="${count}"
+  RESULT_core_posts_sibling_lines_count="${count}"
 
   debug 'core_posts_sibling_lines' 'END'
 
@@ -3169,6 +3847,7 @@ core_posts_sibling()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_url="$7"
+  param_preview="$8"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
@@ -3178,15 +3857,17 @@ core_posts_sibling()
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
   debug 'core_posts_sibling' "param_url:${param_url}"
+  debug 'core_posts_sibling' "param_preview:${param_preview}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   #post_uri_list=''
+  view_index_posts=0
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3200,6 +3881,7 @@ core_posts_sibling()
       then
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -3207,7 +3889,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3221,6 +3903,7 @@ core_posts_sibling()
       then
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -3245,7 +3928,7 @@ core_posts_sibling()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}"
+      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -3259,6 +3942,7 @@ core_posts_sibling()
         then
           thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
+        view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
       else
         error 'Processing has been canceled'
       fi
@@ -3266,8 +3950,11 @@ core_posts_sibling()
     done
   fi
 
-  # depth='', parent-height=0
-  core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+  if [ -z "${param_preview}" ]
+  then
+    # depth='', parent-height=0
+    core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
+  fi
 
   debug 'core_posts_sibling' 'END'
 }
@@ -3280,6 +3967,8 @@ core_posts_independence_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_url="$6"
+  param_preview="$7"
+  param_view_index_lines="$8"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
@@ -3288,6 +3977,8 @@ core_posts_independence_lines()
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence_lines' "param_url:${param_url}"
+  debug 'core_posts_independence_lines' "param_preview:${param_preview}"
+  debug 'core_posts_independence_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_independence_parent_uri=''
   core_posts_independence_parent_cid=''
@@ -3296,7 +3987,7 @@ core_posts_independence_lines()
   #RESULT_core_posts_independence_lines_cid=''
   #RESULT_core_posts_independence_lines_root_uri=''
   RESULT_core_posts_independence_lines_uri_list=''
-  #RESULT_core_posts_independence_lines_count=0
+  RESULT_core_posts_independence_lines_count=0
   status_core_posts_independence_lines=0
   count=0
   lines=''
@@ -3318,7 +4009,8 @@ core_posts_independence_lines()
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
+          specify_index=`expr "${param_view_index_lines}" + "${count}"`
+          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -3355,7 +4047,8 @@ core_posts_independence_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
+      specify_index=`expr "${param_view_index_lines}" + "${count}"`
+      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -3375,7 +4068,8 @@ core_posts_independence_lines()
     fi
   else  # separator not specified : all lines as single content
     count=1
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}"
+    specify_index=`expr "${param_view_index_lines}" + "${count}"`
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -3393,7 +4087,7 @@ core_posts_independence_lines()
       status_core_posts_independence_lines=1
     fi
   fi
-  #RESULT_core_posts_independence_lines_count="${count}"
+  RESULT_core_posts_independence_lines_count="${count}"
 
   debug 'core_posts_independence_lines' 'END'
 
@@ -3409,6 +4103,7 @@ core_posts_independence()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_url="$7"
+  param_preview="$8"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
@@ -3418,20 +4113,23 @@ core_posts_independence()
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
   debug 'core_posts_independence' "param_url:${param_url}"
+  debug 'core_posts_independence' "param_preview:${param_preview}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   post_uri_list=''
+  view_index_posts=0
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
+    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -3439,12 +4137,13 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
+    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+      view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
     else
       error 'Processing has been canceled'
     fi
@@ -3469,12 +4168,13 @@ core_posts_independence()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}"
+      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
         #thread_root_uri=''
         post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
+        view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
       else
         error 'Processing has been canceled'
       fi
@@ -3482,7 +4182,10 @@ core_posts_independence()
     done
   fi
 
-  core_output_post "${post_uri_list}" '' '' "${param_output_json}"
+  if [ -z "${param_preview}" ]
+  then
+    core_output_post "${post_uri_list}" '' '' "${param_output_json}"
+  fi
 
   debug 'core_posts_independence' 'END'
 }
@@ -3497,6 +4200,7 @@ core_posts()
   param_separator_prefix="$6"
   param_output_json="$7"
   param_url="$8"
+  param_preview="$9"
 
   debug 'core_posts' 'START'
   debug 'core_posts' "param_mode:${param_mode}"
@@ -3507,6 +4211,7 @@ core_posts()
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
   debug 'core_posts' "param_url:${param_url}"
+  debug 'core_posts' "param_preview:${param_preview}"
 
   read_session_file
   repo="${SESSION_HANDLE}"
@@ -3517,13 +4222,13 @@ core_posts()
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
       ;;
   esac
 
@@ -3539,8 +4244,10 @@ core_reply()
   param_langs="$5"
   param_output_json="$6"
   param_url="$7"
-  if [ $# -gt 7 ]
+  param_preview="$8"
+  if [ $# -gt 8 ]
   then
+    shift
     shift
     shift
     shift
@@ -3558,6 +4265,7 @@ core_reply()
   debug 'core_reply' "param_langs:${param_langs}"
   debug 'core_reply' "param_output_json:${param_output_json}"
   debug 'core_reply' "param_url:${param_url}"
+  debug 'core_reply' "param_preview:${param_preview}"
   debug 'core_reply' "param_image_alt:$*"
 
   read_session_file
@@ -3574,7 +4282,8 @@ core_reply()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
@@ -3606,15 +4315,23 @@ core_reply()
       then
         _p "${record}"
       else
-        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-        status=$?
-        debug_single 'core_reply'
-        _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-        if [ $status -eq 0 ]
+        if [ -n "${param_preview}" ]
         then
-          core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+          # reply target uri, record json, output-id, output-via, output-json, output-langs
+          core_preview_reply "${param_target_uri}" "${record}" '' '' "${param_output_json}" ''
         else
-          error 'reply command failed'
+          result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+          status=$?
+          debug_single 'core_reply'
+          _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+          if [ $status -eq 0 ]
+          then
+            create_uri=`_p "${result}" | jq -r '.uri'`
+            # depth='', parent-height=1
+            core_thread "${create_uri}" '' 1 '' '' "${param_output_json}"
+          else
+            error 'reply command failed'
+          fi
         fi
       fi
       ;;
@@ -3674,8 +4391,10 @@ core_quote()
   param_langs="$5"
   param_output_json="$6"
   param_url="$7"
-  if [ $# -gt 7 ]
+  param_preview="$8"
+  if [ $# -gt 8 ]
   then
+    shift
     shift
     shift
     shift
@@ -3709,7 +4428,8 @@ core_quote()
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
-  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}"`
+  mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
+  facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
@@ -3745,15 +4465,27 @@ core_quote()
       then
         _p "${record}"
       else
-        result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
-        status=$?
-        debug_single 'core_quote'
-        _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
-        if [ $status -eq 0 ]
+        if [ -n "${param_preview}" ]
         then
-          core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+          if [ "${actual_image_count}" -gt 0 ]
+          then
+            record_include_image=0
+          else
+            record_include_image=1
+          fi
+          # record json, output-id, output-via, output-json, output-langs
+          core_preview_quote "${param_target_uri}" "${record}" "${record_include_image}" '' '' "${param_output_json}" ''
         else
-          error 'quote command failed'
+          result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
+          status=$?
+          debug_single 'core_quote'
+          _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+          if [ $status -eq 0 ]
+          then
+            core_output_post "`_p "${result}" | jq -r '.uri'`" '' '' "${param_output_json}"
+          else
+            error 'quote command failed'
+          fi
         fi
       fi
       ;;

@@ -519,7 +519,7 @@ parse_parameters()
         canonical_key=`_strleft "${canonical_key}" '='`
         # opt-foo -> opt_foo
         canonical_key=`_p "${canonical_key}" | sed 's/-/_/g'`
-        # options value requirement is checked at parse_parameter_lement
+        # options value requirement is checked at parse_parameter_element
         if [ -z "${PARSED_VALUE}" ]
         then  # this parameter is single option
           evaluate="PARSED_PARAM_KEYONLY_${canonical_key}='defined'"
@@ -654,7 +654,7 @@ api_core()
         api_error="${error_element}"
         api_error_message=`_p "${result}" | jq -r '.message // empty'`
         debug 'api_core' "${api_error} / ${api_error_message}"
-        error_msg "${api_error} / ${api_error_message}"
+        #error_msg "${api_error} / ${api_error_message}"
         api_core_status=1
         ;;
     esac
@@ -704,11 +704,18 @@ api()
       # session expired
       read_session_file
       api_core 'com.atproto.server.refreshSession' "${SESSION_REFRESH_JWT}" > /dev/null
-      # refresh runtime information
-      read_session_file
-      debug_single 'api-3'
-      api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       api_status=$?
+      if [ "${api_status}" -eq 0 ]
+      then
+        # refresh runtime information
+        read_session_file
+        debug_single 'api-3'
+        api_core "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+        api_status=$?
+      else
+        error_msg 'session expired and failed to refresh session. please login again.'
+        api_status=1
+      fi
       ;;
     3)
       # 2FA token required
@@ -849,7 +856,7 @@ read_session_file()
   session_filepath=`get_session_filepath`
   if [ -e "${session_filepath}" ]
   then
-    # SC1090 disable for dynamical(variable) path source(.) using and generize on runtime
+    # SC1090 disable for dynamical(variable) path source(.) using and generate on runtime
     # shellcheck source=/dev/null
     . "${session_filepath}"
     status=0
