@@ -3399,6 +3399,32 @@ core_post()
   debug 'core_post' 'END'
 }
 
+# parse directive option in separator line
+core_parse_directive_option()
+{
+  param_directive_option_value="$1"
+
+  debug 'core_parse_directive_option' 'START'
+  debug 'core_parse_directive_option' "param_directive_option_value:${param_directive_option_value}"
+
+  # inherit previous parse results
+  #PARSED_PARAM_KEYVALUE_langs=''
+  #PARSED_PARAM_KEYVALUE_url=''
+  # unescape quote
+  directive_option_value=`echo "${param_directive_option_value}" | sed "s/'//g"`
+  debug 'core_parse_directive_option' "directive_option_value:${directive_option_value}"
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  parse_parameters '--langs:1 --url:1' $directive_option_value
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_langs="${PARSED_PARAM_KEYVALUE_langs}"
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_url="${PARSED_PARAM_KEYVALUE_url}"
+
+  debug 'core_parse_directive_option' 'END'
+}
+
 core_posts_thread_lines()
 {
   param_core_posts_thread_lines_text="$1"
@@ -3428,6 +3454,10 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_root_uri=''
   #RESULT_core_posts_thread_lines_uri_list=''
   RESULT_core_posts_thread_lines_count=0
+  RESULT_core_posts_thread_lines_directive_option_url=''
+  RESULT_core_posts_thread_lines_directive_option_langs=''
+  apply_option_url="${param_url}"
+  apply_option_langs="${param_langs}"
   status_core_posts_thread_lines=0
   count=0
   lines=''
@@ -3446,6 +3476,23 @@ core_posts_thread_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            apply_option_url="${RESULT_parse_directive_option_url}"
+            apply_option_langs="${RESULT_parse_directive_option_langs}"
+            RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
@@ -3461,7 +3508,7 @@ core_posts_thread_lines()
             done
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3510,7 +3557,7 @@ core_posts_thread_lines()
         done
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3542,7 +3589,7 @@ core_posts_thread_lines()
       done
     fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3593,10 +3640,12 @@ core_posts_thread()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_langs}"
+  apply_option_url="${param_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3605,6 +3654,8 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -3612,7 +3663,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3621,6 +3672,8 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -3645,7 +3698,7 @@ core_posts_thread()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3654,6 +3707,8 @@ core_posts_thread()
           thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+        apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+        apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
       else
         error 'Processing has been canceled'
       fi
@@ -3699,6 +3754,10 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_root_uri=''
   #RESULT_core_posts_sibling_lines_uri_list=''
   RESULT_core_posts_sibling_lines_count=0
+  RESULT_core_posts_sibling_lines_directive_option_url=''
+  RESULT_core_posts_sibling_lines_directive_option_langs=''
+  apply_option_url="${param_url}"
+  apply_option_langs="${param_langs}"
   status_core_posts_sibling_lines=0
   count=0
   lines=''
@@ -3717,6 +3776,23 @@ core_posts_sibling_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            apply_option_url="${RESULT_parse_directive_option_url}"
+            apply_option_langs="${RESULT_parse_directive_option_langs}"
+            RESULT_core_posts_sibling_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            RESULT_core_posts_sibling_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
@@ -3726,7 +3802,7 @@ core_posts_sibling_lines()
             specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -3775,7 +3851,7 @@ core_posts_sibling_lines()
         specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -3807,7 +3883,7 @@ core_posts_sibling_lines()
       specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
     fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -3864,10 +3940,12 @@ core_posts_sibling()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_langs}"
+  apply_option_url="${param_url}"
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3882,6 +3960,8 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -3889,7 +3969,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3904,6 +3984,8 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -3928,7 +4010,7 @@ core_posts_sibling()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -3943,6 +4025,8 @@ core_posts_sibling()
           thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+        apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+        apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
       else
         error 'Processing has been canceled'
       fi
@@ -3988,6 +4072,10 @@ core_posts_independence_lines()
   #RESULT_core_posts_independence_lines_root_uri=''
   RESULT_core_posts_independence_lines_uri_list=''
   RESULT_core_posts_independence_lines_count=0
+  RESULT_core_posts_independence_lines_directive_option_url=''
+  RESULT_core_posts_independence_lines_directive_option_langs=''
+  apply_option_url="${param_url}"
+  apply_option_langs="${param_langs}"
   status_core_posts_independence_lines=0
   count=0
   lines=''
@@ -4006,11 +4094,28 @@ core_posts_independence_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            apply_option_url="${RESULT_parse_directive_option_url}"
+            apply_option_langs="${RESULT_parse_directive_option_langs}"
+            RESULT_core_posts_independence_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            RESULT_core_posts_independence_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           specify_index=`expr "${param_view_index_lines}" + "${count}"`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -4048,7 +4153,7 @@ core_posts_independence_lines()
     then
       count=`expr "${count}" + 1`
       specify_index=`expr "${param_view_index_lines}" + "${count}"`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -4069,7 +4174,7 @@ core_posts_independence_lines()
   else  # separator not specified : all lines as single content
     count=1
     specify_index=`expr "${param_view_index_lines}" + "${count}"`
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -4120,16 +4225,20 @@ core_posts_independence()
   thread_root_uri=''
   post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_langs}"
+  apply_option_url="${param_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -4137,13 +4246,15 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+      apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
     else
       error 'Processing has been canceled'
     fi
@@ -4168,13 +4279,15 @@ core_posts_independence()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
         #thread_root_uri=''
         post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+        apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+        apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
       else
         error 'Processing has been canceled'
       fi
