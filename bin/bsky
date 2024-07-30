@@ -177,6 +177,7 @@ commands:
   profile      show profile.
   info         show session/meta informations.
   size         show number of characters in text.
+  update       update this tool.
   help         show this help.
   version      show bsky CLI version.
 
@@ -972,6 +973,22 @@ note:
 EOS
 
   debug 'output_help_size' 'END'
+}
+
+output_help_update()
+{
+  debug 'output_help_update' 'START'
+
+  cat << 'EOS'
+bsky update help
+
+usage: bsky update
+
+note:
+  Update this tool to the latest version.
+EOS
+
+  debug 'output_help_update' 'END'
 }
 
 output_help_version()
@@ -1925,6 +1942,23 @@ command_size()
   debug 'command_size' 'END'
 }
 
+command_update()
+{
+  debug 'command_update' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_update
+  else
+    parse_parameters '--skip-confirm:0 --leave-updater:0 --preview:0' "$@"
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+    core_update "${PARSED_PARAM_KEYONLY_skip_confirm}" "${PARSED_PARAM_KEYONLY_leave_updater}" "${PARSED_PARAM_KEYONLY_preview}"
+  fi
+
+  debug 'command_update' 'END'
+}
+
 command_version()
 {
   debug 'command_version' 'START'
@@ -2038,6 +2072,10 @@ case $1 in
   size)
     shift
     command_size "$@"
+    ;;
+  update)
+    shift
+    command_update "$@"
     ;;
   help)
     output_help_general
