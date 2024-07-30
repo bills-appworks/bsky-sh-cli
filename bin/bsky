@@ -450,7 +450,7 @@ output_help_posts()
   debug 'output_help_posts' 'START'
 
   cat << 'EOS'
-bsky post help
+bsky posts help
 
 usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--url <display mode>] [--langs '<language code>[,...]'] [--separator-prefix '<delimiter string>'] [--preview] [--output-json]
 
