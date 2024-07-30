@@ -1053,6 +1053,51 @@ resolve_post_text()
   return $status_resolve_post_text
 }
 
+inputYn()
+{
+  read prompt_input
+  if [ -n "${prompt_input}" ]
+  then
+    case $prompt_input in
+      Y|y|YES|yes|Yes)
+        status=0
+        ;;
+      *)
+        status=1
+        ;;
+    esac
+  else
+    status=0
+  fi
+  return $status
+}
+
+inputyn()
+{
+  param_prompt="$1"
+
+  status=255
+  while [ $status -eq 255 ]
+  do
+    _p "${param_prompt}"
+    read prompt_input
+    if [ -n "${prompt_input}" ]
+    then
+      case $prompt_input in
+        Y|y|YES|yes|Yes)
+          status=0
+          ;;
+        N|n|NO|no|No)
+          status=1
+          ;;
+        *)
+          ;;
+      esac
+    fi
+  done
+  return $status
+}
+
 # ifndef BSKYSHCLI_DEFINE_UTIL
 fi
 

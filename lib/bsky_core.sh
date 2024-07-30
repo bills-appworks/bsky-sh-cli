@@ -5369,3 +5369,136 @@ core_size()
 
   debug 'core_size' 'END'
 }
+
+core_update()
+{
+  param_skip_confirm="$1"
+  param_leave_updater="$2"
+  param_preview="$3"
+
+  debug 'core_update' 'START'
+  debug 'core_update' "param_skip_confirm:${param_skip_confirm}"
+  debug 'core_update' "param_leave_updater:${param_leave_updater}"
+  debug 'core_update' "param_preview:${param_preview}"
+
+  github_latest_url='https://api.github.com/repos/bills-appworks/bsky-sh-cli/releases/latest'
+  github_tarball_url_prefix='https://github.com/bills-appworks/bsky-sh-cli/tarball/refs/heads'
+  tarball_filename='bsky-sh-cli.tar.gz'
+
+  # current information
+  version="v${BSKYSHCLI_CLI_VERSION}"
+  # '$' is not variable use
+  # shellcheck disable=SC2016
+  bsky_dir=`_p "${FILE_DIR}" | sed -E 's_(.*)/[^/]*$_\1_g'`
+  bsky_which=`which bsky`
+  _pn "Current version: ${version}"
+  _pn "Update target directory: ${bsky_dir}"
+  _pn "bsky in PATH environment variable (`whoami`): ${bsky_which}"
+
+  # check update target
+  if [ -w "${bsky_dir}" ]
+  then
+    :
+  else
+    error "The directory to be updated cannot be updated by the current user.
+Consider running as a superuser using the sudo command.
+Example:
+sudo ${FILE_DIR}/bsky update"
+  fi
+
+  # download latest version
+  if github_latest=`curl -s -X GET "${github_latest_url}"`
+  then
+    :
+  else
+    error "GitHub latest version query error: ${github_latest_url}"
+  fi
+  release_tag=`_p "${github_latest}" | jq -r '.tag_name'`
+  if update_temporary_path=`mktemp --tmpdir -d bsky_sh_cli.XXXXXXXXXX`
+  then
+    :
+  else
+    error 'Failed to make temporary directory'
+  fi
+  _pn "Update temporary directory: ${update_temporary_path}"
+  _pn "Updater download source: ${github_tarball_url_prefix}/${release_tag}"
+  _p "Download latest version..."
+  if curl -s -L "${github_tarball_url_prefix}/${release_tag}" -o "${update_temporary_path}/${tarball_filename}"
+  then
+    :
+  else
+    error "Failed to download latest asset: ${github_tarball_url_prefix}/${release_tag}"
+  fi
+  _pn "Done"
+
+  # expand tarball
+  # tar root directory (bills-appworks-bsky-sh-cli-<commit ID>/) skip (--strip-components 1) 
+  _p "Expand latest version assets..."
+  if tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
+  then
+    :
+  else
+    error "Failed to expand latest asset: ${update_temporary_path}/${tarball_filename}"
+  fi
+  _pn "Done"
+
+  if [ -z "${param_skip_confirm}" ]
+  then
+    confirm_prompt='Are you sure you want to update with the above configuration? [y/n]: '
+    if [ -n "${param_preview}" ]
+    then  # preview
+      _pn "${confirm_prompt}(skip in preview mode)"
+    else  # actual
+      if inputyn "${confirm_prompt}"
+      then
+        :
+      else
+        _pn 'Update canceled.'
+        exit 1
+      fi
+    fi
+  fi
+
+  if [ -n "${param_preview}" ]
+  then
+    _pn '(preview mode) The following command will be executed.'
+    _pn "/bin/sh ${update_temporary_path}/install.sh --install-dir ${bsky_dir} --skip-config-path --skip-rcfile-copy --skip-confirm"
+  else
+    # update (install)
+    _pn ">>>>>>>> ${update_temporary_path}/install.sh START"
+    /bin/sh "${update_temporary_path}/install.sh" --install-dir "${bsky_dir}" --skip-config-path --skip-rcfile-copy --skip-confirm
+    status=$?
+    _pn ">>>>>>>> ${update_temporary_path}/install.sh END"
+  fi
+
+  # remove updater (download and expand files)
+  if [ -n "${param_leave_updater}" ]
+  then
+    _pn 'Leave the following updater file:'
+    _pn "${update_temporary_path}"
+  else
+    _p 'Remove updater files...'
+    
+    if rm -rf "${update_temporary_path}"
+    then
+      :
+    else
+      error "Failed to remove updater: ${update_temporary_path}"
+    fi
+    _pn "Done"
+  fi
+
+  if [ -n "${param_preview}" ]
+  then
+    _pn '(preview mode) Update preview complete.'
+  else
+    if [ "${status}" -eq 0 ]
+    then
+      _pn 'Update complete.'
+    else
+      error "Failed to update. install.sh status code:${status}"
+    fi
+  fi
+
+  debug 'core_update' 'END'
+}
