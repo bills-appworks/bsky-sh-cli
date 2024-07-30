@@ -1,3 +1,11 @@
+# v0.9.0
+## Add
+- Specifying individual post options in the thread posting function (delimited section option directive function in the posts command)
+- Self-update function (update command)
+- portuguese documentation
+## Fix
+- Other minor fixes
+
 # v0.8.0
 ## Add
 - Preview function support for posting functions (posts/posts/reply/quote command) (--preview option)
