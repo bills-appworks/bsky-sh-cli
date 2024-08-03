@@ -926,14 +926,14 @@ core_output_text_file_size_lines()
   param_separator_prefix="$2"
   param_count_only="$3"
   param_output_json="$4"
-  param_url="$5"
+  param_core_output_text_file_size_lines_url="$5"
 
   debug 'core_output_text_file_size_lines' 'START'
   debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
   debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
-  debug 'core_output_text_file_size_lines' "param_url:${param_url}"
+  debug 'core_output_text_file_size_lines' "param_core_output_text_file_size_lines_url:${param_core_output_text_file_size_lines_url}"
 
   # initialize results
   unset RESULT_core_output_text_file_size_lines_directive_option_url
@@ -942,7 +942,7 @@ core_output_text_file_size_lines()
   if [ -r "${param_text_file_path}" ]
   then
     file_content=`cat "${param_text_file_path}"`
-    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_core_output_text_file_size_lines_url}"
     section_count=$?
     if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
     then
@@ -1035,16 +1035,16 @@ core_verify_display_text_size()
 core_verify_text_file_size()
 {
   param_text_file_path="$1"
-  param_url_long="$2"
+  param_core_verify_text_file_size_url="$2"
 
   debug 'core_verify_text_file_size' 'START'
   debug 'core_verify_text_file_size' "param_text_file_path:${param_text_file_path}"
-  debug 'core_verify_text_file_size' "param_url_long:${param_url_long}"
+  debug 'core_verify_text_file_size' "param_core_verify_text_file_size_url:${param_core_verify_text_file_size_url}"
 
   status_core_verify_text_file_size=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    core_build_text_rels "${text_file}" 0 "${param_url_long}"
+    core_build_text_rels "${text_file}" 0 "${param_core_verify_text_file_size_url}"
     text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     if [ "${text_size}" -gt 300 ]
     then
@@ -1064,12 +1064,12 @@ core_verify_text_file_size_lines()
 {
   param_text_file_path="$1"
   param_separator_prefix="$2"
-  param_url="$3"
+  param_core_verify_text_file_size_lines_url="$3"
 
   debug 'core_verify_text_file_size_lines' 'START'
   debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_verify_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_verify_text_file_size_lines' "param_url:${param_url}"
+  debug 'core_verify_text_file_size_lines' "param_core_verify_text_file_size_lines_url:${param_core_verify_text_file_size_lines_url}"
 
   # initialize results
   unset RESULT_core_verify_text_file_size_lines_directive_option_url
@@ -1078,7 +1078,7 @@ core_verify_text_file_size_lines()
   status_core_verify_text_file_size_lines=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_core_verify_text_file_size_lines_url}"
     section_count=$?
     if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
     then
@@ -1231,16 +1231,16 @@ core_verify_text_size_lines()
   param_specified_text="$2"
   param_text_files="$3"
   param_separator_prefix="$4"
-  param_url="$5"
+  param_core_verify_text_size_lines_url="$5"
 
   debug 'core_verify_text_size_lines' 'START'
   debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
   debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
   debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
   debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_verify_text_size_lines' "param_url_long:${param_url}"
+  debug 'core_verify_text_size_lines' "param_core_verify_text_size_lines_url:${param_core_verify_text_size_lines_url}"
 
-  apply_option_url="${param_url}"
+  apply_option_url="${param_core_verify_text_size_lines_url}"
 
   status_core_verify_text_size_lines=0
 
@@ -3189,19 +3189,19 @@ core_output_post()
 core_posts_single()
 {
   param_core_posts_single_text="$1"
-  param_langs="$2"
+  param_core_posts_single_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
-  param_url="$5"
+  param_core_posts_single_url="$5"
   param_preview="$6"
   param_view_index="$7"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
-  debug 'core_posts_single' "param_langs:${param_langs}"
+  debug 'core_posts_single' "param_core_posts_single_langs:${param_core_posts_single_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
-  debug 'core_posts_single' "param_url:${param_url}"
+  debug 'core_posts_single' "param_core_posts_single_url:${param_core_posts_single_url}"
   debug 'core_posts_single' "param_preview:${param_preview}"
   debug 'core_posts_single' "param_view_index:${param_view_index}"
 
@@ -3212,7 +3212,7 @@ core_posts_single()
   else
     reply_fragment=''
   fi
-  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_url}"
+  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_core_posts_single_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
@@ -3220,7 +3220,7 @@ core_posts_single()
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
   external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
-  langs_fragment=`core_build_langs_fragment "${param_langs}"`
+  langs_fragment=`core_build_langs_fragment "${param_core_posts_single_langs}"`
   if [ -n "${reply_fragment}" ]
   then
     record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
@@ -3584,21 +3584,21 @@ core_post()
 core_posts_thread_lines()
 {
   param_core_posts_thread_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_thread_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
+  param_core_posts_thread_lines_url="$6"
   param_preview="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
-  debug 'core_posts_thread_lines' "param_langs:${param_langs}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_langs:${param_core_posts_thread_lines_langs}"
   debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_thread_lines' "param_url:${param_url}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_url:${param_core_posts_thread_lines_url}"
   debug 'core_posts_thread_lines' "param_preview:${param_preview}"
   debug 'core_posts_thread_lines' "param_view_index_lines:${param_view_index_lines}"
 
@@ -3612,8 +3612,8 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_count=0
   unset RESULT_core_posts_thread_lines_directive_option_url
   unset RESULT_core_posts_thread_lines_directive_option_langs
-  apply_option_url="${param_url}"
-  apply_option_langs="${param_langs}"
+  apply_option_url="${param_core_posts_thread_lines_url}"
+  apply_option_langs="${param_core_posts_thread_lines_langs}"
   status_core_posts_thread_lines=0
   count=0
   lines=''
@@ -3781,20 +3781,20 @@ core_posts_thread()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_thread_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
+  param_core_posts_thread_url="$7"
   param_preview="$8"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
   debug 'core_posts_thread' "param_text_files:${param_text_files}"
-  debug 'core_posts_thread' "param_langs:${param_langs}"
+  debug 'core_posts_thread' "param_core_posts_thread_langs:${param_core_posts_thread_langs}"
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
-  debug 'core_posts_thread' "param_url:${param_url}"
+  debug 'core_posts_thread' "param_core_posts_thread_url:${param_core_posts_thread_url}"
   debug 'core_posts_thread' "param_preview:${param_preview}"
 
   parent_uri=''
@@ -3802,8 +3802,8 @@ core_posts_thread()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
-  apply_option_langs="${param_langs}"
-  apply_option_url="${param_url}"
+  apply_option_langs="${param_core_posts_thread_langs}"
+  apply_option_url="${param_core_posts_thread_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
@@ -3908,21 +3908,21 @@ core_posts_thread()
 core_posts_sibling_lines()
 {
   param_core_posts_sibling_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_sibling_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
+  param_core_posts_sibling_lines_url="$6"
   param_preview="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
-  debug 'core_posts_sibling_lines' "param_langs:${param_langs}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_langs:${param_core_posts_sibling_lines_langs}"
   debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_sibling_lines' "param_url:${param_url}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_url:${param_core_posts_sibling_lines_url}"
   debug 'core_posts_sibling_lines' "param_preview:${param_preview}"
   debug 'core_posts_sibling_lines' "param_view_index_lines:${param_view_index_lines}"
 
@@ -3936,8 +3936,8 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_count=0
   unset RESULT_core_posts_sibling_lines_directive_option_url
   unset RESULT_core_posts_sibling_lines_directive_option_langs
-  apply_option_url="${param_url}"
-  apply_option_langs="${param_langs}"
+  apply_option_url="${param_core_posts_sibling_lines_url}"
+  apply_option_langs="${param_core_posts_sibling_lines_langs}"
   status_core_posts_sibling_lines=0
   count=0
   lines=''
@@ -4105,20 +4105,20 @@ core_posts_sibling()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_sibling_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
+  param_core_posts_sibling_url="$7"
   param_preview="$8"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
   debug 'core_posts_sibling' "param_text_files:${param_text_files}"
-  debug 'core_posts_sibling' "param_langs:${param_langs}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_langs:${param_core_posts_sibling_langs}"
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
-  debug 'core_posts_sibling' "param_url:${param_url}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_url:${param_core_posts_sibling_url}"
   debug 'core_posts_sibling' "param_preview:${param_preview}"
 
   parent_uri=''
@@ -4126,8 +4126,8 @@ core_posts_sibling()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
-  apply_option_langs="${param_langs}"
-  apply_option_url="${param_url}"
+  apply_option_langs="${param_core_posts_sibling_langs}"
+  apply_option_url="${param_core_posts_sibling_url}"
 
   if [ -n "${param_stdin_text}" ]
   then
@@ -4250,21 +4250,21 @@ core_posts_sibling()
 core_posts_independence_lines()
 {
   param_core_posts_independence_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_independence_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
+  param_core_posts_independence_lines_url="$6"
   param_preview="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
-  debug 'core_posts_independence_lines' "param_langs:${param_langs}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_langs:${param_core_posts_independence_lines_langs}"
   debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_independence_lines' "param_url:${param_url}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_url:${param_core_posts_independence_lines_url}"
   debug 'core_posts_independence_lines' "param_preview:${param_preview}"
   debug 'core_posts_independence_lines' "param_view_index_lines:${param_view_index_lines}"
 
@@ -4278,8 +4278,8 @@ core_posts_independence_lines()
   RESULT_core_posts_independence_lines_count=0
   unset RESULT_core_posts_independence_lines_directive_option_url
   unset RESULT_core_posts_independence_lines_directive_option_langs
-  apply_option_url="${param_url}"
-  apply_option_langs="${param_langs}"
+  apply_option_url="${param_core_posts_independence_lines_url}"
+  apply_option_langs="${param_core_posts_independence_lines_langs}"
   status_core_posts_independence_lines=0
   count=0
   lines=''
@@ -4414,20 +4414,20 @@ core_posts_independence()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_independence_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
+  param_core_posts_independence_url="$7"
   param_preview="$8"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
   debug 'core_posts_independence' "param_text_files:${param_text_files}"
-  debug 'core_posts_independence' "param_langs:${param_langs}"
+  debug 'core_posts_independence' "param_core_posts_independence_langs:${param_core_posts_independence_langs}"
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
-  debug 'core_posts_independence' "param_url:${param_url}"
+  debug 'core_posts_independence' "param_core_posts_independence_url:${param_core_posts_independence_url}"
   debug 'core_posts_independence' "param_preview:${param_preview}"
 
   parent_uri=''
@@ -4435,8 +4435,8 @@ core_posts_independence()
   thread_root_uri=''
   post_uri_list=''
   view_index_posts=0
-  apply_option_langs="${param_langs}"
-  apply_option_url="${param_url}"
+  apply_option_langs="${param_core_posts_independence_langs}"
+  apply_option_url="${param_core_posts_independence_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
@@ -4559,7 +4559,7 @@ core_posts()
   collection='app.bsky.feed.post'
 
   # size check
-#  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
+  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
 
   case $param_mode in
     sibling)
