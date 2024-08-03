@@ -400,6 +400,34 @@ get_option_type()
   esac
 }
 
+initialize_parameters_result()
+{
+  param_effective_list=$1
+
+  debug 'initialize_parameters_result' 'START'
+  debug 'initialize_parameters_result' "param_effective_list:${param_effective_list}"
+
+  for listitem in $param_effective_list
+  do
+    get_option_type "${listitem}"
+    option_type=$?
+    effective_name=`_strleft "${listitem}" ':'`
+    # -O or --opt -> O or opt
+    cut_start=`expr "${option_type}" + 1`
+    canonical_key=`_cut "${effective_name}" -c "${cut_start}"-`
+    # O or opt=value -> O or opt
+    canonical_key=`_strleft "${canonical_key}" '='`
+    # opt-foo -> opt_foo
+    canonical_key=`_p "${canonical_key}" | sed 's/-/_/g'`
+
+    # initialize result variables
+    unset "PARSED_PARAM_KEYONLY_${canonical_key}"
+    unset "PARSED_PARAM_KEYVALUE_${canonical_key}"
+  done
+
+  debug 'initialize_parameters_result' 'END'
+}
+
 parse_parameter_element()
 {
   param_value_varname=$1
@@ -490,6 +518,8 @@ parse_parameters()
   debug 'parse_parameters' 'START'
   debug 'parse_parameters' "effective_list:${effective_list}"
   debug 'parse_parameters' "parameters:$*"
+
+  initialize_parameters_result "${effective_list}"
 
   count_options=0
   while [ $# -gt 0 ]
