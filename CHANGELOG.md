@@ -2,7 +2,6 @@
 ## Add
 - Specifying individual post options in the thread posting function (delimited section option directive function in the posts command)
 - Self-update function (update command)
-- portuguese documentation
 ## Fix
 - Other minor fixes
 
