@@ -1694,6 +1694,8 @@ core_build_external_fragment()
               status=1
             fi
           else  # no generate thumb
+            # $type is not variable
+            # shellcheck disable=SC2016
             _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
             status=0
           fi
