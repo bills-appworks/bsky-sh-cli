@@ -763,6 +763,33 @@ core_build_text_rels()
   debug 'core_build_text_rels' 'END'
 }
 
+# parse directive option in separator line
+core_parse_directive_option()
+{
+  param_directive_option_value="$1"
+
+  debug 'core_parse_directive_option' 'START'
+  debug 'core_parse_directive_option' "param_directive_option_value:${param_directive_option_value}"
+
+  # initialize result
+  unset RESULT_parse_directive_option_langs
+  unset RESULT_parse_directive_option_url
+
+  # unescape quote
+  directive_option_value=`echo "${param_directive_option_value}" | sed "s/'//g"`
+  debug 'core_parse_directive_option' "directive_option_value:${directive_option_value}"
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  parse_parameters '--langs:1 --url:1' $directive_option_value
+  # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_langs="${PARSED_PARAM_KEYVALUE_langs}"
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_url="${PARSED_PARAM_KEYVALUE_url}"
+
+  debug 'core_parse_directive_option' 'END'
+}
+
 core_text_size_lines()
 {
   param_core_text_size_lines_text="$1"
@@ -773,6 +800,13 @@ core_text_size_lines()
   debug 'core_text_size_lines' "param_core_text_size_lines_text:${param_core_text_size_lines_text}"
   debug 'core_text_size_lines' "param_core_text_size_lines_separator_prefix:${param_core_text_size_lines_separator_prefix}"
   debug 'core_text_size_lines' "param_core_text_size_lines_url:${param_core_text_size_lines_url}"
+
+  # for apply directive
+  apply_option_url="${param_core_text_size_lines_url}"
+
+  # initialize results
+  unset RESULT_core_text_size_lines_directive_option_url
+  unset RESULT_core_text_size_lines_directive_option_langs
 
   count=0
   lines=''
@@ -791,10 +825,35 @@ core_text_size_lines()
     do
       if _startswith "$1" "${param_core_text_size_lines_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_text_size_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              # not used for option inheritance, but defined for uniformity 
+              # shellcheck disable=SC2034
+              RESULT_core_text_size_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
-          core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url}"
+          core_build_text_rels "${lines}" 0 "${apply_option_url}"
           size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
           eval "RESULT_core_text_size_lines_${count}=${size}"
           debug 'core_text_size_lines' "count:${count} size:${size}"
@@ -817,14 +876,14 @@ core_text_size_lines()
     if core_is_post_text_meaningful "${lines}"
     then
       count=`expr "${count}" + 1`
-      core_build_text_rels "${lines}" 0 "${param_core_text_size_lines_url}"
+      core_build_text_rels "${lines}" 0 "${apply_option_url}"
       size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
       eval "RESULT_core_text_size_lines_${count}=${size}"
       debug 'core_text_size_lines' "remain part count:${count} size:${size}"
     fi
   else  # separator not specified : all lines as single content
     count=1
-    core_build_text_rels "${param_core_text_size_lines_text}" 0 "${param_core_text_size_lines_url}"
+    core_build_text_rels "${param_core_text_size_lines_text}" 0 "${apply_option_url}"
     size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     eval "RESULT_core_text_size_lines_${count}=${size}"
     debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
@@ -867,20 +926,34 @@ core_output_text_file_size_lines()
   param_separator_prefix="$2"
   param_count_only="$3"
   param_output_json="$4"
-  param_url="$5"
+  param_core_output_text_file_size_lines_url="$5"
 
   debug 'core_output_text_file_size_lines' 'START'
   debug 'core_output_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_output_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_output_text_file_size_lines' "param_count_only:${param_count_only}"
   debug 'core_output_text_file_size_lines' "param_output_json:${param_output_json}"
-  debug 'core_output_text_file_size_lines' "param_url:${param_url}"
+  debug 'core_output_text_file_size_lines' "param_core_output_text_file_size_lines_url:${param_core_output_text_file_size_lines_url}"
+
+  # initialize results
+  unset RESULT_core_output_text_file_size_lines_directive_option_url
+  unset RESULT_core_output_text_file_size_lines_directive_option_langs
 
   if [ -r "${param_text_file_path}" ]
   then
     file_content=`cat "${param_text_file_path}"`
-    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${file_content}" "${param_separator_prefix}" "${param_core_output_text_file_size_lines_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
+    then
+      RESULT_core_output_text_file_size_lines_directive_option_url="${RESULT_core_text_size_lines_directive_option_url}"
+    fi
+    if [ -n "${RESULT_core_text_size_lines_directive_option_langs}" ]
+    then
+      # not used for option inheritance, but defined for uniformity 
+      # shellcheck disable=SC2034
+      RESULT_core_output_text_file_size_lines_directive_option_langs="${RESULT_core_text_size_lines_directive_option_langs}"
+    fi
     section_index=1
     json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
     while [ $section_index -le $section_count ]
@@ -962,16 +1035,16 @@ core_verify_display_text_size()
 core_verify_text_file_size()
 {
   param_text_file_path="$1"
-  param_url_long="$2"
+  param_core_verify_text_file_size_url="$2"
 
   debug 'core_verify_text_file_size' 'START'
   debug 'core_verify_text_file_size' "param_text_file_path:${param_text_file_path}"
-  debug 'core_verify_text_file_size' "param_url_long:${param_url_long}"
+  debug 'core_verify_text_file_size' "param_core_verify_text_file_size_url:${param_core_verify_text_file_size_url}"
 
   status_core_verify_text_file_size=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    core_build_text_rels "${text_file}" 0 "${param_url_long}"
+    core_build_text_rels "${text_file}" 0 "${param_core_verify_text_file_size_url}"
     text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
     if [ "${text_size}" -gt 300 ]
     then
@@ -991,18 +1064,32 @@ core_verify_text_file_size_lines()
 {
   param_text_file_path="$1"
   param_separator_prefix="$2"
-  param_url="$3"
+  param_core_verify_text_file_size_lines_url="$3"
 
   debug 'core_verify_text_file_size_lines' 'START'
   debug 'core_verify_text_file_size_lines' "param_text_file_path:${param_text_file_path}"
   debug 'core_verify_text_file_size_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_verify_text_file_size_lines' "param_url:${param_url}"
+  debug 'core_verify_text_file_size_lines' "param_core_verify_text_file_size_lines_url:${param_core_verify_text_file_size_lines_url}"
+
+  # initialize results
+  unset RESULT_core_verify_text_file_size_lines_directive_option_url
+  unset RESULT_core_verify_text_file_size_lines_directive_option_langs
 
   status_core_verify_text_file_size_lines=0
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
-    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${text_file}" "${param_separator_prefix}" "${param_core_verify_text_file_size_lines_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
+    then
+      RESULT_core_verify_text_file_size_lines_directive_option_url="${RESULT_core_text_size_lines_directive_option_url}"
+    fi
+    if [ -n "${RESULT_core_text_size_lines_directive_option_langs}" ]
+    then
+      # not used for option inheritance, but defined for uniformity 
+      # shellcheck disable=SC2034
+      RESULT_core_verify_text_file_size_lines_directive_option_langs="${RESULT_core_text_size_lines_directive_option_langs}"
+    fi
     section_index=1
     while [ $section_index -le $section_count ]
     do
@@ -1058,27 +1145,113 @@ core_process_files()
   return $status_core_process_files
 }
 
+core_process_files_verify_text_file_size_lines()
+{
+  param_process_files="$1"
+  param_process_name="$2"
+  if [ $# -ge 2 ]
+  then
+    shift
+    shift
+  fi
+
+  debug 'core_process_files_verify_text_file_size_lines' 'START'
+  debug 'core_process_files_verify_text_file_size_lines' "param_process_files:${param_process_files}"
+  debug 'core_process_files_verify_text_file_size_lines' "param_process_name:${param_process_name}"
+
+  status_core_process_files_verify_text_file_size_lines=0
+  _slice "${param_process_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+  files_count=$?
+  files_index=1
+  apply_option_url="$2"
+  while [ $files_index -le $files_count ]
+  do
+    target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+    if core_verify_text_file_size_lines "${target_file}" "$1" "${apply_option_url}"
+    then
+      :
+    else
+      status_core_process_files_verify_text_file_size_lines=1
+    fi
+    if [ -n "${RESULT_core_verify_text_file_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_verify_text_file_size_lines_directive_option_url}"
+    fi
+    files_index=`expr "$files_index" + 1`
+  done
+
+  debug 'core_process_files_verify_text_file_size_lines' 'END'
+
+  return $status_core_process_files_verify_text_file_size_lines
+}
+
+core_process_files_output_text_file_size_lines()
+{
+  param_process_files="$1"
+  param_process_name="$2"
+  if [ $# -ge 2 ]
+  then
+    shift
+    shift
+  fi
+
+  debug 'core_process_files_output_text_file_size_lines' 'START'
+  debug 'core_process_files_output_text_file_size_lines' "param_process_files:${param_process_files}"
+  debug 'core_process_files_output_text_file_size_lines' "param_process_name:${param_process_name}"
+
+  status_core_process_files_output_text_file_size_lines=0
+  _slice "${param_process_files}" "${BSKYSHCLI_PATH_DELIMITER}"
+  files_count=$?
+  files_index=1
+  apply_option_url="$4"
+  while [ $files_index -le $files_count ]
+  do
+    target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
+    if core_output_text_file_size_lines "${target_file}" "$1" "$2" "$3" "${apply_option_url}"
+    then
+      :
+    else
+      status_core_process_files_output_text_file_size_lines=1
+    fi
+    if [ -n "${RESULT_core_output_text_file_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_output_text_file_size_lines_directive_option_url}"
+    fi
+    files_index=`expr "$files_index" + 1`
+  done
+
+  debug 'core_process_files_output_text_file_size_lines' 'END'
+
+  return $status_core_process_files_output_text_file_size_lines
+}
+
 core_verify_text_size_lines()
 {
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
   param_separator_prefix="$4"
-  param_url="$5"
+  param_core_verify_text_size_lines_url="$5"
 
   debug 'core_verify_text_size_lines' 'START'
   debug 'core_verify_text_size_lines' "param_stdin_text:${param_stdin_text}"
   debug 'core_verify_text_size_lines' "param_specified_text:${param_specified_text}"
   debug 'core_verify_text_size_lines' "param_text_files:${param_text_files}"
   debug 'core_verify_text_size_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_verify_text_size_lines' "param_url_long:${param_url}"
+  debug 'core_verify_text_size_lines' "param_core_verify_text_size_lines_url:${param_core_verify_text_size_lines_url}"
+
+  apply_option_url="${param_core_verify_text_size_lines_url}"
 
   status_core_verify_text_size_lines=0
 
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${apply_option_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_text_size_lines_directive_option_url}"
+    fi
     section_index=1
     while [ $section_index -le $section_count ]
     do
@@ -1094,8 +1267,12 @@ core_verify_text_size_lines()
 
   if [ -n "${param_specified_text}" ]
   then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${apply_option_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_text_size_lines_directive_option_url}"
+    fi
     section_index=1
     while [ $section_index -le $section_count ]
     do
@@ -1111,11 +1288,15 @@ core_verify_text_size_lines()
 
   if [ -n "${param_text_files}" ]
   then
-    if core_process_files "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}" "${param_url}"
+    if core_process_files_verify_text_file_size_lines "${param_text_files}" 'core_verify_text_file_size_lines' "${param_separator_prefix}" "${apply_option_url}"
     then
       :
     else
       status_core_verify_text_size_lines=1
+    fi
+    if [ -n "${RESULT_core_verify_text_file_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_verify_text_file_size_lines_directive_option_url}"
     fi
   fi
 
@@ -1435,10 +1616,12 @@ core_build_external_fragment()
 {
   param_core_build_external_fragment_linkcard_url="$1"
   param_linkcard_index="$2"
+  param_core_build_external_fragment_generate_thumb="$3"
 
   debug 'core_build_external_fragment' 'START'
   debug 'core_build_external_fragment' "param_core_build_external_fragment_linkcard_url:${param_core_build_external_fragment_linkcard_url}"
   debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_build_external_fragment' "param_core_build_external_fragment_generate_thumb:${param_core_build_external_fragment_generate_thumb}"
 
   if [ "${BSKYSHCLI_DEBUG_OFFLINE}" = 'ON' ]
   then
@@ -1461,52 +1644,60 @@ core_build_external_fragment()
         og_url=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:url" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:url" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
         if [ -n "${og_title}" ] && [ -n "${og_image}" ]
         then
-          check_required_command 'file'
-          check_result=$?
-          if [ $check_result -eq 0 ]
-          then
-            image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
-            mktemp_status=$?
-            debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
-            if [ $mktemp_status -eq 0 ]
+          if [ -n "${param_core_build_external_fragment_generate_thumb}" ]
+          then  # generate thumb
+            check_required_command 'file'
+            check_result=$?
+            if [ $check_result -eq 0 ]
             then
-              curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
-              get_image_status=$?
-              if [ $get_image_status -eq 0 ]
+              image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
+              mktemp_status=$?
+              debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
+              if [ $mktemp_status -eq 0 ]
               then
-                mime_type=`file --mime-type --brief "${image_temporary_path}"`
-                _startswith "${mime_type}" 'image/'
-                mime_type_check_status=$?
-                if [ "${mime_type_check_status}" -eq 0 ]
+                curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
+                get_image_status=$?
+                if [ $get_image_status -eq 0 ]
                 then
-                  upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
-                  api_status=$?
-                  if [ $api_status -eq 0 ]
+                  mime_type=`file --mime-type --brief "${image_temporary_path}"`
+                  _startswith "${mime_type}" 'image/'
+                  mime_type_check_status=$?
+                  if [ "${mime_type_check_status}" -eq 0 ]
                   then
-                    thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
-                    # $type is not variable
-                    # shellcheck disable=SC2016
-                    _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
-                    status=0
-                  else
-                    error_msg 'image file upload failed'
+                    upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
+                    api_status=$?
+                    if [ $api_status -eq 0 ]
+                    then
+                      thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
+                      # $type is not variable
+                      # shellcheck disable=SC2016
+                      _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+                      status=0
+                    else
+                      error_msg 'image file upload failed'
+                      status=1
+                    fi
+                  else  # file mime-type is not image
+                    error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
                     status=1
                   fi
-                else  # file mime-type is not image
-                  error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
+                else
+                  error_msg "image file download failed: ${og_image}"
                   status=1
                 fi
+                rm -f "${image_temporary_path}" 2>/dev/null
               else
-                error_msg "image file download failed: ${og_image}"
+                error_msg 'create image download temporary file failed'
                 status=1
               fi
-              rm -f "${image_temporary_path}" 2>/dev/null
-            else
-              error_msg 'create image download temporary file failed'
+            else  # file command not found
               status=1
             fi
-          else  # file command not found
-            status=1
+          else  # no generate thumb
+            # $type is not variable
+            # shellcheck disable=SC2016
+            _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+            status=0
           fi
         else  # OGP information not found
           html_title=`_p "${external_html}" | grep -o -i -E '< *title *>[^<]*< */ *title *>' | sed -E 's_< *title *>([^<]*)< */ *title *>_\1_g'`
@@ -2324,6 +2515,7 @@ core_output_pref_item()
   debug 'core_output_pref_item' 'END'
 }
 
+# 'create session (login)
 core_create_session()
 {
   param_handle="$1"
@@ -3007,20 +3199,20 @@ core_output_post()
 core_posts_single()
 {
   param_core_posts_single_text="$1"
-  param_langs="$2"
+  param_core_posts_single_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
-  param_url="$5"
-  param_preview="$6"
+  param_core_posts_single_url="$5"
+  param_preview_mode="$6"
   param_view_index="$7"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
-  debug 'core_posts_single' "param_langs:${param_langs}"
+  debug 'core_posts_single' "param_core_posts_single_langs:${param_core_posts_single_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
-  debug 'core_posts_single' "param_url:${param_url}"
-  debug 'core_posts_single' "param_preview:${param_preview}"
+  debug 'core_posts_single' "param_core_posts_single_url:${param_core_posts_single_url}"
+  debug 'core_posts_single' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_single' "param_view_index:${param_view_index}"
 
   created_at=`get_ISO8601UTCbs`
@@ -3030,15 +3222,23 @@ core_posts_single()
   else
     reply_fragment=''
   fi
-  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_url}"
+  case $param_preview_mode in
+    2)
+      generate_external_thumb=''
+      ;;
+    0|1|*)
+      generate_external_thumb='(defined)'
+      ;;
+  esac
+  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_core_posts_single_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
-  langs_fragment=`core_build_langs_fragment "${param_langs}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1 "${generate_external_thumb}"`
+  langs_fragment=`core_build_langs_fragment "${param_core_posts_single_langs}"`
   if [ -n "${reply_fragment}" ]
   then
     record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\",${reply_fragment}"
@@ -3068,7 +3268,7 @@ core_posts_single()
     _p "${record}"
     status_core_posts_single=0
   else
-    if [ -n "${param_preview}" ]
+    if [ "${param_preview_mode}" -ge 1 ]
     then
       # parent uri, record json, output-id, output-via, output-json, output-langs
       core_preview_posts_single "${param_parent_uri}" "${record}" '' '' "${param_output_json}" '' "${param_view_index}"
@@ -3332,6 +3532,13 @@ core_post()
   debug 'core_post' "param_preview:${param_preview}"
   debug 'core_post' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -3345,7 +3552,7 @@ core_post()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -3402,22 +3609,22 @@ core_post()
 core_posts_thread_lines()
 {
   param_core_posts_thread_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_thread_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
-  param_preview="$7"
+  param_core_posts_thread_lines_url="$6"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
-  debug 'core_posts_thread_lines' "param_langs:${param_langs}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_langs:${param_core_posts_thread_lines_langs}"
   debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_thread_lines' "param_url:${param_url}"
-  debug 'core_posts_thread_lines' "param_preview:${param_preview}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_url:${param_core_posts_thread_lines_url}"
+  debug 'core_posts_thread_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_thread_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_thread_lines_parent_uri="${param_parent_uri}"
@@ -3428,6 +3635,10 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_root_uri=''
   #RESULT_core_posts_thread_lines_uri_list=''
   RESULT_core_posts_thread_lines_count=0
+  unset RESULT_core_posts_thread_lines_directive_option_url
+  unset RESULT_core_posts_thread_lines_directive_option_langs
+  apply_option_url="${param_core_posts_thread_lines_url}"
+  apply_option_langs="${param_core_posts_thread_lines_langs}"
   status_core_posts_thread_lines=0
   count=0
   lines=''
@@ -3446,6 +3657,29 @@ core_posts_thread_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
@@ -3461,7 +3695,7 @@ core_posts_thread_lines()
             done
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3510,7 +3744,7 @@ core_posts_thread_lines()
         done
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3542,7 +3776,7 @@ core_posts_thread_lines()
       done
     fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${param_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3572,31 +3806,33 @@ core_posts_thread()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_thread_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
-  param_preview="$8"
+  param_core_posts_thread_url="$7"
+  param_preview_mode="$8"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
   debug 'core_posts_thread' "param_text_files:${param_text_files}"
-  debug 'core_posts_thread' "param_langs:${param_langs}"
+  debug 'core_posts_thread' "param_core_posts_thread_langs:${param_core_posts_thread_langs}"
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
-  debug 'core_posts_thread' "param_url:${param_url}"
-  debug 'core_posts_thread' "param_preview:${param_preview}"
+  debug 'core_posts_thread' "param_core_posts_thread_url:${param_core_posts_thread_url}"
+  debug 'core_posts_thread' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_core_posts_thread_langs}"
+  apply_option_url="${param_core_posts_thread_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3605,6 +3841,14 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -3612,7 +3856,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3621,6 +3865,14 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -3645,7 +3897,7 @@ core_posts_thread()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3654,6 +3906,14 @@ core_posts_thread()
           thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+        if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
+        then
+          apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
+        fi
+        if [ -n "${RESULT_core_posts_thread_lines_directive_option_url}" ]
+        then
+          apply_option_url="${RESULT_core_posts_thread_lines_directive_option_url}"
+        fi
       else
         error 'Processing has been canceled'
       fi
@@ -3661,34 +3921,36 @@ core_posts_thread()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     # depth='', parent-height=0
     core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_thread' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts_sibling_lines()
 {
   param_core_posts_sibling_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_sibling_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
-  param_preview="$7"
+  param_core_posts_sibling_lines_url="$6"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
-  debug 'core_posts_sibling_lines' "param_langs:${param_langs}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_langs:${param_core_posts_sibling_lines_langs}"
   debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_sibling_lines' "param_url:${param_url}"
-  debug 'core_posts_sibling_lines' "param_preview:${param_preview}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_url:${param_core_posts_sibling_lines_url}"
+  debug 'core_posts_sibling_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_sibling_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_sibling_lines_parent_uri="${param_parent_uri}"
@@ -3699,6 +3961,10 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_root_uri=''
   #RESULT_core_posts_sibling_lines_uri_list=''
   RESULT_core_posts_sibling_lines_count=0
+  unset RESULT_core_posts_sibling_lines_directive_option_url
+  unset RESULT_core_posts_sibling_lines_directive_option_langs
+  apply_option_url="${param_core_posts_sibling_lines_url}"
+  apply_option_langs="${param_core_posts_sibling_lines_langs}"
   status_core_posts_sibling_lines=0
   count=0
   lines=''
@@ -3717,6 +3983,29 @@ core_posts_sibling_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_posts_sibling_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              RESULT_core_posts_sibling_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           if [ "${param_view_index_lines}" -eq 0 ] && [ "${count}" -eq 0 ]
@@ -3726,7 +4015,7 @@ core_posts_sibling_lines()
             specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -3775,7 +4064,7 @@ core_posts_sibling_lines()
         specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -3807,7 +4096,7 @@ core_posts_sibling_lines()
       specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
     fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${param_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -3843,31 +4132,33 @@ core_posts_sibling()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_sibling_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
-  param_preview="$8"
+  param_core_posts_sibling_url="$7"
+  param_preview_mode="$8"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
   debug 'core_posts_sibling' "param_text_files:${param_text_files}"
-  debug 'core_posts_sibling' "param_langs:${param_langs}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_langs:${param_core_posts_sibling_langs}"
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
-  debug 'core_posts_sibling' "param_url:${param_url}"
-  debug 'core_posts_sibling' "param_preview:${param_preview}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_url:${param_core_posts_sibling_url}"
+  debug 'core_posts_sibling' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_core_posts_sibling_langs}"
+  apply_option_url="${param_core_posts_sibling_url}"
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3882,6 +4173,14 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -3889,7 +4188,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -3904,6 +4203,14 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -3928,7 +4235,7 @@ core_posts_sibling()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${param_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -3943,6 +4250,14 @@ core_posts_sibling()
           thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+        if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
+        then
+          apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
+        fi
+        if [ -n "${RESULT_core_posts_sibling_lines_directive_option_url}" ]
+        then
+          apply_option_url="${RESULT_core_posts_sibling_lines_directive_option_url}"
+        fi
       else
         error 'Processing has been canceled'
       fi
@@ -3950,34 +4265,36 @@ core_posts_sibling()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     # depth='', parent-height=0
     core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_sibling' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts_independence_lines()
 {
   param_core_posts_independence_lines_text="$1"
-  param_langs="$2"
+  param_core_posts_independence_lines_langs="$2"
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_separator_prefix="$5"
-  param_url="$6"
-  param_preview="$7"
+  param_core_posts_independence_lines_url="$6"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
-  debug 'core_posts_independence_lines' "param_langs:${param_langs}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_langs:${param_core_posts_independence_lines_langs}"
   debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
-  debug 'core_posts_independence_lines' "param_url:${param_url}"
-  debug 'core_posts_independence_lines' "param_preview:${param_preview}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_url:${param_core_posts_independence_lines_url}"
+  debug 'core_posts_independence_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_independence_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_independence_parent_uri=''
@@ -3988,6 +4305,10 @@ core_posts_independence_lines()
   #RESULT_core_posts_independence_lines_root_uri=''
   RESULT_core_posts_independence_lines_uri_list=''
   RESULT_core_posts_independence_lines_count=0
+  unset RESULT_core_posts_independence_lines_directive_option_url
+  unset RESULT_core_posts_independence_lines_directive_option_langs
+  apply_option_url="${param_core_posts_independence_lines_url}"
+  apply_option_langs="${param_core_posts_independence_lines_langs}"
   status_core_posts_independence_lines=0
   count=0
   lines=''
@@ -4006,11 +4327,34 @@ core_posts_independence_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -c 1`
+        directive_value=`_cut "${separator_remain}" -c 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_posts_independence_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              RESULT_core_posts_independence_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           specify_index=`expr "${param_view_index_lines}" + "${count}"`
-          if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -4048,7 +4392,7 @@ core_posts_independence_lines()
     then
       count=`expr "${count}" + 1`
       specify_index=`expr "${param_view_index_lines}" + "${count}"`
-      if core_posts_single "${lines}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -4069,7 +4413,7 @@ core_posts_independence_lines()
   else  # separator not specified : all lines as single content
     count=1
     specify_index=`expr "${param_view_index_lines}" + "${count}"`
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${param_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${param_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -4099,37 +4443,47 @@ core_posts_independence()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_langs="$4"
+  param_core_posts_independence_langs="$4"
   param_separator_prefix="$5"
   param_output_json="$6"
-  param_url="$7"
-  param_preview="$8"
+  param_core_posts_independence_url="$7"
+  param_preview_mode="$8"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
   debug 'core_posts_independence' "param_text_files:${param_text_files}"
-  debug 'core_posts_independence' "param_langs:${param_langs}"
+  debug 'core_posts_independence' "param_core_posts_independence_langs:${param_core_posts_independence_langs}"
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
-  debug 'core_posts_independence' "param_url:${param_url}"
-  debug 'core_posts_independence' "param_preview:${param_preview}"
+  debug 'core_posts_independence' "param_core_posts_independence_url:${param_core_posts_independence_url}"
+  debug 'core_posts_independence' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
   thread_root_uri=''
   post_uri_list=''
   view_index_posts=0
+  apply_option_langs="${param_core_posts_independence_langs}"
+  apply_option_url="${param_core_posts_independence_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -4137,13 +4491,21 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
+      then
+        apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+      fi
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
+      fi
     else
       error 'Processing has been canceled'
     fi
@@ -4168,13 +4530,21 @@ core_posts_independence()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${param_langs}" '' '' "${param_separator_prefix}" "${param_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
         #thread_root_uri=''
         post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+        if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
+        then
+          apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
+        fi
+        if [ -n "${RESULT_core_posts_independence_lines_directive_option_url}" ]
+        then
+          apply_option_url="${RESULT_core_posts_independence_lines_directive_option_url}"
+        fi
       else
         error 'Processing has been canceled'
       fi
@@ -4182,12 +4552,14 @@ core_posts_independence()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     core_output_post "${post_uri_list}" '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_independence' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts()
@@ -4200,7 +4572,7 @@ core_posts()
   param_separator_prefix="$6"
   param_output_json="$7"
   param_url="$8"
-  param_preview="$9"
+  param_preview_mode="$9"
 
   debug 'core_posts' 'START'
   debug 'core_posts' "param_mode:${param_mode}"
@@ -4211,26 +4583,43 @@ core_posts()
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
   debug 'core_posts' "param_url:${param_url}"
-  debug 'core_posts' "param_preview:${param_preview}"
+  debug 'core_posts' "param_preview_mode:${param_preview_mode}"
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
 
-  # size check
-  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
+  if [ -z "${param_output_json}" ]
+  then
+    _pn '[Post processing in progress...]'
+  fi
+
+  if [ "${param_preview_mode}" -lt 2 ]
+  then
+    # size check
+    core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
+  fi
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
   esac
+
+  debug 'core_posts' "posts count: ${posts_count}"
+  if [ "${posts_count}" -gt 10 ]
+  then
+    error "The total number of posts by standard input and --text and --text-files options exceeds the limit of 10. Detect count:${posts_count}"
+  fi
 
   debug 'core_posts' 'END'
 }
@@ -4268,6 +4657,13 @@ core_reply()
   debug 'core_reply' "param_preview:${param_preview}"
   debug 'core_reply' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -4284,7 +4680,7 @@ core_reply()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -4414,6 +4810,13 @@ core_quote()
   debug 'core_quote' "param_url:${param_url}"
   debug 'core_quote' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -4430,7 +4833,7 @@ core_quote()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -5230,13 +5633,19 @@ core_size()
   debug 'core_size' "param_output_json:${param_output_json}"
   debug 'core_size' "param_url:${param_url}"
 
+  apply_option_url="${param_url}"
+
   json_stack=''
   status=0
   # standard input
   if [ -n "${param_stdin_text}" ]
   then
-    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${param_stdin_text}" "${param_separator_prefix}" "${apply_option_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_url}" ]
+    then
+      apply_option_url="${RESULT_core_text_size_lines_url}"
+    fi
     section_index=1
     if [ -n "${json_stack}" ]
     then
@@ -5291,8 +5700,12 @@ core_size()
   # parameter specified text
   if [ -n "${param_specified_text}" ]
   then
-    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${param_url}"
+    core_text_size_lines "${param_specified_text}" "${param_separator_prefix}" "${apply_option_url}"
     section_count=$?
+    if [ -n "${RESULT_core_text_size_lines_directive_option_url}" ]
+    then
+      apply_option_url="${RESULT_core_text_size_lines_directive_option_url}"
+    fi
     section_index=1
     if [ -n "${json_stack}" ]
     then
@@ -5349,7 +5762,11 @@ core_size()
   then
     if [ -n "${param_output_json}" ]
     then
-      json_files=`core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url}"`
+      json_files=`core_process_files_output_text_file_size_lines "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${apply_option_url}"`
+      if [ -n "${RESULT_core_output_text_file_size_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_output_text_file_size_lines_directive_option_url}"
+      fi
       json_files=`_p "${json_files}" | jq --slurp -c '.'`
       json_files="\"files\":${json_files}"
       if [ -n "${json_stack}" ]
@@ -5358,7 +5775,11 @@ core_size()
       fi
       json_stack="${json_stack}${json_files}"
     else
-      core_process_files "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${param_url}"
+      core_process_files_output_text_file_size_lines "${param_text_files}" 'core_output_text_file_size_lines' "${param_separator_prefix}" "${param_count_only}" "${param_output_json}" "${apply_option_url}"
+      if [ -n "${RESULT_core_output_text_file_size_lines_directive_option_url}" ]
+      then
+        apply_option_url="${RESULT_core_output_text_file_size_lines_directive_option_url}"
+      fi
     fi
   fi
   json_stack="{${json_stack}}"
@@ -5368,4 +5789,137 @@ core_size()
   fi
 
   debug 'core_size' 'END'
+}
+
+core_update()
+{
+  param_skip_confirm="$1"
+  param_leave_updater="$2"
+  param_preview="$3"
+
+  debug 'core_update' 'START'
+  debug 'core_update' "param_skip_confirm:${param_skip_confirm}"
+  debug 'core_update' "param_leave_updater:${param_leave_updater}"
+  debug 'core_update' "param_preview:${param_preview}"
+
+  github_latest_url='https://api.github.com/repos/bills-appworks/bsky-sh-cli/releases/latest'
+  github_tarball_url_prefix='https://github.com/bills-appworks/bsky-sh-cli/tarball/refs/heads'
+  tarball_filename='bsky-sh-cli.tar.gz'
+
+  # current information
+  version="v${BSKYSHCLI_CLI_VERSION}"
+  # '$' is not variable use
+  # shellcheck disable=SC2016
+  bsky_dir=`_p "${FILE_DIR}" | sed -E 's_(.*)/[^/]*$_\1_g'`
+  bsky_which=`which bsky`
+  _pn "Current version: ${version}"
+  _pn "Update target directory: ${bsky_dir}"
+  _pn "bsky in PATH environment variable (`whoami`): ${bsky_which}"
+
+  # check update target
+  if [ -w "${bsky_dir}" ]
+  then
+    :
+  else
+    error "The directory to be updated cannot be updated by the current user.
+Consider running as a superuser using the sudo command.
+Example:
+sudo ${FILE_DIR}/bsky update"
+  fi
+
+  # download latest version
+  if github_latest=`curl -s -X GET "${github_latest_url}"`
+  then
+    :
+  else
+    error "GitHub latest version query error: ${github_latest_url}"
+  fi
+  release_tag=`_p "${github_latest}" | jq -r '.tag_name'`
+  if update_temporary_path=`mktemp --tmpdir -d bsky_sh_cli.XXXXXXXXXX`
+  then
+    :
+  else
+    error 'Failed to make temporary directory'
+  fi
+  _pn "Update temporary directory: ${update_temporary_path}"
+  _pn "Updater download source: ${github_tarball_url_prefix}/${release_tag}"
+  _p "Download latest version..."
+  if curl -s -L "${github_tarball_url_prefix}/${release_tag}" -o "${update_temporary_path}/${tarball_filename}"
+  then
+    :
+  else
+    error "Failed to download latest asset: ${github_tarball_url_prefix}/${release_tag}"
+  fi
+  _pn "Done"
+
+  # expand tarball
+  # tar root directory (bills-appworks-bsky-sh-cli-<commit ID>/) skip (--strip-components 1) 
+  _p "Expand latest version assets..."
+  if tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
+  then
+    :
+  else
+    error "Failed to expand latest asset: ${update_temporary_path}/${tarball_filename}"
+  fi
+  _pn "Done"
+
+  if [ -z "${param_skip_confirm}" ]
+  then
+    confirm_prompt='Are you sure you want to update with the above configuration? [y/n]: '
+    if [ -n "${param_preview}" ]
+    then  # preview
+      _pn "${confirm_prompt}(skip in preview mode)"
+    else  # actual
+      if inputyn "${confirm_prompt}"
+      then
+        :
+      else
+        _pn 'Update canceled.'
+        exit 1
+      fi
+    fi
+  fi
+
+  if [ -n "${param_preview}" ]
+  then
+    _pn '(preview mode) The following command will be executed.'
+    _pn "/bin/sh ${update_temporary_path}/install.sh --install-dir ${bsky_dir} --skip-config-path --skip-rcfile-copy --skip-confirm"
+  else
+    # update (install)
+    _pn ">>>>>>>> ${update_temporary_path}/install.sh START"
+    /bin/sh "${update_temporary_path}/install.sh" --install-dir "${bsky_dir}" --skip-config-path --skip-rcfile-copy --skip-confirm
+    status=$?
+    _pn ">>>>>>>> ${update_temporary_path}/install.sh END"
+  fi
+
+  # remove updater (download and expand files)
+  if [ -n "${param_leave_updater}" ]
+  then
+    _pn 'Leave the following updater file:'
+    _pn "${update_temporary_path}"
+  else
+    _p 'Remove updater files...'
+    
+    if rm -rf "${update_temporary_path}"
+    then
+      :
+    else
+      error "Failed to remove updater: ${update_temporary_path}"
+    fi
+    _pn "Done"
+  fi
+
+  if [ -n "${param_preview}" ]
+  then
+    _pn '(preview mode) Update preview complete.'
+  else
+    if [ "${status}" -eq 0 ]
+    then
+      _pn 'Update complete.'
+    else
+      error "Failed to update. install.sh status code:${status}"
+    fi
+  fi
+
+  debug 'core_update' 'END'
 }
