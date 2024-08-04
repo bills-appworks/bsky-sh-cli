@@ -1616,10 +1616,12 @@ core_build_external_fragment()
 {
   param_core_build_external_fragment_linkcard_url="$1"
   param_linkcard_index="$2"
+  param_core_build_external_fragment_generate_thumb="$3"
 
   debug 'core_build_external_fragment' 'START'
   debug 'core_build_external_fragment' "param_core_build_external_fragment_linkcard_url:${param_core_build_external_fragment_linkcard_url}"
   debug 'core_build_external_fragment' "param_linkcard_index:${param_linkcard_index}"
+  debug 'core_build_external_fragment' "param_core_build_external_fragment_generate_thumb:${param_core_build_external_fragment_generate_thumb}"
 
   if [ "${BSKYSHCLI_DEBUG_OFFLINE}" = 'ON' ]
   then
@@ -1642,52 +1644,60 @@ core_build_external_fragment()
         og_url=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:url" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:url" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
         if [ -n "${og_title}" ] && [ -n "${og_image}" ]
         then
-          check_required_command 'file'
-          check_result=$?
-          if [ $check_result -eq 0 ]
-          then
-            image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
-            mktemp_status=$?
-            debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
-            if [ $mktemp_status -eq 0 ]
+          if [ -n "${param_core_build_external_fragment_generate_thumb}" ]
+          then  # generate thumb
+            check_required_command 'file'
+            check_result=$?
+            if [ $check_result -eq 0 ]
             then
-              curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
-              get_image_status=$?
-              if [ $get_image_status -eq 0 ]
+              image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
+              mktemp_status=$?
+              debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
+              if [ $mktemp_status -eq 0 ]
               then
-                mime_type=`file --mime-type --brief "${image_temporary_path}"`
-                _startswith "${mime_type}" 'image/'
-                mime_type_check_status=$?
-                if [ "${mime_type_check_status}" -eq 0 ]
+                curl -o "${image_temporary_path}" "${og_image}" 2>/dev/null
+                get_image_status=$?
+                if [ $get_image_status -eq 0 ]
                 then
-                  upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
-                  api_status=$?
-                  if [ $api_status -eq 0 ]
+                  mime_type=`file --mime-type --brief "${image_temporary_path}"`
+                  _startswith "${mime_type}" 'image/'
+                  mime_type_check_status=$?
+                  if [ "${mime_type_check_status}" -eq 0 ]
                   then
-                    thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
-                    # $type is not variable
-                    # shellcheck disable=SC2016
-                    _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
-                    status=0
-                  else
-                    error_msg 'image file upload failed'
+                    upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
+                    api_status=$?
+                    if [ $api_status -eq 0 ]
+                    then
+                      thumb_fragment=`_p "${upload_blob}" | jq -c -M '.blob'`
+                      # $type is not variable
+                      # shellcheck disable=SC2016
+                      _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","thumb":'"${thumb_fragment}"',"title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+                      status=0
+                    else
+                      error_msg 'image file upload failed'
+                      status=1
+                    fi
+                  else  # file mime-type is not image
+                    error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
                     status=1
                   fi
-                else  # file mime-type is not image
-                  error_msg "link destination site specified image file is not image - mime-type:${mime_type}"
+                else
+                  error_msg "image file download failed: ${og_image}"
                   status=1
                 fi
+                rm -f "${image_temporary_path}" 2>/dev/null
               else
-                error_msg "image file download failed: ${og_image}"
+                error_msg 'create image download temporary file failed'
                 status=1
               fi
-              rm -f "${image_temporary_path}" 2>/dev/null
-            else
-              error_msg 'create image download temporary file failed'
+            else  # file command not found
               status=1
             fi
-          else  # file command not found
-            status=1
+          else  # no generate thumb
+            # $type is not variable
+            # shellcheck disable=SC2016
+            _p '{"$type":"app.bsky.embed.external","external":{"description":"'"${og_description}"'","title":"'"${og_title}"'","uri":"'"${og_url}"'"}}'
+            status=0
           fi
         else  # OGP information not found
           html_title=`_p "${external_html}" | grep -o -i -E '< *title *>[^<]*< */ *title *>' | sed -E 's_< *title *>([^<]*)< */ *title *>_\1_g'`
@@ -3193,7 +3203,7 @@ core_posts_single()
   param_parent_uri="$3"
   param_parent_cid="$4"
   param_core_posts_single_url="$5"
-  param_preview="$6"
+  param_preview_mode="$6"
   param_view_index="$7"
 
   debug 'core_posts_single' 'START'
@@ -3202,7 +3212,7 @@ core_posts_single()
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_single' "param_core_posts_single_url:${param_core_posts_single_url}"
-  debug 'core_posts_single' "param_preview:${param_preview}"
+  debug 'core_posts_single' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_single' "param_view_index:${param_view_index}"
 
   created_at=`get_ISO8601UTCbs`
@@ -3212,6 +3222,14 @@ core_posts_single()
   else
     reply_fragment=''
   fi
+  case $param_preview_mode in
+    2)
+      generate_external_thumb=''
+      ;;
+    0|1|*)
+      generate_external_thumb='(defined)'
+      ;;
+  esac
   core_build_text_rels "${param_core_posts_single_text}" 1 "${param_core_posts_single_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
@@ -3219,7 +3237,7 @@ core_posts_single()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" 1 "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_core_posts_single_langs}"`
   if [ -n "${reply_fragment}" ]
   then
@@ -3250,7 +3268,7 @@ core_posts_single()
     _p "${record}"
     status_core_posts_single=0
   else
-    if [ -n "${param_preview}" ]
+    if [ "${param_preview_mode}" -ge 1 ]
     then
       # parent uri, record json, output-id, output-via, output-json, output-langs
       core_preview_posts_single "${param_parent_uri}" "${record}" '' '' "${param_output_json}" '' "${param_view_index}"
@@ -3514,6 +3532,13 @@ core_post()
   debug 'core_post' "param_preview:${param_preview}"
   debug 'core_post' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -3527,7 +3552,7 @@ core_post()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -3589,7 +3614,7 @@ core_posts_thread_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_core_posts_thread_lines_url="$6"
-  param_preview="$7"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_thread_lines' 'START'
@@ -3599,7 +3624,7 @@ core_posts_thread_lines()
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_thread_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_url:${param_core_posts_thread_lines_url}"
-  debug 'core_posts_thread_lines' "param_preview:${param_preview}"
+  debug 'core_posts_thread_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_thread_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_thread_lines_parent_uri="${param_parent_uri}"
@@ -3670,7 +3695,7 @@ core_posts_thread_lines()
             done
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3719,7 +3744,7 @@ core_posts_thread_lines()
         done
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3751,7 +3776,7 @@ core_posts_thread_lines()
       done
     fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -3785,7 +3810,7 @@ core_posts_thread()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_core_posts_thread_url="$7"
-  param_preview="$8"
+  param_preview_mode="$8"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
@@ -3795,7 +3820,7 @@ core_posts_thread()
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
   debug 'core_posts_thread' "param_core_posts_thread_url:${param_core_posts_thread_url}"
-  debug 'core_posts_thread' "param_preview:${param_preview}"
+  debug 'core_posts_thread' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
@@ -3807,7 +3832,7 @@ core_posts_thread()
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3831,7 +3856,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3872,7 +3897,7 @@ core_posts_thread()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -3896,13 +3921,15 @@ core_posts_thread()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     # depth='', parent-height=0
     core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_thread' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts_sibling_lines()
@@ -3913,7 +3940,7 @@ core_posts_sibling_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_core_posts_sibling_lines_url="$6"
-  param_preview="$7"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_sibling_lines' 'START'
@@ -3923,7 +3950,7 @@ core_posts_sibling_lines()
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_sibling_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_url:${param_core_posts_sibling_lines_url}"
-  debug 'core_posts_sibling_lines' "param_preview:${param_preview}"
+  debug 'core_posts_sibling_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_sibling_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_sibling_lines_parent_uri="${param_parent_uri}"
@@ -3988,7 +4015,7 @@ core_posts_sibling_lines()
             specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -4037,7 +4064,7 @@ core_posts_sibling_lines()
         specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -4069,7 +4096,7 @@ core_posts_sibling_lines()
       specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
     fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -4109,7 +4136,7 @@ core_posts_sibling()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_core_posts_sibling_url="$7"
-  param_preview="$8"
+  param_preview_mode="$8"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
@@ -4119,7 +4146,7 @@ core_posts_sibling()
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
   debug 'core_posts_sibling' "param_core_posts_sibling_url:${param_core_posts_sibling_url}"
-  debug 'core_posts_sibling' "param_preview:${param_preview}"
+  debug 'core_posts_sibling' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
@@ -4131,7 +4158,7 @@ core_posts_sibling()
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4161,7 +4188,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4208,7 +4235,7 @@ core_posts_sibling()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -4238,13 +4265,15 @@ core_posts_sibling()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     # depth='', parent-height=0
     core_thread "${thread_root_uri}" '' 0 '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_sibling' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts_independence_lines()
@@ -4255,7 +4284,7 @@ core_posts_independence_lines()
   param_parent_cid="$4"
   param_separator_prefix="$5"
   param_core_posts_independence_lines_url="$6"
-  param_preview="$7"
+  param_preview_mode="$7"
   param_view_index_lines="$8"
 
   debug 'core_posts_independence_lines' 'START'
@@ -4265,7 +4294,7 @@ core_posts_independence_lines()
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
   debug 'core_posts_independence_lines' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_url:${param_core_posts_independence_lines_url}"
-  debug 'core_posts_independence_lines' "param_preview:${param_preview}"
+  debug 'core_posts_independence_lines' "param_preview_mode:${param_preview_mode}"
   debug 'core_posts_independence_lines' "param_view_index_lines:${param_view_index_lines}"
 
   core_posts_independence_parent_uri=''
@@ -4325,7 +4354,7 @@ core_posts_independence_lines()
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           specify_index=`expr "${param_view_index_lines}" + "${count}"`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -4363,7 +4392,7 @@ core_posts_independence_lines()
     then
       count=`expr "${count}" + 1`
       specify_index=`expr "${param_view_index_lines}" + "${count}"`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -4384,7 +4413,7 @@ core_posts_independence_lines()
   else  # separator not specified : all lines as single content
     count=1
     specify_index=`expr "${param_view_index_lines}" + "${count}"`
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview}" "${specify_index}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -4418,7 +4447,7 @@ core_posts_independence()
   param_separator_prefix="$5"
   param_output_json="$6"
   param_core_posts_independence_url="$7"
-  param_preview="$8"
+  param_preview_mode="$8"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
@@ -4428,7 +4457,7 @@ core_posts_independence()
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
   debug 'core_posts_independence' "param_core_posts_independence_url:${param_core_posts_independence_url}"
-  debug 'core_posts_independence' "param_preview:${param_preview}"
+  debug 'core_posts_independence' "param_preview_mode:${param_preview_mode}"
 
   parent_uri=''
   parent_cid=''
@@ -4440,7 +4469,7 @@ core_posts_independence()
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
@@ -4462,7 +4491,7 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
@@ -4501,7 +4530,7 @@ core_posts_independence()
         fi
         error_msg "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview}" "${view_index_posts}"
+      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
@@ -4523,12 +4552,14 @@ core_posts_independence()
     done
   fi
 
-  if [ -z "${param_preview}" ]
+  if [ "${param_preview_mode}" -eq 0 ]
   then
     core_output_post "${post_uri_list}" '' '' "${param_output_json}"
   fi
 
   debug 'core_posts_independence' 'END'
+
+  return "${view_index_posts}"
 }
 
 core_posts()
@@ -4541,7 +4572,7 @@ core_posts()
   param_separator_prefix="$6"
   param_output_json="$7"
   param_url="$8"
-  param_preview="$9"
+  param_preview_mode="$9"
 
   debug 'core_posts' 'START'
   debug 'core_posts' "param_mode:${param_mode}"
@@ -4552,26 +4583,43 @@ core_posts()
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
   debug 'core_posts' "param_url:${param_url}"
-  debug 'core_posts' "param_preview:${param_preview}"
+  debug 'core_posts' "param_preview_mode:${param_preview_mode}"
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
 
-  # size check
-  core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
+  if [ -z "${param_output_json}" ]
+  then
+    _pn '[Post processing in progress...]'
+  fi
+
+  if [ "${param_preview_mode}" -lt 2 ]
+  then
+    # size check
+    core_verify_text_size_lines "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_separator_prefix}" "${param_url}"
+  fi
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      posts_count=$?
       ;;
   esac
+
+  debug 'core_posts' "posts count: ${posts_count}"
+  if [ "${posts_count}" -gt 10 ]
+  then
+    error "The total number of posts by standard input and --text and --text-files options exceeds the limit of 10. Detect count:${posts_count}"
+  fi
 
   debug 'core_posts' 'END'
 }
@@ -4609,6 +4657,13 @@ core_reply()
   debug 'core_reply' "param_preview:${param_preview}"
   debug 'core_reply' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -4625,7 +4680,7 @@ core_reply()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
@@ -4755,6 +4810,13 @@ core_quote()
   debug 'core_quote' "param_url:${param_url}"
   debug 'core_quote' "param_image_alt:$*"
 
+  if [ -n "${param_preview}" ]
+  then
+    generate_external_thumb=''
+  else
+    generate_external_thumb='(defined)'
+  fi
+
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
@@ -4771,7 +4833,7 @@ core_quote()
   tag_facets_fragment=`core_build_tag_facets_fragment "${RESULT_core_build_text_rels_tag_facets_element}"`
   mention_facets_fragment=`core_build_mention_facets_fragment "${RESULT_core_build_text_rels_mention_facets_element}"`
   facets_fragment=`create_json_array "${link_facets_fragment}" "${tag_facets_fragment}" "${mention_facets_fragment}"`
-  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}"`
+  external_fragment=`core_build_external_fragment "${RESULT_core_build_text_rels_linkcard_url}" "${param_linkcard_index}" "${generate_external_thumb}"`
   langs_fragment=`core_build_langs_fragment "${param_langs}"`
   case $actual_image_count in
     0|1|2|3|4)
