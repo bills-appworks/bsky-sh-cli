@@ -12,7 +12,7 @@
 targets='
   shellcheck.sh
   install.sh
-  direct-install.sh
+  download-install.sh
   bin/bsky
   lib/bsky_core.sh
   lib/util.sh
