@@ -26,6 +26,7 @@ sudo sh download-install.sh
 When running as a general user:
 ```
 sh download-install.sh
+```
 
 In addition to the above, there is also a method such as downloading the release archive and running the installer inside.
 
