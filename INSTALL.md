@@ -1,7 +1,58 @@
 # About installation
 
-## Overview
-You can install this tool in your environment by running the simple installer: `install.sh` included in the provided file.
+This document explains how to install and update after installation.
+
+- How to install
+  - [Run download installer](#run-download-installer)
+  - [Run installer in release archive](#run-installer-in-release-archive)
+  - [Manual installation](#manual-installation)
+- How to update
+  - [Execute update command](#execute-update-command)
+
+## Run download installer
+
+### Overview
+By downloading and running one file in the GitHub repository, the following installation-related processes will be performed.
+1. Download the latest release archive to a temporary directory
+2. Extract the downloaded release archive in a temporary directory
+3. Run the installer (`install.sh`) in the release archive
+4. Delete temporary directory
+
+### How to run
+- Run the following command. This will save the download installer in the current directory to download and install.
+```
+curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-install.sh -O
+```
+- Run the download installer with the following command. If you want all users to use it, run it as super user.
+
+For super user：
+```
+sudo sh download-install.sh
+```
+For general users:
+```
+sh download-install.sh
+```
+
+> [!WARNING]
+> Direct execution like below is not recommended.
+> ```
+> curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-install.sh | sh
+> ```
+> Input waiting within the installer is disabled. As a result, the installation method cannot be selected, and the final confirmation waiting process loops endlessly, making installation impossible.
+> ```
+> sudo sh <(https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-install.sh)
+> ```
+> If you run the downloaded file as a super user using standard input, execution may fail depending on the environment for security reasons.
+
+- When executed, the processing described in the overview above will be performed. For information on executing the installer in the release archive, please refer to [next section](#run-installer-in-release-archive). When the installation is complete, the files extracted to the temporary directory will be deleted. If you cancel it, it will remain so please delete it manually. The temporary directory can be confirmed by the "Install temporary directory:" line displayed during installation.
+
+- If you specify an option parameter, it will be passed as is as an option parameter to the installer in the release archive.
+
+## Run installer in release archive
+
+### Overview
+You can install this tool in your environment by running the simple installer: `install.sh` included in the latest release archive.
 
 The following describes what to do. If it does not meet your needs, please refer to [Manual installation](#manual-installation).
 
@@ -9,7 +60,7 @@ If necessary, you will be asked to confirm execution or input during installatio
 
 If you create or modify (add) a login script that sets the environment variable `PATH` during the installation process, the environment variable `PATH` will not be set immediately after the installation is completed. To execute the `bsky` command without specifying a path, log in to the shell again.
 
-## What `install.sh` does
+### What `install.sh` does
 1. Check the existence of some files under the subdirectories `bin` and `lib`. It is assumed that the directory and file structure is the same as provided.
 2. Check the existence of the commands required when running this tool. If it does not exist, please install the necessary tools in advance. The following commands are checked (subject to change depending on version):
    - Required
@@ -48,7 +99,7 @@ If you create or modify (add) a login script that sets the environment variable 
 6. The contents specified above will be displayed in a list and you will be asked to confirm execution. If there is no problem with the content, please continue.
 7. Executes the specified processing.
 
-## `install.sh` command options
+### `install.sh` command options
 You can change the behavior by specifying the following options when running `install.sh`.
 - `--install-dir <directory path>`
   - Specify the path specified by `<directory path>` as the installation destination directory.
@@ -108,3 +159,9 @@ Please copy the following directories and files included in the provided files t
       - For information on how to write `<language code>`, see [`install.sh` command options](#installsh-command-options), see the description of the `--config-langs` option.
 
 To run the `bsky` command without specifying a path, edit the login script according to your environment and add the full path of the `bin` directory to the environment variable `PATH`.
+
+## Execute update command
+
+If it has already been installed, you can update the tool itself to the latest version using the installed bsky command (`bsky update`).
+
+See the [command line reference](https://github.com/bills-appworks/bsky-sh-cli/wiki/Command-Line-Reference#tool-update-update) for details.
