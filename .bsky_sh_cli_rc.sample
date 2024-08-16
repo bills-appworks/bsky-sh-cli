@@ -44,6 +44,8 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Like:\($LIKE_COUNT)'
 # template for separator field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
+# template for separator field in parent post
+#BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT='|'
 # template for output id placeholder to post templates (meta/head/body/tail/separator)
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
 # template for output via placeholder to post templates (meta/head/body/tail/separator)

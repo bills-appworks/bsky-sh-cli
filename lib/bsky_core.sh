@@ -30,9 +30,16 @@ FEED_PARSE_PROCEDURE='
   .feed |
   to_entries |
   foreach .[] as $feed_entry (0; 0;
-    $feed_entry.value.post as $post_fragment |
+    $feed_entry.value as $feed_fragment |
     ($feed_entry.key + 1) as $view_index |
-    output_post($view_index; $post_fragment)
+    $feed_fragment |
+    if has("reply")
+    then
+      output_post([$view_index, "1"] | join("-"); $feed_fragment.reply.parent; true),
+      output_post($view_index; $feed_fragment.post; false)
+    else
+      output_post($view_index; $feed_fragment.post; false)
+    end
   )
 '
 # shellcheck disable=SC2016
@@ -1878,6 +1885,7 @@ core_create_post_chunk()
   view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_post_separator_parent=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # disable via to quoted
   view_template_quoted_post_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
@@ -1966,7 +1974,7 @@ core_create_post_chunk()
           "'"${view_template_post_external_body}"'"
         end
       ;
-      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted):
+      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent):
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
         "" as $VIA |
@@ -2017,14 +2025,14 @@ core_create_post_chunk()
                     output_post_external(view_index; $embed; true)
                   )
                 )
-              else
+              else  # not has("embeds")
                 empty
               end
             )
-          else
+          else  # not before embed
             empty
           end
-        else
+        else  # not quoted
           view_index as $VIEW_INDEX |
           post_fragment.record.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
           post_fragment.record.text as $TEXT |
@@ -2088,18 +2096,25 @@ core_create_post_chunk()
                     output_facets_features_mention(.; $facet.features[].did; $mention_text)
                   )
                 )
-              else
+              else  # not has("facets")
                 empty
               end
             )
-          else
+          else  # not before embed
             "'"${view_template_post_tail}"'",
-            "'"${view_template_post_separator}"'"
+            (
+              if is_parent
+              then
+                "'"${view_template_post_separator_parent}"'"
+              else
+                "'"${view_template_post_separator}"'"
+              end
+            )
           end
         end
       ;
-      def output_post(view_index; post_fragment):
-        output_post_part(true; view_index; post_fragment; false),
+      def output_post(view_index; post_fragment; is_parent):
+        output_post_part(true; view_index; post_fragment; false; is_parent),
         (
           post_fragment |
           if has("embed")
@@ -2116,14 +2131,14 @@ core_create_post_chunk()
               ),
               (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
-                output_post_part(true; view_index; post_fragment.embed.record.record; true)
+                output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent)
               )
             ),
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |
               (
                 select(.embed.record."$type" == "app.bsky.embed.record#viewRecord") |
-                output_post_part(true; view_index; post_fragment.embed.record; true)
+                output_post_part(true; view_index; post_fragment.embed.record; true; is_parent)
               ),
               (
                 select(.embed.record."$type" == "app.bsky.feed.defs#generatorView") |
@@ -2138,7 +2153,10 @@ core_create_post_chunk()
             empty
           end
         ),
-        output_post_part(false; view_index; post_fragment; false)
+        output_post_part(false; view_index; post_fragment; false; is_parent)
+      ;
+      def output_parent_thread:
+        "'"${view_template_post_separator_parent}"'"
       ;
      '
 
@@ -2154,7 +2172,7 @@ core_create_session_chunk()
   # shellcheck disable=SC2016
   view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)\"'
   # shellcheck disable=SC2016
-  _p 'def output_post(view_index; post_fragment):
+  _p 'def output_post(view_index; post_fragment; is_parent):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
@@ -2196,6 +2214,9 @@ core_create_session_chunk()
             empty
           end
         )
+      ;
+      def output_parent_thread:
+        empty
       ;
      '
 
@@ -2972,7 +2993,7 @@ core_preview_reply()
   thread_parse_procedure_target='
     "-1" as $view_index |
     .thread.post as $post_fragment |
-    output_post($view_index; $post_fragment)
+    output_post($view_index; $post_fragment; true)
   '
   # depth='', parent_height=0
   result=`api app.bsky.feed.getPostThread "${param_target_uri}" '' 0`
@@ -3446,7 +3467,7 @@ core_thread()
         foreach .[] as $feed_entry (0; 0;
           ($feed_entry.key * -1 - 1) as $view_index |
           $feed_entry.value.post as $post_fragment |
-          output_post($view_index; $post_fragment)
+          output_post($view_index; $post_fragment; true)
         );
       .thread |
       if has("parent")
@@ -3460,7 +3481,9 @@ core_thread()
     thread_parse_procedure_target='
       0 as $view_index |
       .thread.post as $post_fragment |
-      output_post($view_index; $post_fragment)
+      (.thread.replies | length) as $reply_count |
+      ($reply_count > 0) as $has_child |
+      output_post($view_index; $post_fragment; $has_child)
     '
     # shellcheck disable=SC2016
     thread_parse_procedure_replies='
@@ -3471,14 +3494,20 @@ core_thread()
         $node.post as $post_fragment |
         $index_str[1:] as $view_index |
         $node.replies |
-        reverse |
+        reverse as $reverse_replies |
         if $sibling_index == 0
         then
           empty
         else
-          output_post($view_index; $post_fragment)
+          if $sibling_index > 1
+          then
+            output_parent_thread
+          else
+            empty
+          end,
+          output_post($view_index; $post_fragment; ($reverse_replies | length) > 0)
         end,
-        foreach .[] as $reply (0; . + 1;
+        foreach $reverse_replies[] as $reply (0; . + 1;
           output_replies($reply; .; "\($index_str)-\(.)")
         )
       ;
@@ -5523,6 +5552,8 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_QUOTE'
@@ -5556,6 +5587,7 @@ core_info_meta_config()
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE='${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}'"
