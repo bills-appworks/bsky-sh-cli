@@ -35,10 +35,10 @@ FEED_PARSE_PROCEDURE='
     $feed_fragment |
     if has("reply")
     then
-      output_post([$view_index, "1"] | join("-"); $feed_fragment.reply.parent; true),
-      output_post($view_index; $feed_fragment.post; false)
+      output_post([$view_index, "1"] | join("-"); $feed_fragment.reply.parent; true; $feed_fragment.reply; $feed_fragment.reason),
+      output_post($view_index; $feed_fragment.post; false; $feed_fragment.reply; $feed_fragment.reason)
     else
-      output_post($view_index; $feed_fragment.post; false)
+      output_post($view_index; $feed_fragment.post; false; $feed_fragment.reply; $feed_fragment.reason)
     end
   )
 '
@@ -1974,7 +1974,7 @@ core_create_post_chunk()
           "'"${view_template_post_external_body}"'"
         end
       ;
-      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent):
+      def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent; reply_fragment; reason_fragment):
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
         "" as $VIA |
@@ -2041,6 +2041,40 @@ core_create_post_chunk()
           if is_before_embed
           then
             "'"${view_template_post_meta}"'",
+            if is_parent
+            then
+              if reply_fragment != null
+              then
+                if reply_fragment.grandparentAuthor != null
+                then
+                  if reply_fragment.grandparentAuthor.did == "'"${SESSION_DID}"'"
+                  then
+                    "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX}${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF}${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX}"'"
+                  else
+                    "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX}"'\(reply_fragment.grandparentAuthor.displayName)'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX}"'"
+                  end
+                else
+                  empty
+                end
+              else  # reply_fragment == null
+                empty
+              end
+            else  # not is_parent
+              if reason_fragment != null
+              then
+                (
+                  select(reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost") |
+                  if reason_fragment.by.did == "'"${SESSION_DID}"'"
+                  then
+                    "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX}${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF}${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX}"'"
+                  else
+                    "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX}"'\(reason_fragment.by.displayName)'"${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX}"'"
+                  end
+                )
+              else
+                empty
+              end
+            end,
             "'"${view_template_post_head}"'",
             "'"${view_template_post_body}"'",
             (
@@ -2113,8 +2147,8 @@ core_create_post_chunk()
           end
         end
       ;
-      def output_post(view_index; post_fragment; is_parent):
-        output_post_part(true; view_index; post_fragment; false; is_parent),
+      def output_post(view_index; post_fragment; is_parent; reply_fragment; reason_fragment):
+        output_post_part(true; view_index; post_fragment; false; is_parent; reply_fragment; reason_fragment),
         (
           post_fragment |
           if has("embed")
@@ -2131,14 +2165,14 @@ core_create_post_chunk()
               ),
               (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
-                output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent)
+                output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent; reply_fragment; reason_fragment)
               )
             ),
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |
               (
                 select(.embed.record."$type" == "app.bsky.embed.record#viewRecord") |
-                output_post_part(true; view_index; post_fragment.embed.record; true; is_parent)
+                output_post_part(true; view_index; post_fragment.embed.record; true; is_parent; reply_fragment; reason_fragment)
               ),
               (
                 select(.embed.record."$type" == "app.bsky.feed.defs#generatorView") |
@@ -2153,7 +2187,7 @@ core_create_post_chunk()
             empty
           end
         ),
-        output_post_part(false; view_index; post_fragment; false; is_parent)
+        output_post_part(false; view_index; post_fragment; false; is_parent; reply_fragment; reason_fragment)
       ;
       def output_parent_thread:
         "'"${view_template_post_separator_parent}"'"
@@ -2172,7 +2206,7 @@ core_create_session_chunk()
   # shellcheck disable=SC2016
   view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)\"'
   # shellcheck disable=SC2016
-  _p 'def output_post(view_index; post_fragment; is_parent):
+  _p 'def output_post(view_index; post_fragment; is_parent; reply_fragment; reason_fragment):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
@@ -2993,7 +3027,7 @@ core_preview_reply()
   thread_parse_procedure_target='
     "-1" as $view_index |
     .thread.post as $post_fragment |
-    output_post($view_index; $post_fragment; true)
+    output_post($view_index; $post_fragment; true; null; null)
   '
   # depth='', parent_height=0
   result=`api app.bsky.feed.getPostThread "${param_target_uri}" '' 0`
@@ -3467,7 +3501,7 @@ core_thread()
         foreach .[] as $feed_entry (0; 0;
           ($feed_entry.key * -1 - 1) as $view_index |
           $feed_entry.value.post as $post_fragment |
-          output_post($view_index; $post_fragment; true)
+          output_post($view_index; $post_fragment; true; null; null)
         );
       .thread |
       if has("parent")
@@ -3483,7 +3517,7 @@ core_thread()
       .thread.post as $post_fragment |
       (.thread.replies | length) as $reply_count |
       ($reply_count > 0) as $has_child |
-      output_post($view_index; $post_fragment; $has_child)
+      output_post($view_index; $post_fragment; $has_child; null; null)
     '
     # shellcheck disable=SC2016
     thread_parse_procedure_replies='
@@ -3505,7 +3539,7 @@ core_thread()
           else
             empty
           end,
-          output_post($view_index; $post_fragment; ($reverse_replies | length) > 0)
+          output_post($view_index; $post_fragment; ($reverse_replies | length) > 0; null; null)
         end,
         foreach $reverse_replies[] as $reply (0; . + 1;
           output_replies($reply; .; "\($index_str)-\(.)")
@@ -3525,8 +3559,8 @@ core_thread()
     view_session_functions=`core_create_session_chunk`
     feed_view_index_parents=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_parents}"`
     feed_view_index_target=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_target}"`
-    feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_replies}" | sed 's/.$//'`
-    feed_view_index="${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}"
+    feed_view_index_replies=`_p "${result}" | jq -r -j "${view_session_functions}${thread_parse_procedure_replies}"`
+    feed_view_index=`_p "${feed_view_index_parents}${feed_view_index_target}${feed_view_index_replies}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
     update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
   fi
@@ -3922,9 +3956,9 @@ core_posts_thread()
         check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
         if [ -n "${check_comma}" ]
         then
-          error_msg "commas(,) may be used to separate multiple paths"
+          error "commas(,) may be used to separate multiple paths"
         fi
-        error_msg "Specified file is not readable: ${target_file}"
+        error "Specified file is not readable: ${target_file}"
       fi
       if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
@@ -4041,7 +4075,7 @@ core_posts_sibling_lines()
           then
             specify_index="1"
           else
-            specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+            specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
           fi
           count=`expr "${count}" + 1`
           if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
@@ -4090,7 +4124,7 @@ core_posts_sibling_lines()
       then
         specify_index="1"
       else
-        specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+        specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
       fi
       count=`expr "${count}" + 1`
       if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
@@ -4122,7 +4156,7 @@ core_posts_sibling_lines()
     then
       specify_index="1"
     else
-      specify_index="1-"`expr "${param_view_index_lines}" + "${count}"`
+      specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
     fi
     count=1
     if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
@@ -4260,9 +4294,9 @@ core_posts_sibling()
         check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
         if [ -n "${check_comma}" ]
         then
-          error_msg "commas(,) may be used to separate multiple paths"
+          error "commas(,) may be used to separate multiple paths"
         fi
-        error_msg "Specified file is not readable: ${target_file}"
+        error "Specified file is not readable: ${target_file}"
       fi
       if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
@@ -4555,9 +4589,9 @@ core_posts_independence()
         check_comma=`_p "${target_file}" | sed 's/[^,]//g'`
         if [ -n "${check_comma}" ]
         then
-          error_msg "commas(,) may be used to separate multiple paths"
+          error "commas(,) may be used to separate multiple paths"
         fi
-        error_msg "Specified file is not readable: ${target_file}"
+        error "Specified file is not readable: ${target_file}"
       fi
       if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then

@@ -36,6 +36,16 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS=' [langs:\($LANGS)]'
 # template for meta field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_META='[ViewIndex:\($VIEW_INDEX)]<VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER><VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
+# template for auxiliary field prefix (Reply to)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX='[Reply to '
+# template for auxiliary field postfix (Reply to)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX=']'
+# template for auxiliary field prefix (Reposted by)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX='[Reposted by '
+# template for auxiliary field postfix (Reposted by)
+#BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX=']'
+# template for auxiliary field self name
+#BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF='you'
 # template for head field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \($INDEXED_AT)'
 # template for body field in post
