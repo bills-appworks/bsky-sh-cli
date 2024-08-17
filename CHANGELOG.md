@@ -1,3 +1,12 @@
+# v0.10.0
+## Add
+- Display of post supplementary information of reply recipient and reposter
+- download installer
+## Modify
+- Improved timeline and thread display
+## Fix
+- Other minor fixes
+
 # v0.9.0
 ## Add
 - Specifying individual post options in the thread posting function (delimited section option directive function in the posts command)
