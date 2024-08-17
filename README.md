@@ -11,19 +11,24 @@ The goal of this tool is to be able to run it using a shell script execution env
 It is currently under development and will be enriched with functionality in the future.
 
 ## How to use
-You can install (copy files, edit the login script to set the environment variable PATH) by running `install.sh` included in the provided file. When you run `install.sh`, the installation destination etc. will be confirmed. 
+By downloading and running one file in the GitHub repository, you can download and install the latest release archive.
 
-If you install it as a super user (sudo or root user), it will be configured for use by all users. If you install it as a general user, it will be set so that it can only be used by the user who installed it.
+If you install it as a super user (sudo or root user), it will be configured for use by all users. If you install it as a general user, it will be set so that it can only be used by the user who installed it. During the installation, you will be asked to confirm the installation destination, etc.
 
-Execution example:
+Download one file from GitHub repository:
 ```
-# Install as super user
-sudo ./install.sh
+curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-install.sh -O
 ```
+When running as super user:
 ```
-# Installation as a general user
-./install.sh
+sudo sh download-install.sh
 ```
+When running as a general user:
+```
+sh download-install.sh
+```
+
+In addition to the above, there is also a method such as downloading the release archive and running the installer inside.
 
 For details, please refer to [Installation document](INSTALL.md).
 
