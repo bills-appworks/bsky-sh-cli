@@ -10,6 +10,7 @@
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
 IFS='
  	'
+umask 077
 FILENAME='com.atproto.repo.uploadBlob'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

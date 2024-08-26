@@ -10,6 +10,7 @@
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-feed-get-timeline
 IFS='
  	'
+umask 077
 FILENAME='app.bsky.feed.getTimeline'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

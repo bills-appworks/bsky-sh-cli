@@ -10,6 +10,7 @@
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-server-refresh-session
 IFS='
  	'
+umask 077
 FILENAME='com.atproto.server.refreshSession'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

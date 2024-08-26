@@ -10,6 +10,7 @@
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-actor-get-profile
 IFS='
  	'
+umask 077
 FILENAME='app.bsky.actor.getProfile'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

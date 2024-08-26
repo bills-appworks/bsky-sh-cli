@@ -10,6 +10,7 @@
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-identity-resolve-handle
 IFS='
  	'
+umask 077
 FILENAME='com.atproto.identity.resolveHandle'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
