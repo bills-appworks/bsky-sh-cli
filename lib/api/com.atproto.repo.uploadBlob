@@ -8,6 +8,8 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
+IFS='
+ 	'
 FILENAME='com.atproto.repo.uploadBlob'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

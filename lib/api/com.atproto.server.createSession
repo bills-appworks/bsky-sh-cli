@@ -8,6 +8,8 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/com-atproto-server-create-session
+IFS='
+ 	'
 FILENAME='com.atproto.server.createSession'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

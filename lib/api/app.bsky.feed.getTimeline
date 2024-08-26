@@ -8,6 +8,8 @@
 # http://opensource.org/licenses/mit-license.php
 #
 # API Reference: https://docs.bsky.app/docs/api/app-bsky-feed-get-timeline
+IFS='
+ 	'
 FILENAME='app.bsky.feed.getTimeline'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
