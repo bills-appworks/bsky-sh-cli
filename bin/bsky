@@ -8,6 +8,9 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+# future use
+# shellcheck disable=SC2034
+BSKYSHCLI_EVACUATED_UMASK=`umask`
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
