@@ -64,7 +64,7 @@
 
 # v0.3.1
 ## Fix
-- OGP image file work directry was the current directoy instead of the temporary directory
+- OGP image file work directory was the current directory instead of the temporary directory
 
 # v0.3.0
 ## Add

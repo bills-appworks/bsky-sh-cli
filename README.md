@@ -108,7 +108,7 @@ Please also refer to the [Command Line Reference](https://github.com/bills-appwo
     - It supports 2FA
   - Display of timeline and custom feed (feed generator)
   - Post
-  - Reply to post/Reost/Quoted Repost/Like
+  - Reply to post/Repost/Quoted repost/Like
   - Specified user profile display and feed display
 - Things impossible
   - Displaying images (only display URL)

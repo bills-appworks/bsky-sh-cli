@@ -27,7 +27,7 @@ fi
 export BSKYSHCLI_RUN_COMMANDS_PATH
 if [ -r "${BSKYSHCLI_RUN_COMMANDS_PATH}" ]
 then
-  # SC1090 disable for Run Commands file generize on runtime
+  # SC1090 disable for Run Commands file generate on runtime
   # shellcheck source=/dev/null
   . "${BSKYSHCLI_RUN_COMMANDS_PATH}"
 fi
