@@ -1891,6 +1891,7 @@ core_create_post_chunk()
   view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_detached=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
@@ -1974,6 +1975,9 @@ core_create_post_chunk()
           "'"${view_template_post_external_body}"'"
         end
       ;
+      def output_post_part_quote_detached:
+        "'"${view_template_quoted_detached}"'"
+      ;
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent; reply_fragment; reason_fragment):
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
@@ -1984,6 +1988,7 @@ core_create_post_chunk()
         post_fragment.replyCount as $REPLY_COUNT |
         post_fragment.repostCount as $REPOST_COUNT |
         post_fragment.likeCount as $LIKE_COUNT |
+        post_fragment.quoteCount as $QUOTE_COUNT |
         post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         if is_quoted
         then
@@ -2166,6 +2171,10 @@ core_create_post_chunk()
               (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
                 output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent; reply_fragment; reason_fragment)
+              ),
+              (
+                select(.embed.record.record."$type" == "app.bsky.embed.record#viewDetached") |
+                output_post_part_quote_detached
               )
             ),
             (
@@ -2177,6 +2186,10 @@ core_create_post_chunk()
               (
                 select(.embed.record."$type" == "app.bsky.feed.defs#generatorView") |
                 output_post_feed_generator(view_index; post_fragment.embed.record)
+              ),
+              (
+                select(.embed.record."$type" == "app.bsky.embed.record#viewDetached") |
+                output_post_part_quote_detached
               )
             ),
             (
@@ -2856,6 +2869,7 @@ core_preview_post()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "quoteCount": 0,
             "indexedAt": .createdAt
           }
         }
@@ -2945,6 +2959,7 @@ core_preview_posts_single()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "quoteCount": 0,
             "indexedAt": .createdAt
           }
         }
@@ -3049,6 +3064,7 @@ core_preview_reply()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "quoteCount": 0,
             "indexedAt": .createdAt
           }
         }
@@ -3146,6 +3162,7 @@ core_preview_quote()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "quoteCount": 0,
             "indexedAt": .post.createdAt
           }
         },
