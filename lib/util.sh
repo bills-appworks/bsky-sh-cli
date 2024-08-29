@@ -18,6 +18,7 @@ BSKYSHCLI_DEBUG_SINGLE=''
 SESSION_FILENAME_DEFAULT_PREFIX='_bsky_sh_cli'
 SESSION_FILENAME_SUFFIX='_session'
 SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
+SESSION_KEY_RECORD_VERSION='SESSION_RECORD_VERSION'
 SESSION_KEY_LOGIN_TIMESTAMP='SESSION_LOGIN_TIMESTAMP'
 SESSION_KEY_REFRESH_TIMESTAMP='SESSION_REFRESH_TIMESTAMP'
 SESSION_KEY_HANDLE='SESSION_HANDLE'
@@ -910,6 +911,7 @@ create_session_info()
   read_session_file
   timestamp=`get_timestamp_timezone`
   _pn "# session ${param_ops} at ${timestamp}"
+  _pn "${SESSION_KEY_RECORD_VERSION}='${BSKYSHCLI_CLI_VERSION}'"
   decoded_prefix='DECODED_'
   decode_keyvalue_list "${param_session_keyvalue_list}" "${decoded_prefix}" '='
   # no double quote for use word splitting
