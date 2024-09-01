@@ -35,8 +35,13 @@ FEED_PARSE_PROCEDURE='
     $feed_fragment |
     if has("reply")
     then
-      output_post([$view_index, "1"] | join("-"); $feed_fragment.reply.parent; true; $feed_fragment.reply; $feed_fragment.reason),
-      output_post($view_index; $feed_fragment.post; false; $feed_fragment.reply; $feed_fragment.reason)
+      if ($feed_fragment.post.viewer.threadMuted == true) and ($feed_fragment.post.author.did != env.SESSION_DID)
+      then
+        empty
+      else
+        output_post([$view_index, "1"] | join("-"); $feed_fragment.reply.parent; true; $feed_fragment.reply; $feed_fragment.reason),
+        output_post($view_index; $feed_fragment.post; false; $feed_fragment.reply; $feed_fragment.reason)
+      end
     else
       output_post($view_index; $feed_fragment.post; false; $feed_fragment.reply; $feed_fragment.reason)
     end

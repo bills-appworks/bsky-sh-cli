@@ -890,6 +890,7 @@ read_session_file()
     # SC1090 disable for dynamical(variable) path source(.) using and generate on runtime
     # shellcheck source=/dev/null
     . "${session_filepath}"
+    export SESSION_DID
     status=0
   else
     status=1
