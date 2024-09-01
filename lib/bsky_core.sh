@@ -2819,6 +2819,16 @@ core_get_author_feed()
     feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
     update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+  else
+    api_error=`_p "${result}" | jq -r '.error // ""'`
+    case $api_error in
+      BlockedActor)
+        error "The specified author has been blocked."
+        ;;
+      *)
+        error "API error: ${result}"
+        ;;
+    esac
   fi
 
   debug 'core_get_author_feed' 'END'
