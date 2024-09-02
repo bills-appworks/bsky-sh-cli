@@ -53,10 +53,10 @@ build_array_parameters()
   shift
   param_query_values="$@"
 
-  debug 'build_array_parametres' 'START'
-  debug 'build_array_parametres' "param_stack:${param_stack}"
-  debug 'build_array_parametres' "param_query_key:${param_query_key}"
-  debug 'build_array_parametres' "param_query_values:${param_query_values}"
+  debug 'build_array_parameters' 'START'
+  debug 'build_array_parameters' "param_stack:${param_stack}"
+  debug 'build_array_parameters' "param_query_key:${param_query_key}"
+  debug 'build_array_parameters' "param_query_values:${param_query_values}"
 
   stack="${param_stack}"
   for query_value in $param_query_values
@@ -65,7 +65,7 @@ build_array_parameters()
   done
   _p "${stack}"
 
-  debug 'build_array_parametres' 'END'
+  debug 'build_array_parameters' 'END'
 }
 
 create_authorization_header()
