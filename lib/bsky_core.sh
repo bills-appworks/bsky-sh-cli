@@ -1975,14 +1975,15 @@ core_create_post_chunk()
       def output_post_external(view_index; post_fragment; is_quoted):
         post_fragment.external.uri as $EXTERNAL_URI |
         post_fragment.external.title as $EXTERNAL_TITLE |
-        post_fragment.external.description as $EXTERNAL_DESCRIPTION |
         post_fragment.external.thumb as $EXTERNAL_THUMB |
         if is_quoted
         then
+          (post_fragment.external.description | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $EXTERNAL_DESCRIPTION |
           "'"${view_template_quoted_post_external_meta}"'",
           "'"${view_template_quoted_post_external_head}"'",
           "'"${view_template_quoted_post_external_body}"'"
         else
+          (post_fragment.external.description | gsub("\n"; "\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'")) as $EXTERNAL_DESCRIPTION |
           "'"${view_template_post_external_meta}"'",
           "'"${view_template_post_external_head}"'",
           "'"${view_template_post_external_body}"'"
