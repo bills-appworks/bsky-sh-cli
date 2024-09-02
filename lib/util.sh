@@ -188,29 +188,37 @@ debug_mode_restore()
   BSKYSHCLI_DEBUG="${EVACUATED_BSKYSHCLI_DEBUG}"
 }
 
+if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
+then
 debug()
 {
   param_id="$1"
   param_message="$2"
 
-  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
-  then
-    timestamp=`get_timestamp`
-    _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
-  fi
+  timestamp=`get_timestamp`
+  _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
 }
+else
+debug()
+{
+  :
+}
+fi
 
+if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
+then
 debug_single()
 {
   param_file="$1"
 
-  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
-  then
-    BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_DIR}/${param_file}"
-  else
-    BSKYSHCLI_DEBUG_SINGLE='/dev/null'
-  fi
+  BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_DIR}/${param_file}"
 }
+else
+debug_single()
+{
+  BSKYSHCLI_DEBUG_SINGLE='/dev/null'
+}
+fi
 
 debug_json()
 {
