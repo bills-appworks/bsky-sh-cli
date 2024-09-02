@@ -732,6 +732,8 @@ api()
       api_status=0
       ;;
     1)
+      debug_single 'api-4'
+      _p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       api_status=1
       ;;
     2)
@@ -893,6 +895,7 @@ read_session_file()
     # SC1090 disable for dynamical(variable) path source(.) using and generate on runtime
     # shellcheck source=/dev/null
     . "${session_filepath}"
+    export SESSION_DID
     status=0
   else
     status=1

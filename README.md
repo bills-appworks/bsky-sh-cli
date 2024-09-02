@@ -113,7 +113,7 @@ Please also refer to the [Command Line Reference](https://github.com/bills-appwo
   - Specified user profile display and feed display
 - Things impossible
   - Displaying images (only display URL)
-  - Hide mute and block targets
+  - Mute using words and tags, hide specific posts
   - Execution of commands and APIs that do not require authentication when not logged in
   - Many other functions
 
