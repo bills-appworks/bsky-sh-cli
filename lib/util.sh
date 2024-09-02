@@ -728,6 +728,7 @@ api()
       api_status=0
       ;;
     1)
+      debug_single 'api-4'
       _p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       api_status=1
       ;;

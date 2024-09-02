@@ -696,7 +696,7 @@ core_build_text_rels_line()
       overall_mention_start=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}"`
       # overall index of mention end
       overall_mention_end=`expr "${overall_mention_start}" + "${mention_length}"`
-      # handle validation
+      # handle validation (if the handle cannot be resolved, do not mention it)
       if did=`core_handle_to_did "${mention_handle}"`
       then
         # stack on result set (did, actual index of mention start, actual index of mention end)
@@ -1792,7 +1792,12 @@ core_build_reply_fragment()
   then
     error "insufficiency in AT URI composition - URI:${param_reply_target_uri} AUTHORITY:${AT_URI_ELEMENT_AUTHORITY} COLLECTION:${AT_URI_ELEMENT_COLLECTION} RKEY:${AT_URI_ELEMENT_RKEY}"
   fi
-  result=`api com.atproto.repo.getRecord "${AT_URI_ELEMENT_AUTHORITY}" "${AT_URI_ELEMENT_COLLECTION}" "${AT_URI_ELEMENT_RKEY}"`
+  if result=`api com.atproto.repo.getRecord "${AT_URI_ELEMENT_AUTHORITY}" "${AT_URI_ELEMENT_COLLECTION}" "${AT_URI_ELEMENT_RKEY}"`
+  then
+    :
+  else
+    error "API error: getRecord: ${result}"
+  fi  
   debug_single 'core_build_reply_fragment'
   _p "${result}" | jq -c '
     if (.value | has("reply"))
@@ -2613,8 +2618,12 @@ core_create_session()
   debug 'core_create_session' "param_auth_factor_token:${message}"
 
   canonical_handle=`core_canonicalize_handle "${param_handle}"`
-  api com.atproto.server.createSession "${canonical_handle}" "${param_password}" "${param_auth_factor_token}" > /dev/null
+  result=`api com.atproto.server.createSession "${canonical_handle}" "${param_password}" "${param_auth_factor_token}"`
   api_status=$?
+  if [ $api_status -eq 1 ]
+  then
+    error 'Failed to login'
+  fi
 
   debug 'core_create_session' 'END'
 
@@ -2625,8 +2634,12 @@ core_delete_session()
 {
   debug 'core_delete_session' 'START'
 
-  api com.atproto.server.deleteSession "${SESSION_REFRESH_JWT}" > /dev/null
+  result=`api com.atproto.server.deleteSession "${SESSION_REFRESH_JWT}"`
   api_status=$?
+  if [ $api_status -ne 0 ]
+  then
+    error 'Failed to logout'
+  fi
 
   debug 'core_delete_session' 'END'
 
@@ -2685,6 +2698,13 @@ core_get_timeline()
     feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
     update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+  else
+    api_error=`_p "${result}" | jq -r '.error // ""'`
+    case $api_error in
+      *)
+        error "API error: ${result}"
+        ;;
+    esac
   fi
 
   debug 'core_get_timeline' 'END'
@@ -2762,7 +2782,19 @@ core_get_feed()
       feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
       # CAUTION: key=value pairs are separated by tab characters
       update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    else
+      api_error=`_p "${result}" | jq -r '.error // ""'`
+      case $api_error in
+        NotEnoughResources)
+          error "The process failed due to insufficient server resources."
+          ;;
+        *)
+          error "API error: ${result}"
+          ;;
+      esac
     fi
+  else
+    error 'Failed to resolve the specified feed.'
   fi
 
   debug 'core_get_feed' 'END'
@@ -3060,7 +3092,12 @@ core_preview_reply()
     output_post($view_index; $post_fragment; true; null; null)
   '
   # depth='', parent_height=0
-  result=`api app.bsky.feed.getPostThread "${param_target_uri}" '' 0`
+  if result=`api app.bsky.feed.getPostThread "${param_target_uri}" '' 0`
+  then
+    :
+  else
+    error "API error: getPostThread: ${result}"
+  fi
 
   feed_struct_posts=`_p "${param_record}" | jq -c '
     # record wraps by feed/post/
@@ -3156,7 +3193,12 @@ core_preview_quote()
     handle="${SESSION_HANDLE}"
   fi
 
-  result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  if result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  then
+    :
+  else
+    error "API error: getPosts: ${result}"
+  fi
   combined_posts="{\"post\":${param_record},\"quote\":${result}}"
 
 
@@ -3277,6 +3319,13 @@ core_output_post()
       feed_view_index=`_p "${feed_struct_posts}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
       # CAUTION: key=value pairs are separated by tab characters
       update_session_file "${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    else
+      api_error=`_p "${result}" | jq -r '.error // ""'`
+      case $api_error in
+        *)
+          error "API error: ${result}"
+          ;;
+      esac
     fi
   fi
 
@@ -3515,11 +3564,16 @@ core_thread()
   debug 'core_thread' "param_output_json:${param_output_json}"
   debug 'core_thread' "param_output_langs:${param_output_langs}"
 
-  debug_single 'core_thread'
-
   if [ "${BSKYSHCLI_DEBUG_OFFLINE}" != 'ON' ]
   then
-    result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"  | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+    result=`api app.bsky.feed.getPostThread "${param_target_uri}" "${param_depth}" "${param_parent_height}"`
+    status=$?
+    debug_single 'core_thread'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+    if [ $status -ne 0 ]
+    then
+      error "API error: getPostThread: ${result}"
+    fi
 
     view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
     # $<variables> want to pass through for jq
@@ -5097,6 +5151,13 @@ core_get_profile()
         "'"${profile_output}"'"
       '
     fi
+  else
+    api_error=`_p "${result}" | jq -r '.error // ""'`
+    case $api_error in
+      *)
+        error "API error: ${result}"
+        ;;
+    esac
   fi
 
   debug 'core_get_profile' 'END'
@@ -5351,6 +5412,13 @@ core_get_pref()
         fi
       fi
     fi
+  else
+    api_error=`_p "${result}" | jq -r '.error // ""'`
+    case $api_error in
+      *)
+        error "API error: ${result}"
+        ;;
+    esac
   fi
 
   debug 'core_get_pref' 'END'
