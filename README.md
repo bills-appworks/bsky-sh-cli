@@ -48,7 +48,8 @@ First, log in (sign in) to Bluesky.
 
 For `<handle>`, specify the username of the Bluesky account you are using. The at sign at the beginning of the username is not required. Login using email address is not possible at this time.
 
-`<password>` specifies the password corresponding to the handle (user name).
+`<password>` specifies the password corresponding to the handle (user name). It is recommended to use an app password.
+
 If you omit `--handle` and/or `--password`, an on-screen prompt will appear allowing you to enter what you omitted.
 
 ### Timeline display
