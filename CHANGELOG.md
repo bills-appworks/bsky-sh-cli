@@ -1,3 +1,13 @@
+# v0.11.0
+## Add
+- Display of quoted numbers
+- Support display message of detached quotation
+- Support thread mute hidden target
+## Modify
+- Improved display message for blocked accounts
+## Fix
+- Other minor fixes
+
 # v0.10.0
 ## Add
 - Display of post supplementary information of reply recipient and reposter
