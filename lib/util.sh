@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -
 # Bluesky in the shell
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@billsbs.bills-appworks.net
@@ -6,6 +6,9 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
+IFS='
+ 	'
+umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -18,6 +21,7 @@ BSKYSHCLI_DEBUG_SINGLE=''
 SESSION_FILENAME_DEFAULT_PREFIX='_bsky_sh_cli'
 SESSION_FILENAME_SUFFIX='_session'
 SESSION_DIR="${BSKYSHCLI_TOOLS_WORK_DIR}"
+SESSION_KEY_RECORD_VERSION='SESSION_RECORD_VERSION'
 SESSION_KEY_LOGIN_TIMESTAMP='SESSION_LOGIN_TIMESTAMP'
 SESSION_KEY_REFRESH_TIMESTAMP='SESSION_REFRESH_TIMESTAMP'
 SESSION_KEY_HANDLE='SESSION_HANDLE'
@@ -184,29 +188,37 @@ debug_mode_restore()
   BSKYSHCLI_DEBUG="${EVACUATED_BSKYSHCLI_DEBUG}"
 }
 
+if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
+then
 debug()
 {
   param_id="$1"
   param_message="$2"
 
-  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
-  then
-    timestamp=`get_timestamp`
-    _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
-  fi
+  timestamp=`get_timestamp`
+  _pn "${timestamp} ${param_id}: ${param_message}" >> "${BSKYSHCLI_DEBUG_LOG_FILEPATH}"
 }
+else
+debug()
+{
+  :
+}
+fi
 
+if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
+then
 debug_single()
 {
   param_file="$1"
 
-  if [ "${BSKYSHCLI_DEBUG}" = 'ON' ]
-  then
-    BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_DIR}/${param_file}"
-  else
-    BSKYSHCLI_DEBUG_SINGLE='/dev/null'
-  fi
+  BSKYSHCLI_DEBUG_SINGLE="${BSKYSHCLI_DEBUG_DIR}/${param_file}"
 }
+else
+debug_single()
+{
+  BSKYSHCLI_DEBUG_SINGLE='/dev/null'
+}
+fi
 
 debug_json()
 {
@@ -728,6 +740,8 @@ api()
       api_status=0
       ;;
     1)
+      debug_single 'api-4'
+      _p "${result}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
       api_status=1
       ;;
     2)
@@ -889,6 +903,7 @@ read_session_file()
     # SC1090 disable for dynamical(variable) path source(.) using and generate on runtime
     # shellcheck source=/dev/null
     . "${session_filepath}"
+    export SESSION_DID
     status=0
   else
     status=1
@@ -910,6 +925,7 @@ create_session_info()
   read_session_file
   timestamp=`get_timestamp_timezone`
   _pn "# session ${param_ops} at ${timestamp}"
+  _pn "${SESSION_KEY_RECORD_VERSION}='${BSKYSHCLI_CLI_VERSION}'"
   decoded_prefix='DECODED_'
   decode_keyvalue_list "${param_session_keyvalue_list}" "${decoded_prefix}" '='
   # no double quote for use word splitting

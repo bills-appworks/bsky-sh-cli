@@ -51,7 +51,7 @@
 # template for body field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
 # template for tail field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Like:\($LIKE_COUNT)'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)'
 # template for separator field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
 # template for separator field in parent post
@@ -64,6 +64,8 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER>'
 # template for quoted field prefix in post
 #BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
+# template for detached message in quoted post
+#BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED='Removed by author'
 # template for output id field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)] [did:\($DID)]'
 # template for meta field in post feed generator
