@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -
 # Bluesky in the shell
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@billsbs.bills-appworks.net
@@ -6,6 +6,9 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
+IFS='
+ 	'
+umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -50,10 +53,10 @@ build_array_parameters()
   shift
   param_query_values="$@"
 
-  debug 'build_array_parametres' 'START'
-  debug 'build_array_parametres' "param_stack:${param_stack}"
-  debug 'build_array_parametres' "param_query_key:${param_query_key}"
-  debug 'build_array_parametres' "param_query_values:${param_query_values}"
+  debug 'build_array_parameters' 'START'
+  debug 'build_array_parameters' "param_stack:${param_stack}"
+  debug 'build_array_parameters' "param_query_key:${param_query_key}"
+  debug 'build_array_parameters' "param_query_values:${param_query_values}"
 
   stack="${param_stack}"
   for query_value in $param_query_values
@@ -62,7 +65,7 @@ build_array_parameters()
   done
   _p "${stack}"
 
-  debug 'build_array_parametres' 'END'
+  debug 'build_array_parameters' 'END'
 }
 
 create_authorization_header()

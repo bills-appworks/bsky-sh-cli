@@ -1,3 +1,13 @@
+# v0.11.0
+## Add
+- Display of quoted numbers
+- Support display message of detached quotation
+- Support thread mute hidden target
+## Modify
+- Improved display message for blocked accounts
+## Fix
+- Other minor fixes
+
 # v0.10.0
 ## Add
 - Display of post supplementary information of reply recipient and reposter
@@ -64,7 +74,7 @@
 
 # v0.3.1
 ## Fix
-- OGP image file work directry was the current directoy instead of the temporary directory
+- OGP image file work directory was the current directory instead of the temporary directory
 
 # v0.3.0
 ## Add

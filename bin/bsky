@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -
 # Bluesky in the shell
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@billsbs.bills-appworks.net
@@ -6,10 +6,16 @@
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
+IFS='
+ 	'
+# future use
+# shellcheck disable=SC2034
+BSKYSHCLI_EVACUATED_UMASK=`umask`
+umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.10.0'
+BSKYSHCLI_CLI_VERSION='0.11.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -41,7 +47,7 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Like:\($LIKE_COUNT)'
+BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
 BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT='|'
@@ -49,6 +55,7 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_I
 BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER>'
 BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER='<VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER>'
 BSKYSHCLI_VIEW_TEMPLATE_QUOTE='| '
+BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED='Removed by author'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)] [did:\($DID)]'
 # shellcheck disable=SC2016
