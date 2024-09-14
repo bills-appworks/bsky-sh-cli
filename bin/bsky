@@ -1184,7 +1184,7 @@ command_login()
 
   debug 'command_login' 'END'
 
-  return $status
+  return "${status}"
 }
 
 command_logout()
@@ -2001,7 +2001,12 @@ command_version()
 {
   debug 'command_version' 'START'
 
-  _pn "bsky (bsky-sh-cli) ${BSKYSHCLI_CLI_VERSION}"
+  if [ "$1" = 'help' ]
+  then
+    output_help_version
+  else
+    _pn "bsky (bsky-sh-cli) ${BSKYSHCLI_CLI_VERSION}"
+  fi
 
   debug 'command_version' 'END'
 }
