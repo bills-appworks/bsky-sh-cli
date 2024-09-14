@@ -18,7 +18,41 @@ github_latest_url='https://api.github.com/repos/bills-appworks/bsky-sh-cli/relea
 github_tarball_url_prefix='https://github.com/bills-appworks/bsky-sh-cli/tarball/refs/heads'
 tarball_filename='bsky-sh-cli.tar.gz'
 
+# functions
+verify_required_tool()
+{
+  param_tool="$1"
+
+  printf "%s" "${param_tool} ... "
+  which "${param_tool}" > /dev/null
+  tool_exist=$?
+  if [ ${tool_exist} -eq 0 ]
+  then
+    echo '[OK]'
+  else
+    echo "[NG] Command ${param_tool} not found."
+    STATUS_TOOLS=1
+  fi
+  return $tool_exist
+}
+
+verify_required_tools()
+{
+  STATUS_TOOLS=0
+  verify_required_tool 'curl'
+  verify_required_tool 'jq'
+
+  if [ $STATUS_TOOLS -ne 0 ]
+  then
+    echo 'Lack of required tool.'
+    exit 1
+  fi
+}
+
+# entry point
 echo "bsky-sh-cli (Bluesky in the shell) download & installer (download-install.sh) version ${BSKYSHCLI_DOWNLOAD_INSTALLER_VERSION}"
+
+verify_required_tools
 
 # download latest version
 if github_latest=`curl -s -X GET "${github_latest_url}"`
