@@ -769,7 +769,7 @@ api()
 
   debug 'api' 'END'
 
-  return $api_status
+  return "${api_status}"
 }
 
 verify_profile_name()

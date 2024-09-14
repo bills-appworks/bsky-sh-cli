@@ -906,7 +906,7 @@ core_text_size_lines()
 
   debug 'core_text_size_lines' 'END'
 
-  return $count
+  return "${count}"
 }
 
 core_get_text_file()
@@ -971,7 +971,7 @@ core_output_text_file_size_lines()
     fi
     section_index=1
     json_stack="{\"file\":\"${param_text_file_path}\",\"sections\":["
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${text_size}" -le 300 ]
@@ -988,7 +988,7 @@ core_output_text_file_size_lines()
         else
           status_value='false'
         fi
-        if [ $section_index -gt 1 ]
+        if [ "${section_index}" -gt 1 ]
         then
           json_stack="${json_stack},"
         fi
@@ -998,13 +998,13 @@ core_output_text_file_size_lines()
         then
           _pn "${text_size}"
         else
-          if [ $status -eq 0 ]
+          if [ "${status}" -eq 0 ]
           then
             status_message='OK'
           else
             status_message='NG:over 300'
           fi
-          if [ $section_count -eq 1 ]
+          if [ "${section_count}" -eq 1 ]
           then
             _pn "text file character count: ${text_size} [${status_message}] [file:${param_text_file_path}]"
           else
@@ -1106,7 +1106,7 @@ core_verify_text_file_size_lines()
       RESULT_core_verify_text_file_size_lines_directive_option_langs="${RESULT_core_text_size_lines_directive_option_langs}"
     fi
     section_index=1
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${size}" -gt 300 ]
@@ -1122,7 +1122,7 @@ core_verify_text_file_size_lines()
 
   debug 'core_verify_text_file_size_lines' 'END'
 
-  return $status_core_verify_text_file_size_lines
+  return "${status_core_verify_text_file_size_lines}"
 }
 
 core_process_files()
@@ -1143,7 +1143,7 @@ core_process_files()
   _slice "${param_process_files}" "${BSKYSHCLI_PATH_DELIMITER}"
   files_count=$?
   files_index=1
-  while [ $files_index -le $files_count ]
+  while [ "${files_index}" -le "${files_count}" ]
   do
     target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
     if "${param_process_name}" "${target_file}" "$@"
@@ -1157,7 +1157,7 @@ core_process_files()
 
   debug 'core_process_files' 'END'
 
-  return $status_core_process_files
+  return "${status_core_process_files}"
 }
 
 core_process_files_verify_text_file_size_lines()
@@ -1179,7 +1179,7 @@ core_process_files_verify_text_file_size_lines()
   files_count=$?
   files_index=1
   apply_option_url="$2"
-  while [ $files_index -le $files_count ]
+  while [ "${files_index}" -le "${files_count}" ]
   do
     target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
     if core_verify_text_file_size_lines "${target_file}" "$1" "${apply_option_url}"
@@ -1197,7 +1197,7 @@ core_process_files_verify_text_file_size_lines()
 
   debug 'core_process_files_verify_text_file_size_lines' 'END'
 
-  return $status_core_process_files_verify_text_file_size_lines
+  return "${status_core_process_files_verify_text_file_size_lines}"
 }
 
 core_process_files_output_text_file_size_lines()
@@ -1219,7 +1219,7 @@ core_process_files_output_text_file_size_lines()
   files_count=$?
   files_index=1
   apply_option_url="$4"
-  while [ $files_index -le $files_count ]
+  while [ "${files_index}" -le "${files_count}" ]
   do
     target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
     if core_output_text_file_size_lines "${target_file}" "$1" "$2" "$3" "${apply_option_url}"
@@ -1237,7 +1237,7 @@ core_process_files_output_text_file_size_lines()
 
   debug 'core_process_files_output_text_file_size_lines' 'END'
 
-  return $status_core_process_files_output_text_file_size_lines
+  return "${status_core_process_files_output_text_file_size_lines}"
 }
 
 core_verify_text_size_lines()
@@ -1268,7 +1268,7 @@ core_verify_text_size_lines()
       apply_option_url="${RESULT_core_text_size_lines_directive_option_url}"
     fi
     section_index=1
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${size}" -gt 300 ]
@@ -1289,7 +1289,7 @@ core_verify_text_size_lines()
       apply_option_url="${RESULT_core_text_size_lines_directive_option_url}"
     fi
     section_index=1
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${size}" -gt 300 ]
@@ -1315,7 +1315,7 @@ core_verify_text_size_lines()
     fi
   fi
 
-  if [ $status_core_verify_text_size_lines -ne 0 ]
+  if [ "${status_core_verify_text_size_lines}" -ne 0 ]
   then
     error 'Processing has been canceled'
   fi
@@ -1381,7 +1381,7 @@ core_build_images_fragment_precheck()
     then
       core_build_images_fragment_precheck_single "${image}"
       status=$?
-      if [ $status -eq 0 ]
+      if [ "${status}" -eq 0 ]
       then
         actual_image_count=`expr "${actual_image_count}" + 1`
         eval "RESULT_precheck_alt_${actual_image_count}=\${alt}"
@@ -1400,14 +1400,14 @@ core_build_images_fragment_precheck()
     fi
   done
 
-  if [ $worst_status -ne 0 ]
+  if [ "${worst_status}" -ne 0 ]
   then
     actual_image_count=255
   fi
 
   debug 'core_build_images_fragment_precheck' 'END'
 
-  return $actual_image_count
+  return "${actual_image_count}"
 }
 
 core_build_images_fragment_single()
@@ -1479,7 +1479,7 @@ core_build_images_fragment()
     fragment_stack='{"$type":"app.bsky.embed.images","images":['
     single_status=0
     image_index=1
-    while [ $image_index -le $actual_image_count ]
+    while [ "${image_index}" -le "${actual_image_count}" ]
     do
       alt=`eval _p \"\\$"RESULT_precheck_alt_${image_index}"\"`
       image_filename=`eval _p \"\\$"RESULT_precheck_image_filename_${image_index}"\"`
@@ -1488,9 +1488,9 @@ core_build_images_fragment()
       image_height=`eval _p \"\\$"RESULT_precheck_image_height_${image_index}"\"`
       result_single=`core_build_images_fragment_single "${alt}" "${image_filename}" "${file_mime_type}" "${image_width}" "${image_height}"`
       single_status=$?
-      if [ $single_status -eq 0 ]
+      if [ "${single_status}" -eq 0 ]
       then
-        if [ $image_index -gt 1 ]
+        if [ "${image_index}" -gt 1 ]
         then
           fragment_stack="${fragment_stack},"
         fi
@@ -1500,7 +1500,7 @@ core_build_images_fragment()
       fi
       image_index=`expr "${image_index}" + 1`
     done
-    if [ $single_status -eq 0 ]
+    if [ "${single_status}" -eq 0 ]
     then
       fragment_stack="${fragment_stack}]}"
       _p "${fragment_stack}"
@@ -1519,7 +1519,7 @@ core_build_images_fragment()
 
   debug 'core_build_images_fragment' 'END'
 
-  return $actual_image_count
+  return "${actual_image_count}"
 }
 
 core_build_link_facets_fragment()
@@ -1539,7 +1539,7 @@ core_build_link_facets_fragment()
     url=$1
     url_start=$2
     url_end=$3
-    if [ $element_count -gt 0 ]
+    if [ "${element_count}" -gt 0 ]
     then
       link_facets_fragment="${link_facets_fragment},"
     fi
@@ -1574,7 +1574,7 @@ core_build_tag_facets_fragment()
     tag=$1
     tag_start=$2
     tag_end=$3
-    if [ $element_count -gt 0 ]
+    if [ "${element_count}" -gt 0 ]
     then
       tag_facets_fragment="${tag_facets_fragment},"
     fi
@@ -1609,7 +1609,7 @@ core_build_mention_facets_fragment()
     did=$1
     mention_start=$2
     mention_end=$3
-    if [ $element_count -gt 0 ]
+    if [ "${element_count}" -gt 0 ]
     then
       mention_facets_fragment="${mention_facets_fragment},"
     fi
@@ -1760,11 +1760,11 @@ core_build_langs_fragment()
     lang_count=$?
     lang_index=1
     langs_fragment='['
-    while [ $lang_index -le $lang_count ]
+    while [ "${lang_index}" -le "${lang_count}" ]
     do
       lang_element=`eval _p \"\\$"RESULT_slice_${lang_index}"\"`
       lang_element=`_p "${lang_element}" | sed 's/^ *\([^ ]*\) *$/\1/g'`
-      if [ $lang_index -gt 1 ]
+      if [ "${lang_index}" -gt 1 ]
       then
         langs_fragment="${langs_fragment},"
       fi
@@ -2751,7 +2751,7 @@ core_get_feed()
     error 'internal error: did and url are not specified'
   fi
 
-  if [ $status -eq 0 ]
+  if [ "${status}" -eq 0 ]
   then
     read_session_file
     if [ -n "${param_next}" ]
@@ -2803,7 +2803,7 @@ core_get_feed()
 
   debug 'core_get_feed' 'END'
 
-  return $status
+  return "${status}"
 }
 
 core_get_author_feed()
@@ -3510,7 +3510,7 @@ core_posts_count_lines()
 
   debug 'core_posts_count_lines' 'END'
 
-  return $count
+  return "${count}"
 }
 
 core_posts_files_count_lines()
@@ -3530,7 +3530,7 @@ core_posts_files_count_lines()
     if [ -n "${param_core_posts_files_count_lines_separator_prefix}" ]
     then
       files_index=1
-      while [ $files_index -le $files_count ]
+      while [ "${files_index}" -le "${files_count}" ]
       do
         target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
         file_content=`cat "${target_file}"`
@@ -3546,7 +3546,7 @@ core_posts_files_count_lines()
 
   debug 'core_posts_files_count_lines' 'END'
 
-  return $core_posts_files_count_lines_count
+  return "${core_posts_files_count_lines_count}"
 }
 
 core_thread()
@@ -4036,7 +4036,7 @@ core_posts_thread()
     _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
     files_count=$?
     files_index=1
-    while [ $files_index -le $files_count ]
+    while [ "${files_index}" -le "${files_count}" ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
       if [ -r "${target_file}" ]
@@ -4374,7 +4374,7 @@ core_posts_sibling()
     _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
     files_count=$?
     files_index=1
-    while [ $files_index -le $files_count ]
+    while [ "${files_index}" -le "${files_count}" ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
       if [ -r "${target_file}" ]
@@ -4669,7 +4669,7 @@ core_posts_independence()
     _slice "${param_text_files}" "${BSKYSHCLI_PATH_DELIMITER}"
     files_count=$?
     files_index=1
-    while [ $files_index -le $files_count ]
+    while [ "${files_index}" -le "${files_count}" ]
     do
       target_file=`eval _p \"\\$"RESULT_slice_${files_index}"\"`
       if [ -r "${target_file}" ]
@@ -5570,7 +5570,7 @@ core_info_session_index()
     _slice "${SESSION_FEED_VIEW_INDEX}" '"'
     feed_view_index_count=$?
     chunk_index=1
-    while [ "${chunk_index}" -le $feed_view_index_count ]
+    while [ "${chunk_index}" -le "${feed_view_index_count}" ]
     do
       session_chunk=`eval _p \"\\$"RESULT_slice_${chunk_index}"\"`
       (
@@ -5587,7 +5587,7 @@ core_info_session_index()
         
         if [ -n "${param_output_json}" ]
         then
-          if [ $chunk_index -gt 1 ]
+          if [ "${chunk_index}" -gt 1 ]
           then
             _p ','
           fi
@@ -5822,7 +5822,7 @@ core_size()
       json_stack="${json_stack},"
     fi
     json_stack="${json_stack}\"stdin\":["
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${text_size}" -le 300 ]
@@ -5833,13 +5833,13 @@ core_size()
       fi
       if [ -n "${param_output_json}" ]
       then
-        if [ $status -eq 0 ]
+        if [ "${status}" -eq 0 ]
         then
           status_value='true'
         else
           status_value='false'
         fi
-        if [ $section_index -gt 1 ]
+        if [ "${section_index}" -gt 1 ]
         then
           json_stack="${json_stack},"
         fi
@@ -5849,7 +5849,7 @@ core_size()
         then
           _pn "${text_size}"
         else
-          if [ $status -eq 0 ]
+          if [ "${status}" -eq 0 ]
           then
             status_message='OK'
           else
@@ -5882,7 +5882,7 @@ core_size()
       json_stack="${json_stack},"
     fi
     json_stack="${json_stack}\"text\":["
-    while [ $section_index -le $section_count ]
+    while [ "${section_index}" -le "${section_count}" ]
     do
       text_size=`eval _p \"\\$"RESULT_core_text_size_lines_${section_index}"\"`
       if [ "${text_size}" -le 300 ]
@@ -5899,7 +5899,7 @@ core_size()
         else
           status_value='false'
         fi
-        if [ $section_index -gt 1 ]
+        if [ "${section_index}" -gt 1 ]
         then
           json_stack="${json_stack},"
         fi
@@ -5909,7 +5909,7 @@ core_size()
         then
           _pn "${text_size}"
         else
-          if [ $status -eq 0 ]
+          if [ "${status}" -eq 0 ]
           then
             status_message='OK'
           else
