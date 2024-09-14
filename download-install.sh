@@ -12,7 +12,7 @@ umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_DOWNLOAD_INSTALLER_VERSION='0.1.0'
+BSKYSHCLI_DOWNLOAD_INSTALLER_VERSION='0.1.1'
 
 github_latest_url='https://api.github.com/repos/bills-appworks/bsky-sh-cli/releases/latest'
 github_tarball_url_prefix='https://github.com/bills-appworks/bsky-sh-cli/tarball/refs/heads'
