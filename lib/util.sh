@@ -8,7 +8,6 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
-umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
