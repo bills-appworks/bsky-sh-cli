@@ -8,11 +8,10 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
-umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.1.0'
+BSKYSHCLI_INSTALLER_VERSION='0.1.1'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -164,6 +163,8 @@ add_path_config()
     echo 'PATH=$PATH:'"${param_install_dir}/bin"
     echo 'export PATH'
   } >> "${param_config_file}"
+  # refer to echo result
+  # shellcheck disable=SC2320
   return $?
 }
 
@@ -460,7 +461,7 @@ _pn ''
 _pn '[Configuration of install]'
 _pn "Install directory: ${install_dir}"
 _p  'Directory overwrite: '
-if [ $overwrite_directory -eq 0 ]
+if [ "${overwrite_directory}" -eq 0 ]
 then
   _pn 'Yes'
 else
@@ -544,7 +545,7 @@ fi
 if [ $rcfile_copy -eq 0 ]
 then
   _p "Copying Run Commands file to '${HOME}/${rcfile_name}' ... "
-  if cp "${rcfile_name}.sample" "${HOME}/${rcfile_name}"
+  if cp "${FILE_DIR}/${rcfile_name}.sample" "${HOME}/${rcfile_name}"
   then
     _pn 'Complete'
   else
