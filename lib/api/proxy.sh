@@ -187,8 +187,9 @@ api_post_nobearer()
   debug 'api_post_nobearer' "param_endpoint:${param_endpoint}"
 # WARNING: parameters may contain sensitive information (e.g. passwords) and will remain in the debug log
 #  debug_json 'api_post_nobearer' "param_body:${param_body}"
-  debug_single 'api_post_nobearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -d "${param_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+# WARNING: response may contain sensitive information (e.g. JWT) and will remain in the debug log
+#  debug_single 'api_post_nobearer'
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -d "${param_body}"
 
   debug 'api_post_nobearer' 'END'
 }
@@ -202,8 +203,9 @@ api_post_bearer()
   debug 'api_post_bearer' "param_endpoint:${param_endpoint}"
 
   header_authorization=`create_authorization_header "${param_bearer}"`
-  debug_single 'api_post_bearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+# WARNING: response may contain sensitive information (e.g. JWT) and will remain in the debug log
+#  debug_single 'api_post_bearer'
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_ACCEPT}" -H "${header_authorization}"
 
   debug 'api_post_bearer' 'END'
 }
