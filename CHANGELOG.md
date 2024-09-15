@@ -1,3 +1,11 @@
+# v0.11.1
+- Fixed an issue where users other than root could not use tools when installing for the first time using the installer as the root user (or sudo) (reduced excessive permission restrictions)
+- Improved documentation for installation and updates
+- Implemented a check for required tools for the download installer
+- Adjusted permissions for deploying the .bsky_sh_cli_rc file during installation
+- (When running in debug mode) Reduced excessive debug information output
+- (For developers) Supported ShellCheck version 0.9.0
+
 # v0.11.0
 ## Add
 - Display of quoted numbers
