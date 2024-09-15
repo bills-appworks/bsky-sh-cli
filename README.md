@@ -40,6 +40,8 @@ Unless otherwise configured, it is assumed that the `bin` and `lib` directories 
 
 Additionally, the tools listed in [Required tools](#required-tools) below must be executable.
 
+After installation, you can update to the latest version with the `bsky update` command. For details, please refer to the [installation documentation](INSTALL.md).
+
 ## Tutorial
 ### Login (Sign in)
 First, log in (sign in) to Bluesky.
@@ -62,7 +64,7 @@ One post will be displayed in the following format.
 [ViewIndex:<number>]
 <Poster's user display name>  @<Poster's handle>  <Post date and time>
 <Post content>
-Reply:<Number of replies> Repost:<Number of reposts> Like:<Number of Likes>
+Reply:<Number of replies> Repost:<Number of reposts> Quote:<Number of quotes> Like:<Number of likes>
 ```
 The number displayed in the first `ViewIndex` is used to specify the target post as a parameter for commands that like or reply to posts.
 
