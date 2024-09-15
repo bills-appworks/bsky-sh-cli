@@ -40,6 +40,8 @@ Unless otherwise configured, it is assumed that the `bin` and `lib` directories 
 
 Additionally, the tools listed in [Required tools](#required-tools) below must be executable.
 
+After installation, you can update to the latest version with the `bsky update` command. For details, please refer to the [installation documentation](INSTALL-ja.md).
+
 ## Tutorial
 ### Login (Sign in)
 First, log in (sign in) to Bluesky.

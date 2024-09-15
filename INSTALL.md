@@ -25,7 +25,7 @@ curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-
 ```
 - Run the download installer with the following command. If you want all users to use it, run it as super user.
 
-For super user：
+For super user:
 ```
 sudo sh download-install.sh
 ```
@@ -59,6 +59,18 @@ The following describes what to do. If it does not meet your needs, please refer
 If necessary, you will be asked to confirm execution or input during installation (confirmation or input may not be required depending on the [install.sh command option](#installsh-command-options) specification).
 
 If you create or modify (add) a login script that sets the environment variable `PATH` during the installation process, the environment variable `PATH` will not be set immediately after the installation is completed. To execute the `bsky` command without specifying a path, log in to the shell again.
+
+### How to run
+- In the directory where you extracted the release archive, execute the installer with the following command. If you want all users to use it, run it as super user.
+
+For super user:
+```
+sudo ./install.sh
+```
+For general users:
+```
+./install.sh
+```
 
 ### What `install.sh` does
 1. Check the existence of some files under the subdirectories `bin` and `lib`. It is assumed that the directory and file structure is the same as provided.
@@ -163,5 +175,14 @@ To run the `bsky` command without specifying a path, edit the login script accor
 ## Execute update command
 
 If it has already been installed, you can update the tool itself to the latest version using the installed bsky command (`bsky update`).
+
+If you installed as a super user:
+```
+sudo -i bsky update
+```
+If you installed as a general user:
+```
+bsky update
+```
 
 See the [command line reference](https://github.com/bills-appworks/bsky-sh-cli/wiki/Command-Line-Reference#tool-update-update) for details.
