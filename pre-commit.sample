@@ -1,7 +1,7 @@
 #!/bin/sh
 # Bluesky in the shell
 # A Bluesky CLI (Command Line Interface) implementation in shell script
-# Author Bluesky:@billsbs.bills-appworks.net
+# Author Bluesky:@bills-appworks.blue
 #
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
