@@ -1,0 +1,38 @@
+#!/bin/sh -
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implementation in shell script
+# Author Bluesky:@bills-appworks.blue
+# 
+# Copyright (c) 2024 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# API Reference: https://docs.bsky.app/docs/api/app-bsky-graph-get-followers
+IFS='
+ 	'
+umask 077
+FILENAME='app.bsky.graph.getFollowers'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
+
+param_actor=$1
+param_limit=$2
+param_cursor=$3
+
+debug "${FILENAME}" 'START'
+
+debug_single "${FILENAME}"
+api_get 'app.bsky.graph.getFollowers' '' 'actor' "${param_actor}" 'limit' "${param_limit}" 'cursor' "${param_cursor}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+debug "${FILENAME}" 'END'
