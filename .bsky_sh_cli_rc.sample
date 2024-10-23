@@ -96,3 +96,17 @@
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='[posts]\n bsky author-feed --handle \($HANDLE) --filter posts-no-replies\n[replies]\n bsky author-feed --handle \($HANDLE) --filter posts-with-replies\n[media]\n bsky author-feed --handle \($HANDLE) --filter posts-with-media'
 # template for navigation my account part of profile
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='[like]\n (not yet implemented)\n[feed]\n (not yet implemented)\n[list]\n (not yet implemented)'
+# template for follows meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META='[follows]'
+# template for followers meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META='[followers]'
+# template for known followers meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META='[known followers]'
+# template for social follow (output id)
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
+# template for output id placeholder to social follow templates
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER='<VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER>'
+# template for social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
+# template for separator field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''

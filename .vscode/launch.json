@@ -340,6 +340,70 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (social --actor <handle or did> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --actor '${input:actor}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --handle <handle> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --handle '${input:handle}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --did <did> [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --did '${input:did}' ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social [--output-id])",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social ${input:output-id}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --actor <handle or did> --follows)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --actor '${input:actor}' --follows"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --actor <handle or did> --followers)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --actor '${input:actor}' --followers"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --actor <handle or did> --known-followers)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --actor '${input:actor}' --known-followers"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "bsky (social --actor <handle or did> --dump)",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} social --actor '${input:actor}' --dump"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (pref [--group <preference group>] [--item <preference item>])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -816,7 +880,7 @@
             "description": "select multiple post thread mode (delete if unnecessary)",
             "options": ["", "--mode thread", "--mode sibling", "--mode independence"],
             "default": ""
-        }
+        },
         {
             "type": "promptString",
             "id": "any",

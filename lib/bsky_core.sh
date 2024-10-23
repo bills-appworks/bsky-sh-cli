@@ -90,6 +90,16 @@ GENERAL_DUMP_PROCEDURE='
   ) |
   extract_nodes(.; "")
 '
+# shellcheck disable=SC2016
+FOLLOW_PARSE_PROCEDURE='
+  to_entries |
+  foreach .[] as $follow_entry (0; 0;
+    $follow_entry.value as $follow_fragment |
+    ($follow_entry.key + 1) as $follow_index |
+    $follow_fragment |
+    output_follow($follow_index; $follow_fragment)
+  )
+'
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 #FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
@@ -5169,6 +5179,267 @@ core_get_profile()
   return $status
 }
 
+core_create_follow_chunk()
+{
+  param_output_id="$1"
+
+  debug 'core_create_follow_chunk' 'START'
+  debug 'core_create_follow_chunk' "param_output_id:${param_output_id}"
+
+  if [ -n "${param_output_id}" ]
+  then
+    # escape for substitution at placeholder replacement 
+    view_follow_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+  else
+    view_follow_output_id=''
+  fi
+  view_template_follow=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
+  view_template_follow_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
+  # $<variables> want to pass through for jq
+  # shellcheck disable=SC2016
+  _p 'def output_follow(follow_index; follow_fragment):
+        follow_fragment.did as $DID |
+        follow_fragment.handle as $HANDLE |
+        follow_fragment.displayName as $DISPLAYNAME |
+        follow_fragment.description as $DESCRIPTION |
+        (follow_fragment.avatar // "(default)") as $AVATAR |
+        follow_fragment.associated.lists as $ASSOCIATED_LISTS |
+        follow_fragment.associated.feedgens as $ASSOCIATED_FEEDGENS |
+        follow_fragment.associated.starterPacks as $ASSOCIATED_STARTER_PACKS |
+        follow_fragment.associated.labeler as $ASSOCIATED_LABELER |
+        follow_fragment.associated.chat as $ASSOCIATED_CHAT |
+        follow_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
+        follow_fragment.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+        follow_fragment.viewer.muted as $VIEWER_MUTED |
+        follow_fragment.viewer.mutedByList as $VIEWER_MUTEDBYLIST |
+        follow_fragment.viewer.blockedBy as $VIEWER_BLOCKEDBY |
+        follow_fragment.viewer.blocking as $VIEWER_BLOCKING |
+        follow_fragment.viewer.blockingByList as $VIEWER_BLOCKINGBYLIST |
+        follow_fragment.viewer.following as $VIEWER_FOLLOWING |
+        follow_fragment.viewer.followedBy as $VIEWER_FOLLOWEDBY |
+        follow_fragment.viewer.knownFollowers as $VIEWER_KNOWN_FOLLOWERS |
+        follow_fragment.labels as $LABELS |
+        "'"${view_template_follow}"'",
+        "'"${view_template_follow_separator}"'"
+      ;
+  '
+
+  debug 'core_create_follow_chunk' 'END'
+}
+
+core_social()
+{
+  param_did="$1"
+  param_follows="$2"
+  param_followers="$3"
+  param_known_followers="$4"
+  param_limit="$5"
+  param_next="$6"
+  param_output_id="$7"
+  param_dump="$8"
+  param_output_json="$9"
+
+  debug 'core_social' 'START'
+  debug 'core_social' "param_did:${param_did}"
+  debug 'core_social' "param_follows:${param_follows}"
+  debug 'core_social' "param_followers:${param_followers}"
+  debug 'core_social' "param_known_followers:${param_known_followers}"
+  debug 'core_social' "param_limit:${param_limit}"
+  debug 'core_social' "param_next:${param_next}"
+  debug 'core_social' "param_output_id:${param_output_id}"
+  debug 'core_social' "param_dump:${param_dump}"
+  debug 'core_social' "param_output_json:${param_output_json}"
+
+  read_session_file
+
+  if [ -n "${param_follows}" ]
+  then
+    if [ -n "${param_next}" ]
+    then
+      cursor="${SESSION_FOLLOWS_CURSOR}"
+    else
+      cursor=''
+    fi
+
+    if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
+    then
+      if [ -z "${param_output_json}" ]
+      then
+        _pn '(next follows not found)'
+      fi
+      result_follows=''
+      status_follows=0
+    else
+      result_follows=`api app.bsky.graph.getFollows "${param_did}" "${param_limit}" "${cursor}"`
+      status_follows=$?
+      debug_single 'core_social_follows'
+      _p "${result_follows}" > "$BSKYSHCLI_DEBUG_SINGLE"
+    fi
+  else
+    result_follows=''
+    status_follows=0
+  fi
+
+  if [ -n "${param_followers}" ]
+  then
+    if [ -n "${param_next}" ]
+    then
+      cursor="${SESSION_FOLLOWERS_CURSOR}"
+    else
+      cursor=''
+    fi
+
+    if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
+    then
+      if [ -z "${param_output_json}" ]
+      then
+        _pn '(next followers not found)'
+      fi
+      result_followers=''
+      status_followers=0
+    else
+      result_followers=`api app.bsky.graph.getFollowers "${param_did}" "${param_limit}" "${cursor}"`
+      status_followers=$?
+      debug_single 'core_social_followers'
+      _p "${result_followers}" > "$BSKYSHCLI_DEBUG_SINGLE"
+    fi
+  else
+    result_followers=''
+    status_followers=0
+  fi
+
+  if [ -n "${param_known_followers}" ]
+  then
+    result_known_followers=`api app.bsky.graph.getKnownFollowers "${param_did}" "${param_limit}"`
+    status_known_followers=$?
+    debug_single 'core_social_known_followers'
+    _p "${result_known_followers}" > "$BSKYSHCLI_DEBUG_SINGLE"
+  else
+    result_known_followers=''
+    status_known_followers=0
+  fi
+
+  if [ "${status_follows}" -eq 0 ] && [ "${status_followers}" -eq 0 ] && [ "${status_known_followers}" -eq 0 ] 
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      key_follows="\"follows\""
+      if [ -n "${result_follows}" ]
+      then
+        fragment_follows=`_p "${result_follows}" | jq -c '.follows'`
+        fragment_follows="${key_follows}:${fragment_follows}"
+      else
+        fragment_follows="${key_follows}:[]"
+      fi
+      key_followers="\"followers\""
+      if [ -n "${result_followers}" ]
+      then
+        fragment_followers=`_p "${result_followers}" | jq -c '.followers'`
+        fragment_followers="${key_followers}:${fragment_followers}"
+      else
+        fragment_followers="${key_followers}:[]"
+      fi
+      key_known_followers="\"knownFollowers\""
+      if [ -n "${result_known_followers}" ]
+      then
+        fragment_known_followers=`_p "${result_known_followers}" | jq -c '.followers'`
+        fragment_known_followers="${key_known_followers}:${fragment_known_followers}"
+      else
+        fragment_known_followers="${key_known_followers}:[]"
+      fi
+      aggregated_json=`_join ',' "${fragment_follows}" "${fragment_followers}" "${fragment_known_followers}"`
+      _p "{${aggregated_json}}"
+    elif [ -n "${param_dump}" ]
+    then
+      _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META}"
+      _p "${result_follows}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+      _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META}"
+      _p "${result_followers}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+      _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META}"
+      _p "${result_known_followers}" | jq -r "${GENERAL_DUMP_PROCEDURE}"
+    else
+      view_follow_functions=`core_create_follow_chunk "${param_output_id}"`
+      if [ -n "${param_follows}" ]
+      then
+        _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META}"
+        _pn "${result_follows}" | jq -r ".follows|${view_follow_functions}${FOLLOW_PARSE_PROCEDURE}"
+      fi
+      if [ -n "${param_followers}" ]
+      then
+        _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META}"
+        _pn "${result_followers}" | jq -r ".followers|${view_follow_functions}${FOLLOW_PARSE_PROCEDURE}"
+      fi
+      if [ -n "${param_known_followers}" ]
+      then
+        _pn "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META}"
+        _pn "${result_known_followers}" | jq -r ".followers|${view_follow_functions}${FOLLOW_PARSE_PROCEDURE}"
+      fi
+    fi
+
+    if [ -n "${param_follows}" ]
+    then
+      cursor=`_p "${result_follows}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+      # CAUTION: key=value pairs are separated by tab characters
+      cursor_keyvalue_follows="${SESSION_KEY_FOLLOWS_CURSOR}=${cursor}"
+    else
+      cursor_keyvalue_follows=''
+    fi
+    if [ -n "${param_followers}" ]
+    then
+      cursor=`_p "${result_followers}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+      # CAUTION: key=value pairs are separated by tab characters
+      cursor_keyvalue_followers="${SESSION_KEY_FOLLOWERS_CURSOR}=${cursor}"
+    else
+      cursor_keyvalue_followers=''
+    fi
+    if [ -n "${param_known_followers}" ]
+    then
+      cursor=`_p "${result_known_followers}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+      # CAUTION: key=value pairs are separated by tab characters
+      cursor_keyvalue_known_followers="${SESSION_KEY_KNOWN_FOLLOWERS_CURSOR}=${cursor}"
+    else
+      cursor_keyvalue_known_followers=''
+    fi
+    # CAUTION: _join first parameter is tab character
+    cursor_keyvalues=`_join '	' "${cursor_keyvalue_follows}" "${cursor_keyvalue_followers}" "${cursor_keyvalue_known_followers}"`
+    update_session_file "${cursor_keyvalues}"
+  else
+    if [ "${status_follows}" -ne 0 ]
+    then
+      api_error=`_p "${result_follows}" | jq -r '.error // ""'`
+      case $api_error in
+        *)
+          error "follows API error: ${result_follows}"
+          ;;
+      esac
+    fi
+
+    if [ "${status_followers}" -ne 0 ]
+    then
+      api_error=`_p "${result_followers}" | jq -r '.error // ""'`
+      case $api_error in
+        *)
+          error "followers API error: ${result_followers}"
+          ;;
+      esac
+    fi
+
+    if [ "${status_known_followers}" -ne 0 ]
+    then
+      api_error=`_p "${result_known_followers}" | jq -r '.error // ""'`
+      case $api_error in
+        *)
+          error "follows API error: ${result_known_followers}"
+          ;;
+      esac
+    fi
+  fi
+
+  debug 'core_social' 'END'
+
+  return "${status}"
+}
+
 core_get_pref()
 {
   param_group="$1"
@@ -5622,12 +5893,14 @@ core_info_session_cursor()
 
   if [ -n "${param_output_json}" ]
   then
-    _p "\"cursor\":{\"timeline\":\"${SESSION_GETTIMELINE_CURSOR}\",\"feed\":\"${SESSION_GETFEED_CURSOR}\",\"authorFeed\":\"${SESSION_GETAUTHORFEED_CURSOR}\"}"
+    _p "\"cursor\":{\"timeline\":\"${SESSION_GETTIMELINE_CURSOR}\",\"feed\":\"${SESSION_GETFEED_CURSOR}\",\"authorFeed\":\"${SESSION_GETAUTHORFEED_CURSOR}\",\"follows\":\"${SESSION_FOLLOWS_CURSOR}\",\"followers\":\"${SESSION_FOLLOWERS_CURSOR}\"}"
   else
     _pn '[cursor]'
     _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
     _pn "feed cursor: ${SESSION_GETFEED_CURSOR}"
     _pn "author-feed cursor: ${SESSION_GETAUTHORFEED_CURSOR}"
+    _pn "follows cursor: ${SESSION_FOLLOWS_CURSOR}"
+    _pn "followers cursor: ${SESSION_FOLLOWERS_CURSOR}"
   fi
 
   debug 'core_info_session_cursor' 'END'
@@ -5713,6 +5986,20 @@ core_info_meta_config()
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR'
     _p '}'
   else
     _pn "BSKYSHCLI_DEBUG=${BSKYSHCLI_DEBUG}"
@@ -5737,6 +6024,13 @@ core_info_meta_config()
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}'"
   fi
 
   debug 'core_info_meta_config' 'END'
