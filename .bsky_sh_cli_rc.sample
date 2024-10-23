@@ -69,7 +69,7 @@
 # template for output id field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)] [did:\($DID)]'
 # template for meta field in post feed generator
-#BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='[custom feed (feed generator)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='[custom feed (feed generator)] <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
 # template for head field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='\($DISPLAYNAME)\n  Feed by @\($CREATOR_HANDLE)'
 # template for tail field in post feed generator
