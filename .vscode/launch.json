@@ -516,6 +516,30 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.graph.getFollowers (<actor> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.graph.getFollowers",
+            "terminalKind": "integrated",
+            "argsString": "'${input:actor}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "app.bsky.graph.getFollows (<actor> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.graph.getFollows",
+            "terminalKind": "integrated",
+            "argsString": "'${input:actor}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "app.bsky.graph.getKnownFollowers (<actor> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.graph.getKnownFollowers",
+            "terminalKind": "integrated",
+            "argsString": "'${input:actor}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.identity.resolveHandle (<handle>)",
             "program": "${workspaceFolder}/lib/api/com.atproto.identity.resolveHandle",
             "terminalKind": "integrated",
