@@ -5193,7 +5193,7 @@ core_create_follow_chunk()
   else
     view_follow_output_id=''
   fi
-  view_template_follow=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
+  view_template_follow=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
   view_template_follow_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
