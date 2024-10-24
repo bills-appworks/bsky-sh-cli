@@ -5194,7 +5194,7 @@ core_create_follow_chunk()
     view_follow_output_id=''
   fi
   view_template_follow=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
-  view_template_follow_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
+  view_template_follow_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_follow_output_id}"'/g'`
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
   _p 'def output_follow(follow_index; follow_fragment):
@@ -5995,8 +5995,6 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID'
     _p ','
-    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER'
-    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR'
@@ -6028,7 +6026,6 @@ core_info_meta_config()
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID}'"
-    _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID_PLACEHOLDER}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}'"
   fi
