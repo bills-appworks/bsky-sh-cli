@@ -1,3 +1,13 @@
+# v0.12.0
+## 追加
+- フォロー/フォロワー表示機能（socialコマンド）
+- APIラッパースクリプトを追加
+  - app.bsky.graph.getFollowers
+  - app.bsky.graph.getFollows
+  - app.bsky.graph.getKnowFollowers
+## 修正
+- その他軽微な修正
+
 # v0.11.1
 ## 修正
 - rootユーザ（またはsudo）でインストーラを使って新規にインストールした場合にroot以外のユーザがツールを利用できない不具合を修正（過剰なパーミッション制約の削減）
