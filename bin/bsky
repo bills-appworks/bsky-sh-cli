@@ -86,6 +86,14 @@ BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='[avatar] \($AVATAR)\n[banner] \($BANN
 BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='[posts]\n bsky author-feed --handle \($HANDLE) --filter posts-no-replies\n[replies]\n bsky author-feed --handle \($HANDLE) --filter posts-with-replies\n[media]\n bsky author-feed --handle \($HANDLE) --filter posts-with-media'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='[like]\n (not yet implemented)\n[feed]\n (not yet implemented)\n[list]\n (not yet implemented)'
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META='[follows]'
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META='[followers]'
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META='[known followers]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
+BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
 
 BSKYSHCLI_DEFAULT_RUN_COMMANDS_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
@@ -188,6 +196,7 @@ commands:
   like         like on existing post.
   thread       show thread of specified post.
   profile      show profile.
+  social       show social informations (follows/followers).
   info         show session/meta informations.
   size         show number of characters in text.
   update       update this tool.
@@ -799,6 +808,54 @@ note:
 EOS
 
   debug 'output_help_profile' 'END'
+}
+
+output_help_social()
+{
+  debug 'output_help_social' 'START'
+
+  cat << 'EOS'
+bsky author-feed help
+
+usage: bsky profile --actor <handle or did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       or
+       bsky profile --handle <handle> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       or
+       bsky profile --did <did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       or
+       bsky profile [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+
+parameters:
+  --actor <handle or did>
+    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
+  --handle <handle>
+    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+
+  --did <did>
+    Specify DID of account for custom feed (feed generator) creator.
+
+  --limit <number>
+    Specify limit number (default 50) of output follows/followers (from 1 to 100).
+
+  --next
+    Output next follows/followers from previous social command.
+
+  --output-id
+    Output identifier of AT protocol (did)
+
+  --output-json
+    Output JSON format. Following parameter is ignored:
+      --output-id
+
+note:
+  if --actor, --handle, and --did are all omitted, the current session account will be targeted.
+  if --follows, --followers, and --known-followers are all omitted, show follows and followers.
+  --known-followers cannot be controlled by --next, and the number specified by --limit is the upper limit.
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_social' 'END'
 }
 
 output_help_pref()
@@ -1783,6 +1840,57 @@ command_profile()
   debug 'command_profile' 'END'
 }
 
+command_social()
+{
+  debug 'command_social' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_social
+  else
+    parse_parameters '--actor:1 --handle:1 --did:1 --follows:0 --followers:0 --known-followers:0 --limit:1 --next:0 --output-id:0 --dump:0 --output-json:0' "$@"
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    if verify_exclusive 1 '--actor --handle --did', "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"
+    then
+      :
+    else
+      read_session_file
+      PARSED_PARAM_KEYVALUE_did="${SESSION_DID}"
+    fi
+
+    did=`core_resolve_actor "${PARSED_PARAM_KEYVALUE_actor}" "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+    status=$?
+    if [ $status -ne 0 ]
+    then
+      error 'social command error occurred'
+    fi
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    if [ -z "${PARSED_PARAM_KEYONLY_follows}" ] && [ -z "${PARSED_PARAM_KEYONLY_followers}" ] && [ -z "${PARSED_PARAM_KEYONLY_known_followers}" ]
+    then
+      PARSED_PARAM_KEYONLY_follows='defined'
+      PARSED_PARAM_KEYONLY_followers='defined'
+    fi
+
+    if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+    then
+      verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+      limit=$?
+    else
+      limit=''
+    fi
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    core_social "${did}" "${PARSED_PARAM_KEYONLY_follows}" "${PARSED_PARAM_KEYONLY_followers}" "${PARSED_PARAM_KEYONLY_known_followers}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_dump}" "${PARSED_PARAM_KEYONLY_output_json}"
+  fi
+
+  debug 'command_social' 'END'
+}
+
 command_pref()
 {
   debug 'command_pref' 'START'
@@ -2103,6 +2211,10 @@ case $1 in
   profile)
     shift
     command_profile "$@"
+    ;;
+  social)
+    shift
+    command_social "$@"
     ;;
   pref)  # non-public command
     shift
