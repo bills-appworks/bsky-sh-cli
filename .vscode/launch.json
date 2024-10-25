@@ -484,10 +484,26 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.getAuthorFeed (<actor> <[limit 1<=limit<=100 default:50]> <[cursor]> <[filter]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getAuthorFeed",
+            "terminalKind": "integrated",
+            "argsString": "'${input:actor}' '${input:limit}' '${input:cursor}' '${api-author-feed-filter}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.feed.getFeed (<feed> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.feed.getFeed",
             "terminalKind": "integrated",
             "argsString": "'${input:feed}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "app.bsky.feed.getFeedGenerator (<feed>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.getFeedGenerator",
+            "terminalKind": "integrated",
+            "argsString": "'${input:feed}'"
         },
         {
             "type": "bashdb",
@@ -817,6 +833,13 @@
             "id": "author-feed-filter",
             "description": "select filter",
             "options": ["", "--filter posts-with-replies", "--filter posts-no-replies", "--filter posts-with-media", "--filter posts-and-author-threads"],
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "api-author-feed-filter",
+            "description": "select filter",
+            "options": ["", "posts-with-replies", "posts-no-replies", "posts-with-media", "posts-and-author-threads"],
             "default": ""
         },
         {
