@@ -1,3 +1,7 @@
+# v0.12.1
+## Fix
+- Fixed some errors in the help
+
 # v0.12.0
 ## Add
 - Follows/followers display function (social command)
