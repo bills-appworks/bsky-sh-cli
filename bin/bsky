@@ -775,7 +775,7 @@ output_help_profile()
   debug 'output_help_profile' 'START'
 
   cat << 'EOS'
-bsky author-feed help
+bsky profile help
 
 usage: bsky profile --actor <handle or did> [--output-id] [--output-json]
        or
@@ -815,15 +815,15 @@ output_help_social()
   debug 'output_help_social' 'START'
 
   cat << 'EOS'
-bsky author-feed help
+bsky social help
 
-usage: bsky profile --actor <handle or did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+usage: bsky social --actor <handle or did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
        or
-       bsky profile --handle <handle> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       bsky social --handle <handle> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
        or
-       bsky profile --did <did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       bsky social --did <did> [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
        or
-       bsky profile [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
+       bsky social [--follows] [--followers] [--known-followers] [--limit <number>] [--next] [--output-id] [--output-json]
 
 parameters:
   --actor <handle or did>
@@ -834,6 +834,15 @@ parameters:
 
   --did <did>
     Specify DID of account for custom feed (feed generator) creator.
+
+  --follows
+    Displays accounts followed by the account specified in actor/handle/did.
+  
+  --followers
+    Displays accounts that are following the account specified in actor/handle/did.
+
+  --known-followers
+    Displays accounts that are following the account specified in actor/handle/did (accounts followed by the logged-in account).
 
   --limit <number>
     Specify limit number (default 50) of output follows/followers (from 1 to 100).
