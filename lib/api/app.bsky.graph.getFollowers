@@ -7,11 +7,11 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
-# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-get-record
+# API Reference: https://docs.bsky.app/docs/api/app-bsky-graph-get-followers
 IFS='
  	'
 umask 077
-FILENAME='com.atproto.repo.getRecord'
+FILENAME='app.bsky.graph.getFollowers'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -26,14 +26,13 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-param_repo=$1
-param_collection=$2
-param_rkey=$3
-param_cid=$4
+param_actor=$1
+param_limit=$2
+param_cursor=$3
 
 debug "${FILENAME}" 'START'
 
 debug_single "${FILENAME}"
-api_get 'com.atproto.repo.getRecord' '' 'repo' "${param_repo}" 'collection' "${param_collection}" 'rkey' "${param_rkey}" 'cid' "${param_cid}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_get 'app.bsky.graph.getFollowers' '' 'actor' "${param_actor}" 'limit' "${param_limit}" 'cursor' "${param_cursor}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'
