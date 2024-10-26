@@ -1,4 +1,15 @@
+# v0.12.0
+## Add
+- Follows/followers display function (social command)
+- Add to API wrapper script
+  - app.bsky.graph.getFollowers
+  - app.bsky.graph.getFollows
+  - app.bsky.graph.getKnowFollowers
+## Fix
+- Other minor fixes
+
 # v0.11.1
+## Modify
 - Fixed an issue where users other than root could not use tools when installing for the first time using the installer as the root user (or sudo) (reduced excessive permission restrictions)
 - Improved documentation for installation and updates
 - Implemented a check for required tools for the download installer

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Bluesky in the shell
 # A Bluesky CLI (Command Line Interface) implementation in shell script
-# Author Bluesky:@billsbs.bills-appworks.net
+# Author Bluesky:@bills-appworks.blue
 # 
 # Copyright (c) 2024 bills-appworks
 # This software is released under the MIT License.
@@ -69,7 +69,7 @@
 # template for output id field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='[uri:\($URI)] [cid:\($CID)] [did:\($DID)]'
 # template for meta field in post feed generator
-#BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='[custom feed (feed generator)] VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='[custom feed (feed generator)] <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
 # template for head field in post feed generator
 #BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='\($DISPLAYNAME)\n  Feed by @\($CREATOR_HANDLE)'
 # template for tail field in post feed generator
@@ -96,3 +96,15 @@
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='[posts]\n bsky author-feed --handle \($HANDLE) --filter posts-no-replies\n[replies]\n bsky author-feed --handle \($HANDLE) --filter posts-with-replies\n[media]\n bsky author-feed --handle \($HANDLE) --filter posts-with-media'
 # template for navigation my account part of profile
 #BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_MYACCOUNT='[like]\n (not yet implemented)\n[feed]\n (not yet implemented)\n[list]\n (not yet implemented)'
+# template for follows meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWS_META='[follows]'
+# template for followers meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_FOLLOWERS_META='[followers]'
+# template for known followers meta field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_KNOWN_FOLLOWERS_META='[known followers]'
+# template for social follow (output id)
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
+# template for social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
+# template for separator field in social follow
+#BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
