@@ -1065,6 +1065,9 @@ usage: bsky update
 
 note:
   Update this tool to the latest version.
+  If you have installed it as a superuser and set the execution path, you can run the bsky command as expected by specifying the -i option to the sudo command.
+  Examples:
+    sudo -i bsky update
 EOS
 
   debug 'output_help_update' 'END'
