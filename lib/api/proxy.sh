@@ -7,7 +7,7 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
- 	'
+    '
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
@@ -15,7 +15,13 @@ FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 if [ -z "${BSKYSHCLI_DEFINE_PROXY}" ]; then
 BSKYSHCLI_DEFINE_PROXY='defined'
 
-ENDPOINT_BASE_URL='https://bsky.social/xrpc/'
+# check if selfhosted AT server environment variable has been set
+if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ];then
+    ENDPOINT_BASE_URL="https://${BSKYSHCLI_SELFHOSTED_DOMAIN}/xrpc/"
+else
+    ENDPOINT_BASE_URL='https://bsky.social/xrpc/'
+fi
+
 HEADER_ACCEPT='Accept: application/json'
 HEADER_AUTHORIZATION_PREFIX='Authorization: Bearer'
 HEADER_CONTENT_TYPE='Content-Type: application/json'
