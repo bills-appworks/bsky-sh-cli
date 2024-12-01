@@ -7,7 +7,7 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
- 	'
+    '
 # future use
 # shellcheck disable=SC2034
 BSKYSHCLI_EVACUATED_UMASK=`umask`
