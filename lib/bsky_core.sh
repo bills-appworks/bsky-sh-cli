@@ -1693,6 +1693,16 @@ core_build_external_fragment()
                   mime_type_check_status=$?
                   if [ "${mime_type_check_status}" -eq 0 ]
                   then
+                    # adding size check, optional imagemagic compression
+                    # Your max upload size. Defaults for many webservers is 2M,
+                    # so we're checking if it's greater than 2000 kb
+                    maxsize=2000
+                    filesize=`du -k "${image_temporary_path}" | awk '{print $1}'`
+                    if [ $filesize -gt $maxsize ];then
+                        if [ -f /usr/bin/convert ];then
+                            /usr/bin/convert -resize 800x512\! "${image_temporary_path}" "${image_temporary_path}"
+                        fi
+                    fi
                     upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
                     api_status=$?
                     if [ $api_status -eq 0 ]
