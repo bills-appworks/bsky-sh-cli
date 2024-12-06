@@ -12,7 +12,12 @@ umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_DEFAULT_DOMAIN='.sky.faithcollapsing.com'
+# check if selfhosted AT server environment variable has been set
+if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ];then
+	BSKYSHCLI_DEFAULT_DOMAIN='.${BSKYSHCLI_SELFHOSTED_DOMAIN}"
+else
+	BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+fi
 BSKYSHCLI_VIA_VALUE="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
@@ -2725,7 +2730,7 @@ core_get_timeline()
     view_session_functions=`core_create_session_chunk`
     feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
-    update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${cursor}    ${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    update_session_file "${SESSION_KEY_GETTIMELINE_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
   else
     api_error=`_p "${result}" | jq -r '.error // ""'`
     case $api_error in
@@ -2809,7 +2814,7 @@ core_get_feed()
       view_session_functions=`core_create_session_chunk`
       feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
       # CAUTION: key=value pairs are separated by tab characters
-      update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${cursor}  ${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+      update_session_file "${SESSION_KEY_GETFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
     else
       api_error=`_p "${result}" | jq -r '.error // ""'`
       case $api_error in
@@ -2883,7 +2888,7 @@ core_get_author_feed()
     view_session_functions=`core_create_session_chunk`
     feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${FEED_PARSE_PROCEDURE}" | sed 's/.$//'`
     # CAUTION: key=value pairs are separated by tab characters
-    update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${cursor}  ${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+    update_session_file "${SESSION_KEY_GETAUTHORFEED_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
   else
     api_error=`_p "${result}" | jq -r '.error // ""'`
     case $api_error in
@@ -5415,7 +5420,7 @@ core_social()
       cursor_keyvalue_known_followers=''
     fi
     # CAUTION: _join first parameter is tab character
-    cursor_keyvalues=`_join '   ' "${cursor_keyvalue_follows}" "${cursor_keyvalue_followers}" "${cursor_keyvalue_known_followers}"`
+    cursor_keyvalues=`_join '	' "${cursor_keyvalue_follows}" "${cursor_keyvalue_followers}" "${cursor_keyvalue_known_followers}"`
     update_session_file "${cursor_keyvalues}"
   else
     if [ "${status_follows}" -ne 0 ]
