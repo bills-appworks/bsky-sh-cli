@@ -16,7 +16,8 @@ if [ -z "${BSKYSHCLI_DEFINE_PROXY}" ]; then
 BSKYSHCLI_DEFINE_PROXY='defined'
 
 # check if selfhosted AT server environment variable has been set
-if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ];then
+if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ]
+then
 	ENDPOINT_BASE_URL="https://${BSKYSHCLI_SELFHOSTED_DOMAIN}/xrpc/"
 else
 	ENDPOINT_BASE_URL='https://bsky.social/xrpc/'
