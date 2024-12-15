@@ -13,8 +13,9 @@ FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
 # check if selfhosted AT server environment variable has been set
-if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ];then
-	BSKYSHCLI_DEFAULT_DOMAIN='.${BSKYSHCLI_SELFHOSTED_DOMAIN}"
+if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ]
+then
+	BSKYSHCLI_DEFAULT_DOMAIN=".${BSKYSHCLI_SELFHOSTED_DOMAIN}"
 else
 	BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
 fi
@@ -1703,10 +1704,12 @@ core_build_external_fragment()
                     # so we're checking if it's greater than 2000 kb
                     maxsize=2000
                     filesize=`du -k "${image_temporary_path}" | awk '{print $1}'`
-                    if [ $filesize -gt $maxsize ];then
-                        if [ -f /usr/bin/convert ];then
-                            /usr/bin/convert -resize 800x512\! "${image_temporary_path}" "${image_temporary_path}"
-                        fi
+                    if [ "${filesize}" -gt "${maxsize}" ]
+                    then
+                      if [ -f /usr/bin/convert ]
+                      then
+                          /usr/bin/convert -resize 800x512\! "${image_temporary_path}" "${image_temporary_path}"
+                      fi
                     fi
                     upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
                     api_status=$?
