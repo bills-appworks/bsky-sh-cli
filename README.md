@@ -40,7 +40,8 @@ Unless otherwise configured, it is assumed that the `bin` and `lib` directories 
 
 Additionally, the tools listed in [Required tools](#required-tools) below must be executable.
 
-After installation, you can update to the latest version with the `bsky update` command. For details, please refer to the [installation documentation](INSTALL.md).
+After installation, you can update to the latest version with the `bsky update` command. For details, or if you are [self-hosting the AT server](https://rafaeleyng.github.io/self-hosting-a-bluesky-pds-and-using-your-domain-as-your-handle), please refer to the [installation documentation](INSTALL.md).
+
 
 ## Tutorial
 ### Login (Sign in)

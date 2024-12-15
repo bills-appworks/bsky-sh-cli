@@ -7,12 +7,17 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
- 	'
+    '
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+# check if selfhosted AT server environment variable has been set
+if [ -n "$BSKYSHCLI_SELFHOSTED_DOMAIN" ];then
+	BSKYSHCLI_DEFAULT_DOMAIN='.${BSKYSHCLI_SELFHOSTED_DOMAIN}"
+else
+	BSKYSHCLI_DEFAULT_DOMAIN='.bsky.social'
+fi
 BSKYSHCLI_VIA_VALUE="bsky-sh-cli (Bluesky in the shell) ${BSKYSHCLI_CLI_VERSION}"
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
@@ -1663,10 +1668,14 @@ core_build_external_fragment()
       if [ $get_html_status -eq 0 ]
       then
         # TODO: code/pattern cleanup and correct references to prefix definitions
-        og_description=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:description" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:description" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_image=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:image" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_url=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:url" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:url" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        # added removal of extra newlines in html
+        # more greedy pattern matching to avoid issues when there's extra values in the opengraph tags
+        og_description=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'|grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_image=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'| head -n 1`
+        #og_image=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g' | head -n 1`
+        og_title=`_p "${external_html}" | sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        #og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
+        og_url=`_p "${external_html}" | sed -z "s/\n//g" | sed 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         if [ -n "${og_title}" ] && [ -n "${og_image}" ]
         then
           if [ -n "${param_core_build_external_fragment_generate_thumb}" ]
@@ -1689,6 +1698,16 @@ core_build_external_fragment()
                   mime_type_check_status=$?
                   if [ "${mime_type_check_status}" -eq 0 ]
                   then
+                    # adding size check, optional imagemagic compression
+                    # Your max upload size. Defaults for many webservers is 2M,
+                    # so we're checking if it's greater than 2000 kb
+                    maxsize=2000
+                    filesize=`du -k "${image_temporary_path}" | awk '{print $1}'`
+                    if [ $filesize -gt $maxsize ];then
+                        if [ -f /usr/bin/convert ];then
+                            /usr/bin/convert -resize 800x512\! "${image_temporary_path}" "${image_temporary_path}"
+                        fi
+                    fi
                     upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
                     api_status=$?
                     if [ $api_status -eq 0 ]
