@@ -6,7 +6,7 @@ This document explains how to install and update after installation.
   - [Run download installer](#run-download-installer)
   - [Run installer in release archive](#run-installer-in-release-archive)
   - [Manual installation](#manual-installation)
-  - [Self Hosted AT Server](#self-hosted)
+  - [Self hosted AT server (PDS)](#self-hosted-at-server-pds)
 - How to update
   - [Execute update command](#execute-update-command)
 
@@ -176,17 +176,16 @@ Please copy the following directories and files included in the provided files t
 
 To run the `bsky` command without specifying a path, edit the login script according to your environment and add the full path of the `bin` directory to the environment variable `PATH`.
 
-## self hosted
+## Self hosted AT server (PDS)
 
-If you are self-hosting the AT server, you can easily point the program at your server through the 
+If you are self-hosting the AT server (PDS), you can easily point the program at your server through the 
 use of an exported environment variable. 
 
-If you are [self-hosting the AT server](https://rafaeleyng.github.io/self-hosting-a-bluesky-pds-and-using-your-domain-as-your-handle), then add this line, replacing `sky.example.com` with the url to your AT server, to either your `.profile` or `.bashrc` as applicable:
+If you are [self-hosting the AT server (PDS)](https://rafaeleyng.github.io/self-hosting-a-bluesky-pds-and-using-your-domain-as-your-handle), then add this line, replacing `sky.example.com` with the url to your AT server, to either your `.profile` or `.bashrc` as applicable:
 
 `export BSKYSHCLI_SELFHOSTED_DOMAIN=sky.example.com`
 
-The script will then query your AT server instead of bsky.social.
-
+The script will then query your AT server (PDS) instead of bsky.social.
 
 # How To Update
 
