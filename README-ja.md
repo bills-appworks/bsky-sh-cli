@@ -40,7 +40,7 @@ sh download-install.sh
 
 また後述の[「必要ツール」](#必要ツール)に記載しているツールが実行可能であることが必要になります。
 
-インストール後は`bsky update`コマンドにより最新版へのアップデートが可能です。詳細は[インストールドキュメント](INSTALL-ja.md)を参照してください。
+インストール後は`bsky update`コマンドにより最新版へのアップデートが可能です。詳細や[PDSをセルフホスト](https://rafaeleyng.github.io/self-hosting-a-bluesky-pds-and-using-your-domain-as-your-handle)している場合は[インストールドキュメント](INSTALL-ja.md)を参照してください。
 
 ## チュートリアル
 ### ログイン（サインイン）
