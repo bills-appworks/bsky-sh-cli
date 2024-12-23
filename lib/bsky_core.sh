@@ -1671,12 +1671,12 @@ core_build_external_fragment()
         # TODO: code/pattern cleanup and correct references to prefix definitions
         # added removal of extra newlines in html
         # more greedy pattern matching to avoid issues when there's extra values in the opengraph tags
-        og_description=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'|grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
-        og_image=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'| head -n 1`
-        #og_image=`_p "${external_html}" |  sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g' | head -n 1`
-        og_title=`_p "${external_html}" | sed -z "s/\n//g" | sed 's/</\n</g'| grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_description=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/' | head -n 1`
+        #og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g' | head -n 1`
+        og_title=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         #og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_url=`_p "${external_html}" | sed -z "s/\n//g" | sed 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_url=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         if [ -n "${og_title}" ] && [ -n "${og_image}" ]
         then
           if [ -n "${param_core_build_external_fragment_generate_thumb}" ]
