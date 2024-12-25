@@ -93,6 +93,16 @@ verify_required_tools()
   else
     _pn '[WARNING] : Command find (libmagic) not found. Images and link cards cannot be used.'
   fi
+  # convert (imagemagick)
+  _p '/usr/bin/convert (imagemagick) ... ' 
+  which /usr/bin/convert > /dev/null
+  result_convert=$?
+  if [ $result_convert -eq 0 ]
+  then
+    _pn '[OK]'
+  else
+    _pn '[WARNING] : Command /usr/bin/convert (imagemagick) not found. Images and link card some functions cannot be used.'
+  fi
 
   if [ $STATUS_TOOLS -ne 0 ]
   then

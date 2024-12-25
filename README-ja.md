@@ -142,6 +142,8 @@ Reply:<リプライ件数> Repost:<リポスト件数 Quote:<引用件数> Like:
 
 実行環境やツールを提供・維持している皆様に感謝いたします。
 
+- convert (imagemagick)
+  - 画像利用時のみ
 - curl
 - file (libmagic)
   - 画像利用時のみ

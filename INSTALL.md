@@ -84,6 +84,7 @@ For general users:
      - `jq`
      - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option.
    - Recommendation
+     - `convert` (imagemagick): If it does not exist, display a warning that some image posting and link card functions cannot be used and continue the installation.
      - `file` (libmagic): If it does not exist, display a warning that image posting and link cards cannot be used and continue the installation.
 3. Copy the subdirectories `bin` and `lib` and the files under them to the specified installation directory.
    - The copy destination installation directory is specified in [Startup options](#installsh-command-options), or if not specified, the following is suggested: If the proposal is not what you want, you can change it.

@@ -143,6 +143,8 @@ This tool uses the following tools in addition to general Unix-like tools used i
 
 We would like to thank everyone who provides and maintains the execution environment and tools.
 
+- convert (imagemagick)
+  - Only when using images
 - curl
 - file (libmagic)
   - Only when using images
