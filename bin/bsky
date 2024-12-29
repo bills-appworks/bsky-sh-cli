@@ -15,7 +15,7 @@ umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.12.1'
+BSKYSHCLI_CLI_VERSION='0.13.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
