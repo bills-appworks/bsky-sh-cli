@@ -1677,6 +1677,10 @@ core_build_external_fragment()
         og_title=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         #og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
         og_url=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        if [ -z "${og_url}" ]
+        then
+          og_url="${url}"
+        fi
         if [ -n "${og_title}" ] && [ -n "${og_image}" ]
         then
           if [ -n "${param_core_build_external_fragment_generate_thumb}" ]
