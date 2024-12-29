@@ -1702,13 +1702,13 @@ core_build_external_fragment()
                     # adding size check, optional imagemagick compression
                     # Your max upload size. Defaults for many webservers is 2M,
                     # so we're checking if it's greater than 2000 kb
-                    maxsize=2000
+                    maxsize="${BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE}"
                     filesize=`du -k "${image_temporary_path}" | cut -f 1`
                     if [ "${filesize}" -gt "${maxsize}" ]
                     then
                       if [ -f /usr/bin/convert ]
                       then
-                        /usr/bin/convert -resize 800x512\! "${image_temporary_path}" "${image_temporary_path}"
+                        /usr/bin/convert -resize "${BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM}" "${image_temporary_path}" "${image_temporary_path}"
                       fi
                     fi
                     upload_blob=`api com.atproto.repo.uploadBlob "${image_temporary_path}" "${mime_type}"`
