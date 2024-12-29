@@ -15,7 +15,7 @@ umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.12.1'
+BSKYSHCLI_CLI_VERSION='0.13.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -94,6 +94,8 @@ BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
+BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=2000
+BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='800x512!'
 
 BSKYSHCLI_DEFAULT_RUN_COMMANDS_PATH="${HOME}/.bsky_sh_cli_rc"
 BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR="${HOME}/.bsky_sh_cli"
@@ -1065,6 +1067,9 @@ usage: bsky update
 
 note:
   Update this tool to the latest version.
+  If you have installed it as a superuser and set the execution path, you can run the bsky command as expected by specifying the -i option to the sudo command.
+  Examples:
+    sudo -i bsky update
 EOS
 
   debug 'output_help_update' 'END'

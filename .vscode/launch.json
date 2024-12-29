@@ -532,6 +532,22 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "app.bsky.feed.searchPosts (<q> <[sort]> <[since]> <[until]> <[mentions]> <[author]> <[lang]> <[domain]> <[url]> <[tag]> <[limit 1<=limit<=100 default:25]> <[cursor]>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.searchPosts",
+            "terminalKind": "integrated",
+            "argsString": "'${input:q}' '${input:sort}' '${input:since}' '${input:until}' '${input:mentions}' '${input:author}' '${input:lang}' '${input:domain}' '${input:url}' '${input:tag}' '${input:limit}' '${input:cursor}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "app.bsky.feed.searchPosts (<q>)",
+            "program": "${workspaceFolder}/lib/api/app.bsky.feed.searchPosts",
+            "terminalKind": "integrated",
+            "argsString": "'${input:q}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "app.bsky.graph.getFollowers (<actor> <[limit 1<=limit<=100 default:50]> <[cursor]>)",
             "program": "${workspaceFolder}/lib/api/app.bsky.graph.getFollowers",
             "terminalKind": "integrated",
@@ -576,6 +592,14 @@
             "program": "${workspaceFolder}/lib/api/com.atproto.repo.getRecord",
             "terminalKind": "integrated",
             "argsString": "'${input:repo}' '${input:collection}' '${input:rkey}' '${input:cid}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "com.atproto.repo.listRecords (<repo> <collection> <[limit 1<=limit<=100 default:50]> <[cursor]> <[reverse]>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.getRecord",
+            "terminalKind": "integrated",
+            "argsString": "'${input:repo}' '${input:collection}' '${input:limit}' '${input:cursor}' '${input:reverse}'"
         },
         {
             "type": "bashdb",
@@ -926,6 +950,74 @@
             "id": "posts_mode",
             "description": "select multiple post thread mode (delete if unnecessary)",
             "options": ["", "--mode thread", "--mode sibling", "--mode independence"],
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "q",
+            "description": "search query string",
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "sort",
+            "description": "select ranking order of results (delete if unnecessary)",
+            "options": ["", "top", "latest"],
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "since",
+            "description": "filter results for posts after the indicated datetime (YYYY-MM-DD)",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "until",
+            "description": "filter results for posts befre the indicated datetime (YYYY-MM-DD)",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "mentions",
+            "description": "filter to posts which mention the given account",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "author",
+            "description": "filter to posts by the given account",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "lang",
+            "description": "filter to posts in the given language",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "tag",
+            "description": "filter to posts with the given tag",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "domain",
+            "description": "filter to posts with URLs linking to the given domain",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "url",
+            "description": "filter to posts with links pointing to this URL",
+            "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "reverse",
+            "description": "reverse order (delete if unnecessary)",
+            "options": ["", "true", "false"],
             "default": ""
         },
         {
