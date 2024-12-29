@@ -1,3 +1,12 @@
+# v0.13.0
+## Add
+- Support for self-hosted PDS (BSKYSHCLI_SELFHOSTED_DOMAIN) #5
+- Added API wrapper script (searchPosts/listRecords)
+## Modify
+- Link card OGP image file size is resized if it exceeds 2MB (imagemagick convert) #5
+## Fix
+- Other minor fixes
+
 # v0.12.1
 ## Fix
 - Fixed some errors in the help

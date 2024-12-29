@@ -1,3 +1,12 @@
+# v0.13.0
+## 追加
+- セルフホストPDSに対応(BSKYSHCLI_SELFHOSTED_DOMAIN) #5
+- APIラッパースクリプト追加(searchPosts/listRecords)
+## 変更
+- リンクカードOGP画像ファイルサイズが2MBを超える場合にリサイズを実施(imagemagick convert) #5
+## 修正
+- その他軽微な修正
+
 # v0.12.1
 ## 修正
 - ヘルプの誤りを修正
