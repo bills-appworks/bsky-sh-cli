@@ -164,12 +164,28 @@ get_candidate_user_config()
         config="${HOME}/.bash_login"
       fi
       ;;
+    /bin/zsh)
+      if [ -f "${HOME}/.zshrc" ]
+      then
+        config="${HOME}/.zshrc"
+      elif [ -f "${HOME}/.zlogin" ]
+      then
+        config="${HOME}/.zlogin"
+      fi
+      ;;
     *)
       ;;
   esac
   if [ -z "${config}" ]
   then
-    config="${HOME}/.profile"
+    case $SHELL in
+      /bin/zsh)
+        config="${HOME}/.zprofile"
+        ;;
+      *)
+        config="${HOME}/.profile"
+        ;;
+    esac
   fi
   echo "${config}"
 }
@@ -282,7 +298,14 @@ verify_required_tools
 if is_super_user
 then
   install_dir='/opt/bsky_sh_cli'
-  config_path_file='/etc/profile.d/bsky_sh_cli.sh'
+  case $SHELL in
+    /bin/zsh)
+      config_path_file='/etc/zprofile'
+      ;;
+    *)
+      config_path_file='/etc/profile.d/bsky_sh_cli.sh'
+      ;;
+  esac
 else
   install_dir="${HOME}/.local/bsky_sh_cli"
   config_path_file=`get_candidate_user_config`
