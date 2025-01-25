@@ -70,14 +70,30 @@ verify_required_tools()
   if [ $result_sed -eq 0 ]
   then
     # check GNU sed -z option
-    sed -z 's///' < /dev/null 2>&1 /dev/null
+    sed -z 's///' < /dev/null > /dev/null 2>&1
     result_sed=$?
     if [ $result_sed -eq 0 ]
     then
       _pn '[OK]'
     else
-      _pn '[NG] : Command GNU sed not found (-z option is disabled).'
-      STATUS_TOOLS=1
+      # check gsed command
+      which gsed > /dev/null
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        gsed -z 's///' < /dev/null > /dev/null 2>&1
+        result_sed=$?
+        if [ $result_sed -eq 0 ]
+        then
+          _pn '[OK]'
+        else
+          _pn '[NG] : Command GNU gsed not found (-z option is disabled).'
+          STATUS_TOOLS=1
+        fi
+      else
+        _pn '[NG] : Command "sed" is not GNU sed and "gsed" not found.'
+        STATUS_TOOLS=1
+      fi
     fi
   else
     _pn '[NG] : Command "sed" not found.'
