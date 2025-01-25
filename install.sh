@@ -74,30 +74,39 @@ verify_required_tools()
     result_sed=$?
     if [ $result_sed -eq 0 ]
     then
-      _pn '[OK]'
+      _pn '[OK] : sed'
     else
-      # check gsed command
-      which gsed > /dev/null
+      # try to gsed
+      #_pn '[NG] : Command GNU sed not found (sed -z option is desabled).'
+      #STATUS_TOOLS=1
+      :
+    fi
+  else
+    # try to gsed
+    #_pn '[NG] : Command "sed" not found.'
+    #STATUS_TOOLS=1
+    :
+  fi
+  # gsed
+  if [ $result_sed -ne 0 ]
+  then
+    which gsed > /dev/null
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      gsed -z 's///' < /dev/null > /dev/null 2>&1
       result_sed=$?
       if [ $result_sed -eq 0 ]
       then
-        gsed -z 's///' < /dev/null > /dev/null 2>&1
-        result_sed=$?
-        if [ $result_sed -eq 0 ]
-        then
-          _pn '[OK]'
-        else
-          _pn '[NG] : Command GNU gsed not found (-z option is disabled).'
-          STATUS_TOOLS=1
-        fi
+        _pn '[OK] : gsed'
       else
-        _pn '[NG] : Command "sed" is not GNU sed and "gsed" not found.'
+        _pn '[NG] : Command GNU sed not found (gsed -z option is disabled).'
         STATUS_TOOLS=1
       fi
+    else
+      _pn '[NG] : Command GNU sed not found.'
+      STATUS_TOOLS=1
     fi
-  else
-    _pn '[NG] : Command "sed" not found.'
-    STATUS_TOOLS=1
   fi
   # file (libmagic)
   _p 'file (libmagic) ... ' 
