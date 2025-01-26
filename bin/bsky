@@ -2177,10 +2177,13 @@ fi
 
 parse_global_option "$@"
 options=$?
-for _ in `seq 1 ${options}`
-do
-  shift
-done
+if [ $options -gt 0 ]
+then
+  for _ in `seq 1 ${options}`
+  do
+    shift
+  done
+fi
 
 case $1 in
   login)
