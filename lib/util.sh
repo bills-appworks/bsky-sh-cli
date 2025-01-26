@@ -295,12 +295,56 @@ check_required_command()
   return $status
 }
 
+set_sed_command()
+{
+  # sed
+  which sed > /dev/null
+  result_sed=$?
+  if [ $result_sed -eq 0 ]
+  then
+    # check GNU sed -z option
+    sed -z 's///' < /dev/null > /dev/null 2>&1
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      BSKYSHCLI_SED='sed'
+    else
+      # try to gsed
+      :
+    fi
+  else
+    # try to gsed
+    :
+  fi
+  # gsed
+  if [ $result_sed -ne 0 ]
+  then
+    which gsed > /dev/null
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      gsed -z 's///' < /dev/null > /dev/null 2>&1
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        BSKYSHCLI_SED='gsed'
+      else
+        :
+      fi
+    else
+      :
+    fi
+  fi
+
+  return $result_sed
+}
+
 escape_text_json_value()
 {
   param_escape_json_value=$1
 
   # using GNU sed -z option
-  _p "${param_escape_json_value}" | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+  _p "${param_escape_json_value}" | "${BSKYSHCLI_SED}" -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
 }
 
 decode_keyvalue_list()
@@ -656,7 +700,7 @@ create_json_keyvalue_variable()
   debug 'create_json_keyvalue_variable' "param_key:${param_variable} param_quote:${param_quote}"
 
   value=`eval _p \"\\$"${param_variable}"\"`
-  value=`_p "${value}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
+  value=`_p "${value}" | "${BSKYSHCLI_SED}" -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
   create_json_keyvalue "${param_variable}" "${value}" "${param_quote}"
 
   debug 'create_json_keyvalue_variable' 'END'

@@ -2166,6 +2166,15 @@ then
   exit 1
 fi
 
+set_sed_command
+set_result=$?
+if [ $set_result -ne 0 ]
+then
+  _pn 'GNU sed (-z option) not found'
+  command_version
+  exit 1
+fi
+
 parse_global_option "$@"
 options=$?
 for _ in `seq 1 ${options}`

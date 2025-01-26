@@ -785,7 +785,7 @@ core_build_text_rels()
   done
   # (newline)... at tail -> (null)
   # using GNU sed -z option
-  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | sed -z 's/\(\n\)*$//g'`
+  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | "${BSKYSHCLI_SED}" -z 's/\(\n\)*$//g'`
 
   RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
   RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
@@ -1671,12 +1671,12 @@ core_build_external_fragment()
         # TODO: code/pattern cleanup and correct references to prefix definitions
         # added removal of extra newlines in html
         # more greedy pattern matching to avoid issues when there's extra values in the opengraph tags
-        og_description=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
-        og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/' | head -n 1`
+        og_description=`_p "${external_html}" |  "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_image=`_p "${external_html}" |  "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/' | head -n 1`
         #og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g' | head -n 1`
-        og_title=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_title=`_p "${external_html}" | "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         #og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_url=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_url=`_p "${external_html}" | "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         if [ -z "${og_url}" ]
         then
           og_url="${url}"
@@ -3477,7 +3477,7 @@ core_is_post_text_meaningful()
   debug 'core_is_post_text_meaningful' 'START'
   debug 'core_is_post_text_meaningful' "param_post_text:${param_post_text}"
 
-  modified_post_text=`_p "${param_post_text}" | sed -z 's/\(\n\)*$//g'`
+  modified_post_text=`_p "${param_post_text}" | "${BSKYSHCLI_SED}" -z 's/\(\n\)*$//g'`
   if [ -n "${modified_post_text}" ]
   then
     is_post_text_meaningful=0
