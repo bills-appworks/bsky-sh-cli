@@ -31,7 +31,7 @@ curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-
 
 For super user:
 ```
-sudo sh download-install.sh
+sudo -s sh download-install.sh
 ```
 For general users:
 ```
@@ -69,7 +69,7 @@ If you create or modify (add) a login script that sets the environment variable 
 
 For super user:
 ```
-sudo ./install.sh
+sudo -s ./install.sh
 ```
 For general users:
 ```
@@ -94,14 +94,24 @@ For general users:
        - `$HOME/.local/bsky_sh_cli`
 4. Check the setting status of the environment variable `PATH` to the `bin` subdirectory under the installation directory, and if it is not set, we will suggest creating or modifying (adding) a login script. If the proposal is not what you want, you can change it.
    - The installation execution user is a super user (when executed with sudo or root):
-     - `/etc/profile.d/bsky_sh_cli.sh`
+     - If `$SHELL` is `/bin/zsh`
+       - `/etc/zprofile`
+     - If `$SHELL` is not `/bin/zsh`
+       - `/etc/profile.d/bsky_sh_cli.sh`
    - If the installation execution user is a general user:
-     - Files found by checking the following sequentially
-       - If the execution shell is `/bin/bash`:
+     - If `$SHELL` is `/bin/bash`
+       - Files found by checking the following sequentially
          1. `$HOME/.bashrc`
          2. `$HOME/.bash_profile`
          3. `$HOME/.bash_login`
-       - If the execution shell is other than `/bin/bash` or the file is not found above:
+     - If `$SHELL` is `/bin/zsh`
+       - Files found by checking the following sequentially
+         1. `$HOME/.zshrc`
+         2. `$HOME/.zlogin`
+     - If the the file is not found above:
+       - If `$SHELL` is `/bin/zsh`
+         - `$HOME/.zprofile`
+       - If `$SHELL` is not `/bin/zsh`
          - `$HOME/.profile`
    - Add the following line (create the file if it doesn't exist):
      ````

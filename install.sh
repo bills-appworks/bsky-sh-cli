@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.1.1'
+BSKYSHCLI_INSTALLER_VERSION='0.2.0'
 
 rcfile_name='.bsky_sh_cli_rc'
 
