@@ -8,6 +8,7 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
@@ -650,9 +651,11 @@ core_build_text_rels_line()
   # hash tag
   tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
   text_work="${display_line_text}"
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  # sed not required at use grep -P, but do not use for compatibility
-  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
+#  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+#  # sed not required at use grep -P, but do not use for compatibility
+#  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  hash_tag=`echo "${text_work}" | jq -R -r 'scan("^#[^\\\\s]+|\\\\s#[^\\\\s]+") | sub("\\\\s"; "")'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $hash_tag
@@ -693,9 +696,11 @@ core_build_text_rels_line()
   # mention
   mention_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
   text_work="${display_line_text}"
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  # sed not required at use grep -P, but do not use for compatibility
-  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
+#  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+#  # sed not required at use grep -P, but do not use for compatibility
+#  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  mention=`echo "${text_work}" | jq -R -r 'scan("^@[^\\\\s]+|\\\\s@[^\\\\s]+") | sub("\\\\s"; "")'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $mention
@@ -885,7 +890,9 @@ core_text_size_lines()
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           core_build_text_rels "${lines}" 0 "${apply_option_url}"
-          size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+          # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#          size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+          size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
           eval "RESULT_core_text_size_lines_${count}=${size}"
           debug 'core_text_size_lines' "count:${count} size:${size}"
         fi
@@ -908,14 +915,18 @@ core_text_size_lines()
     then
       count=`expr "${count}" + 1`
       core_build_text_rels "${lines}" 0 "${apply_option_url}"
-      size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+      # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#      size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+      size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
       eval "RESULT_core_text_size_lines_${count}=${size}"
       debug 'core_text_size_lines' "remain part count:${count} size:${size}"
     fi
   else  # separator not specified : all lines as single content
     count=1
     core_build_text_rels "${param_core_text_size_lines_text}" 0 "${apply_option_url}"
-    size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#    size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
     eval "RESULT_core_text_size_lines_${count}=${size}"
     debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
   fi
@@ -1054,7 +1065,9 @@ core_verify_display_text_size()
   debug 'core_verify_display_text_size' 'START'
   debug 'core_verify_display_text_size' "param_core_verify_display_text:${param_core_verify_display_text}"
 
-  text_size=`_p "${param_core_verify_display_text}" | wc -m`
+  # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#  text_size=`_p "${param_core_verify_display_text}" | wc -m`
+  text_size=`_p "${param_core_verify_display_text}" | jq -R -s 'length'`
   if [ "${text_size}" -gt 300 ]
   then
     error "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters."
@@ -1076,7 +1089,9 @@ core_verify_text_file_size()
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
     core_build_text_rels "${text_file}" 0 "${param_core_verify_text_file_size_url}"
-    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
     if [ "${text_size}" -gt 300 ]
     then
       error_msg "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters: ${param_text_file_path}"
@@ -6342,7 +6357,7 @@ sudo ${FILE_DIR}/bsky update"
   # expand tarball
   # tar root directory (bills-appworks-bsky-sh-cli-<commit ID>/) skip (--strip-components 1) 
   _p "Expand latest version assets..."
-  if tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
+  if LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
   then
     :
   else

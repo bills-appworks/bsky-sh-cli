@@ -8,6 +8,7 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`

@@ -8,6 +8,7 @@
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -64,7 +65,7 @@ _strlen()
 {
   param_strlen_string=$1
 
-  result=`_p "${param_strlen_string}" | wc -c`
+  result=`_p "${param_strlen_string}" | wc -c | sed 's/[^0-9]//g'`
   return "${result}"
 }
 
