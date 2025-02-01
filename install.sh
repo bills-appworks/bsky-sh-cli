@@ -77,7 +77,7 @@ verify_required_tools()
       _pn '[OK] : sed'
     else
       # try to gsed
-      #_pn '[NG] : Command GNU sed not found (sed -z option is desabled).'
+      #_pn '[NG] : Command GNU sed not found (sed -z option is disabled).'
       #STATUS_TOOLS=1
       :
     fi
@@ -409,7 +409,7 @@ else
         _pn "Login script file path is specified: '${PARSED_PARAM_KEYVALUE_config_path_file}'"
       else
         _pn "Suggests '${config_path_file}' as a login script file in the environment variable PATH."
-        _p 'Are you sure you want to crate or make changes to this file? [Y/n]: '
+        _p 'Are you sure you want to create or make changes to this file? [Y/n]: '
         if inputYn
         then
           _pn "Configure login script file: ${config_path_file}"
