@@ -754,9 +754,10 @@ api_core()
   debug_single 'api_core-1'
   result=`/bin/sh "${BSKYSHCLI_API_PATH}/${param_api}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   error_element=`_p "${result}" | jq -r '.error // empty'`
+  api_error_message=`_p "${result}" | jq -r '.message // empty'`
   if [ -n "${error_element}" ]
   then
-    debug 'api_core' "error_element:${error_element}"
+    debug 'api_core' "error_element:${error_element} / ${api_error_message}"
     case "${error_element}" in
       ExpiredToken)
         api_core_status=2
@@ -765,9 +766,6 @@ api_core()
         api_core_status=3
         ;;
       *)
-        api_error="${error_element}"
-        api_error_message=`_p "${result}" | jq -r '.message // empty'`
-        debug 'api_core' "${api_error} / ${api_error_message}"
         #error_msg "${api_error} / ${api_error_message}"
         api_core_status=1
         ;;

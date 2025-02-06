@@ -39,7 +39,7 @@ result=`api_post_bearer 'com.atproto.server.refreshSession' "${param_refresh_jwt
 # restore debug mode
 debug_mode_restore
 
-error_element=`_p "${result}" | jq -r '.error_element // empty'`
+error_element=`_p "${result}" | jq -r '.error // empty'`
 
 if [ -z "${error_element}" ]
 then
