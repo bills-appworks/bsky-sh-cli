@@ -193,7 +193,7 @@ get_candidate_user_config()
 is_already_set_path()
 {
   param_install_dir="$1"
-  detect=`echo "${PATH}" | grep -o -E '(^|\:)'"${param_install_dir}"/bin'(\:|$)'`
+  detect=`echo "${PATH}" | grep -o -E '(^|:)'"${param_install_dir}"/bin'(:|$)'`
   if [ -n "${detect}" ]
   then
     status=0
@@ -376,7 +376,7 @@ then
   _pn 'Skip configure the environment variable PATH.'
   config_path=1
 else
-  if is_already_set_path "${install_dir}/bin"
+  if is_already_set_path "${install_dir}"
   then
     _pn "Directory '${install_dir}/bin' is already set in the environment variable PATH. Skip configuring the environment variable PATH."
     config_path=1
