@@ -3,11 +3,12 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -64,7 +65,7 @@ _strlen()
 {
   param_strlen_string=$1
 
-  result=`_p "${param_strlen_string}" | wc -c`
+  result=`_p "${param_strlen_string}" | wc -c | sed 's/[^0-9]//g'`
   return "${result}"
 }
 
@@ -295,12 +296,56 @@ check_required_command()
   return $status
 }
 
+set_sed_command()
+{
+  # sed
+  which sed > /dev/null
+  result_sed=$?
+  if [ $result_sed -eq 0 ]
+  then
+    # check GNU sed -z option
+    sed -z 's///' < /dev/null > /dev/null 2>&1
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      BSKYSHCLI_SED='sed'
+    else
+      # try to gsed
+      :
+    fi
+  else
+    # try to gsed
+    :
+  fi
+  # gsed
+  if [ $result_sed -ne 0 ]
+  then
+    which gsed > /dev/null
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      gsed -z 's///' < /dev/null > /dev/null 2>&1
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        BSKYSHCLI_SED='gsed'
+      else
+        :
+      fi
+    else
+      :
+    fi
+  fi
+
+  return $result_sed
+}
+
 escape_text_json_value()
 {
   param_escape_json_value=$1
 
   # using GNU sed -z option
-  _p "${param_escape_json_value}" | sed -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
+  _p "${param_escape_json_value}" | "${BSKYSHCLI_SED}" -z 's/\\/\\\\/g; s/"/\\"/g; s/\(\n\)*$//g; s/\n/\\n/g'
 }
 
 decode_keyvalue_list()
@@ -656,7 +701,7 @@ create_json_keyvalue_variable()
   debug 'create_json_keyvalue_variable' "param_key:${param_variable} param_quote:${param_quote}"
 
   value=`eval _p \"\\$"${param_variable}"\"`
-  value=`_p "${value}" | sed -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
+  value=`_p "${value}" | "${BSKYSHCLI_SED}" -z 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g; s/\n/\\\\n/g'`
   create_json_keyvalue "${param_variable}" "${value}" "${param_quote}"
 
   debug 'create_json_keyvalue_variable' 'END'
@@ -709,9 +754,10 @@ api_core()
   debug_single 'api_core-1'
   result=`/bin/sh "${BSKYSHCLI_API_PATH}/${param_api}" "$@" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
   error_element=`_p "${result}" | jq -r '.error // empty'`
+  api_error_message=`_p "${result}" | jq -r '.message // empty'`
   if [ -n "${error_element}" ]
   then
-    debug 'api_core' "error_element:${error_element}"
+    debug 'api_core' "error_element:${error_element} / ${api_error_message}"
     case "${error_element}" in
       ExpiredToken)
         api_core_status=2
@@ -720,9 +766,6 @@ api_core()
         api_core_status=3
         ;;
       *)
-        api_error="${error_element}"
-        api_error_message=`_p "${result}" | jq -r '.message // empty'`
-        debug 'api_core' "${api_error} / ${api_error_message}"
         #error_msg "${api_error} / ${api_error_message}"
         api_core_status=1
         ;;
