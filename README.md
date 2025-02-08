@@ -21,7 +21,7 @@ curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-
 ```
 When running as super user:
 ```
-sudo sh download-install.sh
+sudo -s sh download-install.sh
 ```
 When running as a general user:
 ```
