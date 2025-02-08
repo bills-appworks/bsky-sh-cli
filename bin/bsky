@@ -3,11 +3,12 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 # future use
 # shellcheck disable=SC2034
 BSKYSHCLI_EVACUATED_UMASK=`umask`
@@ -15,7 +16,7 @@ umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_CLI_VERSION='0.13.0'
+BSKYSHCLI_CLI_VERSION='0.14.0'
 
 # following definitions are same to lib/api/common.sh
 # for independence of this bsky command
@@ -2166,12 +2167,24 @@ then
   exit 1
 fi
 
+set_sed_command
+set_result=$?
+if [ $set_result -ne 0 ]
+then
+  _pn 'GNU sed (-z option) not found'
+  command_version
+  exit 1
+fi
+
 parse_global_option "$@"
 options=$?
-for _ in `seq 1 ${options}`
-do
-  shift
-done
+if [ $options -gt 0 ]
+then
+  for _ in `seq 1 ${options}`
+  do
+    shift
+  done
+fi
 
 case $1 in
   login)

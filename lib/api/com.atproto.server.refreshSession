@@ -3,7 +3,7 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
@@ -39,7 +39,7 @@ result=`api_post_bearer 'com.atproto.server.refreshSession' "${param_refresh_jwt
 # restore debug mode
 debug_mode_restore
 
-error_element=`_p "${result}" | jq -r '.error_element // empty'`
+error_element=`_p "${result}" | jq -r '.error // empty'`
 
 if [ -z "${error_element}" ]
 then

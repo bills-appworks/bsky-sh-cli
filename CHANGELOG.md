@@ -1,3 +1,13 @@
+# v0.1４.0
+## Add
+- Platform tuning
+  - macOS
+  - cloud shell (SAKURA internet)
+  - Amazon Web Services CloudShell
+## Fix
+- Corrected output configuration information (info meta)
+- Other minor fixes
+
 # v0.13.0
 ## Add
 - Support for self-hosted PDS (BSKYSHCLI_SELFHOSTED_DOMAIN) #5

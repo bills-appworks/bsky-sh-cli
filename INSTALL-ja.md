@@ -30,7 +30,7 @@ curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-
 
 スーパーユーザの場合：
 ```
-sudo sh download-install.sh
+sudo -s sh download-install.sh
 ```
 一般ユーザの場合：
 ```
@@ -70,7 +70,7 @@ sh download-install.sh
 
 スーパーユーザの場合：
 ```
-sudo ./install.sh
+sudo -s ./install.sh
 ```
 一般ユーザの場合：
 ```
@@ -83,7 +83,7 @@ sudo ./install.sh
    - 必須
      - `curl`
      - `jq`
-     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。
+     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。Macの場合は`brew install gnu-sed`等で導入してください。
    - 推奨
      - `convert` (imagemagick) : 存在しない場合は画像やリンクカードの一部機能が使用できないことを示す警告を表示してインストールを続行します。
      - `file` (libmagic) : 存在しない場合は画像投稿やリンクカードが使用できないことを示す警告を表示してインストールを続行します。
@@ -96,14 +96,24 @@ sudo ./install.sh
        - `$HOME/.local/bsky_sh_cli`
 4. インストールディレクトリ配下のbinサブディレクトリへの環境変数`PATH`の設定状態を確認し、設定されていない場合はログインスクリプトの作成または修正（追記）を提案します。提案が希望と異なる場合は、変更することが可能です。
    - インストール実行ユーザがスーパーユーザ（sudoでの実行や、rootの場合）：
-     - `/etc/profile.d/bsky_sh_cli.sh`
+     - `$SHELL`が`/bin/zsh`の場合
+       - `/etc/zprofile`
+     - `$SHELL`が`/bin/zsh`以外の場合
+       - `/etc/profile.d/bsky_sh_cli.sh`
    - インストール実行ユーザが一般ユーザの場合：
-     - 以下を順次確認して見つかったファイル
-       - 実行シェルが`/bin/bash`の場合：
+     - `$SHELL`が`/bin/bash`の場合
+       - 以下を順次確認して見つかったファイル
          1. `$HOME/.bashrc`
          2. `$HOME/.bash_profile`
          3. `$HOME/.bash_login`
-       - 実行シェルが`/bin/bash`以外、または上記でファイルが見つからなかった場合：
+     - `$SHELL`が`/bin/zsh`の場合
+       - 以下を順次確認して見つかったファイル
+         1. `$HOME/.zshrc`
+         2. `$HOME/.zlogin`
+     - 実行シェルが`/bin/bash`以外、または上記でファイルが見つからなかった場合：
+       - `$SHELL`が`/bin/zsh`の場合
+         - `$HOME/.zprofile`
+     - `$SHELL`が`/bin/zsh`以外の場合
          - `$HOME/.profile`
    - 以下の行を追加（ファイルが存在しない場合は作成）します。
      ```

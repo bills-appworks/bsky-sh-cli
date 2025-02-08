@@ -3,7 +3,7 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.1.1'
+BSKYSHCLI_INSTALLER_VERSION='0.2.0'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -70,18 +70,43 @@ verify_required_tools()
   if [ $result_sed -eq 0 ]
   then
     # check GNU sed -z option
-    sed -z 's///' < /dev/null 2>&1 /dev/null
+    sed -z 's///' < /dev/null > /dev/null 2>&1
     result_sed=$?
     if [ $result_sed -eq 0 ]
     then
-      _pn '[OK]'
+      _pn '[OK] : sed'
     else
-      _pn '[NG] : Command GNU sed not found (-z option is disabled).'
-      STATUS_TOOLS=1
+      # try to gsed
+      #_pn '[NG] : Command GNU sed not found (sed -z option is disabled).'
+      #STATUS_TOOLS=1
+      :
     fi
   else
-    _pn '[NG] : Command "sed" not found.'
-    STATUS_TOOLS=1
+    # try to gsed
+    #_pn '[NG] : Command "sed" not found.'
+    #STATUS_TOOLS=1
+    :
+  fi
+  # gsed
+  if [ $result_sed -ne 0 ]
+  then
+    which gsed > /dev/null
+    result_sed=$?
+    if [ $result_sed -eq 0 ]
+    then
+      gsed -z 's///' < /dev/null > /dev/null 2>&1
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        _pn '[OK] : gsed'
+      else
+        _pn '[NG] : Command GNU sed not found (gsed -z option is disabled).'
+        STATUS_TOOLS=1
+      fi
+    else
+      _pn '[NG] : Command GNU sed not found.'
+      STATUS_TOOLS=1
+    fi
   fi
   # file (libmagic)
   _p 'file (libmagic) ... ' 
@@ -139,12 +164,28 @@ get_candidate_user_config()
         config="${HOME}/.bash_login"
       fi
       ;;
+    /bin/zsh)
+      if [ -f "${HOME}/.zshrc" ]
+      then
+        config="${HOME}/.zshrc"
+      elif [ -f "${HOME}/.zlogin" ]
+      then
+        config="${HOME}/.zlogin"
+      fi
+      ;;
     *)
       ;;
   esac
   if [ -z "${config}" ]
   then
-    config="${HOME}/.profile"
+    case $SHELL in
+      /bin/zsh)
+        config="${HOME}/.zprofile"
+        ;;
+      *)
+        config="${HOME}/.profile"
+        ;;
+    esac
   fi
   echo "${config}"
 }
@@ -152,7 +193,7 @@ get_candidate_user_config()
 is_already_set_path()
 {
   param_install_dir="$1"
-  detect=`echo "${PATH}" | grep -o -E '(^|\:)'"${param_install_dir}"/bin'(\:|$)'`
+  detect=`echo "${PATH}" | grep -o -E '(^|:)'"${param_install_dir}"/bin'(:|$)'`
   if [ -n "${detect}" ]
   then
     status=0
@@ -257,7 +298,14 @@ verify_required_tools
 if is_super_user
 then
   install_dir='/opt/bsky_sh_cli'
-  config_path_file='/etc/profile.d/bsky_sh_cli.sh'
+  case $SHELL in
+    /bin/zsh)
+      config_path_file='/etc/zprofile'
+      ;;
+    *)
+      config_path_file='/etc/profile.d/bsky_sh_cli.sh'
+      ;;
+  esac
 else
   install_dir="${HOME}/.local/bsky_sh_cli"
   config_path_file=`get_candidate_user_config`
@@ -328,7 +376,7 @@ then
   _pn 'Skip configure the environment variable PATH.'
   config_path=1
 else
-  if is_already_set_path "${install_dir}/bin"
+  if is_already_set_path "${install_dir}"
   then
     _pn "Directory '${install_dir}/bin' is already set in the environment variable PATH. Skip configuring the environment variable PATH."
     config_path=1
@@ -361,7 +409,7 @@ else
         _pn "Login script file path is specified: '${PARSED_PARAM_KEYVALUE_config_path_file}'"
       else
         _pn "Suggests '${config_path_file}' as a login script file in the environment variable PATH."
-        _p 'Are you sure you want to crate or make changes to this file? [Y/n]: '
+        _p 'Are you sure you want to create or make changes to this file? [Y/n]: '
         if inputYn
         then
           _pn "Configure login script file: ${config_path_file}"

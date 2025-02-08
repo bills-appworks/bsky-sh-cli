@@ -1,3 +1,13 @@
+# v0.14.0
+## 追加
+- プラットフォーム向けチューニング
+  - macOS
+  - さくらのクラウドシェル
+  - Amazon Web Services CloudShell
+## 修正
+- 出力構成情報の修正（info meta）
+- その他軽微な修正
+
 # v0.13.0
 ## 追加
 - セルフホストPDSに対応(BSKYSHCLI_SELFHOSTED_DOMAIN) #5

@@ -149,6 +149,7 @@ Reply:<リプライ件数> Repost:<リポスト件数 Quote:<引用件数> Like:
   - 画像利用時のみ
 - jq
 - sed (GNU sed)
+  - Macの場合は`brew install gnu-sed`等で導入してください。
 
 ## APIラッパースクリプト
 提供ファイル群の`lib/api/`ディレクトリには、`app.`や`com.`等から始まる名前のファイルが存在します。これはBlueskyやAT ProtocolのAPIを呼び出すラッパースクリプトです。
