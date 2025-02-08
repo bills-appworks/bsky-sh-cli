@@ -150,6 +150,7 @@ We would like to thank everyone who provides and maintains the execution environ
   - Only when using images
 - jq
 - sed (GNU sed)
+  - For Mac, please install it with `brew install gnu-sed` etc.
 
 ## API wrapper script
 In the `lib/api/` directory of the provided files, there are files with names starting with `app.`, `com.`, etc. This is a wrapper script that calls Bluesky and AT Protocol APIs.

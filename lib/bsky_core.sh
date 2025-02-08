@@ -3,11 +3,12 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 IFS='
  	'
+export IFS LC_ALL=C.UTF-8 LANG=C.UTF-8
 umask 077
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
@@ -110,8 +111,8 @@ CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 #FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
 # based on https://qiita.com/shimataro999/items/fced9665fa970c009c1e
-PATTERN_URL='https?:\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'\''()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=])*)(:\d*)?(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@]))*)*(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[\/?])*)?'
-PATTERN_URL_BEFORE_HOST='https?:\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?'
+PATTERN_URL='https?://((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'\''()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=])*)(:[0-9]*)?(/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@]))*)*(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|[:@])|[/?])*)?'
+PATTERN_URL_BEFORE_HOST='https?://((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'\''()*+,;=]|:)*@)?'
 
 core_canonicalize_handle()
 {
@@ -407,7 +408,7 @@ core_url_shortening_middle()
   then
     # cut before host (cut command is 1 start index)
     cut_index=`expr "${before_host_length}" + 1`
-    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+    modified_url=`_p "${modified_url}" | cut -b "${cut_index}"-`
   fi
 
   host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
@@ -456,7 +457,7 @@ core_url_shortening_middle()
             tail_length=$?
             over_length=`expr "${temporary_modified_url_length}" - "${BSKYSHCLI_URL_SHORT_BASELINE}"`
             remain_length=`expr "${tail_length}" - "${over_length}" - "${abbrev_length}"`
-            tail_path=`_p "${tail_path}" | cut -c -"${remain_length}"`
+            tail_path=`_p "${tail_path}" | cut -b -"${remain_length}"`
             modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}${BSKYSHCLI_URL_SHORT_ABBREV}"
           else
             # host/...
@@ -502,7 +503,7 @@ core_url_shortening_tail()
   then
     # cut before host (cut command is 1 start index)
     cut_index=`expr "${before_host_length}" + 1`
-    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+    modified_url=`_p "${modified_url}" | cut -b "${cut_index}"-`
   fi
 
   host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
@@ -531,7 +532,7 @@ core_url_shortening_tail()
           modified_url="${host_part}"
         else
           # cut to baseline (include abbrev length)
-          modified_url=`_p "${modified_url}" | cut -c -"${cut_base_length}"`
+          modified_url=`_p "${modified_url}" | cut -b -"${cut_base_length}"`
         fi
         modified_url="${modified_url}${BSKYSHCLI_URL_SHORT_ABBREV}"
       fi
@@ -619,7 +620,7 @@ core_build_text_rels_line()
       # until begin of url
       if [ "${url_index}" -gt 0 ]
       then
-        display_text_before_url=`_p "${original_line_text}" | cut -c "-${url_index}"`
+        display_text_before_url=`_p "${original_line_text}" | cut -b "-${url_index}"`
       else
         display_text_before_url=''
       fi
@@ -629,7 +630,7 @@ core_build_text_rels_line()
       # until end of url (cut command is 1 start index)
       original_cut_index=`expr "${url_index}" + "${original_url_length}" + 1`
       # cut until target url
-      original_line_text=`_p "${original_line_text}" | cut -c "${original_cut_index}"-`
+      original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
 
       # accumulate display length
       CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
@@ -650,9 +651,11 @@ core_build_text_rels_line()
   # hash tag
   tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
   text_work="${display_line_text}"
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  # sed not required at use grep -P, but do not use for compatibility
-  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
+#  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+#  # sed not required at use grep -P, but do not use for compatibility
+#  hash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])#[^ 　]+" | sed 's/^[ 　]//'`
+  hash_tag=`echo "${text_work}" | jq -R -r 'scan("^#[^\\\\s]+|\\\\s#[^\\\\s]+") | sub("\\\\s"; "")'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $hash_tag
@@ -666,7 +669,7 @@ core_build_text_rels_line()
       # cheat (use jq) for shortest match (countermeasure to same hash tag string in text)
       hash_tag_index=`_p "${text_work}" | jq -R 'index("'"${hash_tag}"'")'`
       # remove first hash (#)
-      tag=`_p "${hash_tag}" | cut -c 2-`
+      tag=`_p "${hash_tag}" | cut -b 2-`
       # tag facet
       # overall index of hash tag start
       overall_hash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}"`
@@ -678,7 +681,7 @@ core_build_text_rels_line()
       # until end of hash tag (cut command is 1 start index)
       text_work_cut_index=`expr "${hash_tag_index}" + "${hash_tag_length}" + 1`
       # cut until target hash tag
-      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+      text_work=`_p "${text_work}" | cut -b "${text_work_cut_index}"-`
 
       # accumulate display length
       tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}" + "${hash_tag_length}"`
@@ -693,9 +696,11 @@ core_build_text_rels_line()
   # mention
   mention_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
   text_work="${display_line_text}"
-  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  # sed not required at use grep -P, but do not use for compatibility
-  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
+#  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+#  # sed not required at use grep -P, but do not use for compatibility
+#  mention=`echo "${text_work}" | grep -o -i -E "(^|[] 　])@[^ 　]+" | sed 's/^[ 　]//'`
+  mention=`echo "${text_work}" | jq -R -r 'scan("^@[^\\\\s]+|\\\\s@[^\\\\s]+") | sub("\\\\s"; "")'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $mention
@@ -709,7 +714,7 @@ core_build_text_rels_line()
       # cheat (use jq) for shortest match (countermeasure to same mention string in text)
       mention_index=`_p "${text_work}" | jq -R 'index("'"${mention}"'")'`
       # remove first at (@)
-      mention_handle=`_p "${mention}" | cut -c 2-`
+      mention_handle=`_p "${mention}" | cut -b 2-`
       # mention facet
       # overall index of mention start
       overall_mention_start=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}"`
@@ -725,7 +730,7 @@ core_build_text_rels_line()
       # until end of mention (cut command is 1 start index)
       text_work_cut_index=`expr "${mention_index}" + "${mention_length}" + 1`
       # cut until target mention
-      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+      text_work=`_p "${text_work}" | cut -b "${text_work_cut_index}"-`
 
       # accumulate display length
       mention_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}" + "${mention_length}"`
@@ -785,7 +790,7 @@ core_build_text_rels()
   done
   # (newline)... at tail -> (null)
   # using GNU sed -z option
-  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | sed -z 's/\(\n\)*$//g'`
+  RESULT_core_build_text_rels_display_text=`_p "${RESULT_core_build_text_rels_display_text}" | "${BSKYSHCLI_SED}" -z 's/\(\n\)*$//g'`
 
   RESULT_core_build_text_rels_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}"
   RESULT_core_build_text_rels_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element}"
@@ -858,8 +863,8 @@ core_text_size_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -885,7 +890,9 @@ core_text_size_lines()
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           core_build_text_rels "${lines}" 0 "${apply_option_url}"
-          size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+          # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#          size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+          size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
           eval "RESULT_core_text_size_lines_${count}=${size}"
           debug 'core_text_size_lines' "count:${count} size:${size}"
         fi
@@ -908,14 +915,18 @@ core_text_size_lines()
     then
       count=`expr "${count}" + 1`
       core_build_text_rels "${lines}" 0 "${apply_option_url}"
-      size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+      # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#      size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+      size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
       eval "RESULT_core_text_size_lines_${count}=${size}"
       debug 'core_text_size_lines' "remain part count:${count} size:${size}"
     fi
   else  # separator not specified : all lines as single content
     count=1
     core_build_text_rels "${param_core_text_size_lines_text}" 0 "${apply_option_url}"
-    size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#    size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
     eval "RESULT_core_text_size_lines_${count}=${size}"
     debug 'core_text_size_lines' "no-separator count:${count} size:${size}"
   fi
@@ -1054,7 +1065,9 @@ core_verify_display_text_size()
   debug 'core_verify_display_text_size' 'START'
   debug 'core_verify_display_text_size' "param_core_verify_display_text:${param_core_verify_display_text}"
 
-  text_size=`_p "${param_core_verify_display_text}" | wc -m`
+  # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#  text_size=`_p "${param_core_verify_display_text}" | wc -m`
+  text_size=`_p "${param_core_verify_display_text}" | jq -R -s 'length'`
   if [ "${text_size}" -gt 300 ]
   then
     error "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters."
@@ -1076,7 +1089,9 @@ core_verify_text_file_size()
   if text_file=`core_get_text_file "${param_text_file_path}"`
   then
     core_build_text_rels "${text_file}" 0 "${param_core_verify_text_file_size_url}"
-    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    # cheat (use jq) for i18n character . wc -m has i18n incompatibility between versions.
+#    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | wc -m`
+    text_size=`_p "${RESULT_core_build_text_rels_display_text}" | jq -R -s 'length'`
     if [ "${text_size}" -gt 300 ]
     then
       error_msg "The number of characters is ${text_size}, which exceeds the upper limit of 300 characters: ${param_text_file_path}"
@@ -1671,12 +1686,12 @@ core_build_external_fragment()
         # TODO: code/pattern cleanup and correct references to prefix definitions
         # added removal of extra newlines in html
         # more greedy pattern matching to avoid issues when there's extra values in the opengraph tags
-        og_description=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
-        og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/' | head -n 1`
+        og_description=`_p "${external_html}" |  "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:description"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_image=`_p "${external_html}" |  "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/' | head -n 1`
         #og_image=`_p "${external_html}" |  sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:image"[^>]*content *= *"[^"]*"' | sed -E 's_< *meta +property *= *"og:image" +content *= *"([^"]*)"[^/>]*/?>_\1_g' | head -n 1`
-        og_title=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_title=`_p "${external_html}" | "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:title"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         #og_title=`_p "${external_html}" | grep -o -i -E '< *meta +property *= *"og:title" +content *= *"[^"]*"[^/>]*/?>' | sed -E 's_< *meta +property *= *"og:title" +content *= *"([^"]*)"[^/>]*/?>_\1_g'`
-        og_url=`_p "${external_html}" | sed -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
+        og_url=`_p "${external_html}" | "${BSKYSHCLI_SED}" -z -e 's/\n//g' -e 's/</\n</g' | grep -o -i -E '< *meta[^>]*property *= *"og:url"[^>]*content *= *"[^"]*"' | sed -E 's/.*content *= *"([^"]*)".*/\1/'`
         if [ -z "${og_url}" ]
         then
           og_url="${url}"
@@ -3477,7 +3492,7 @@ core_is_post_text_meaningful()
   debug 'core_is_post_text_meaningful' 'START'
   debug 'core_is_post_text_meaningful' "param_post_text:${param_post_text}"
 
-  modified_post_text=`_p "${param_post_text}" | sed -z 's/\(\n\)*$//g'`
+  modified_post_text=`_p "${param_post_text}" | "${BSKYSHCLI_SED}" -z 's/\(\n\)*$//g'`
   if [ -n "${modified_post_text}" ]
   then
     is_post_text_meaningful=0
@@ -3848,8 +3863,8 @@ core_posts_thread_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -4174,8 +4189,8 @@ core_posts_sibling_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -4518,8 +4533,8 @@ core_posts_independence_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -5969,6 +5984,12 @@ core_info_meta_config()
   then
     # TODO: escape double quote in value
     _p '"config":{'
+    create_json_keyvalue_variable 'BSKYSHCLI_POST_DEFAULT_LANGUAGES'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_POSTS_SEPARATOR_PREFIX'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_POST_VIA'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_DEBUG'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_LIB_PATH'
@@ -5977,9 +5998,25 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_PROFILE'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_URL_SHORT_BASELINE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_URL_SHORT_ABBREV'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD'
     _p ','
@@ -5993,7 +6030,13 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_QUOTE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID'
     _p ','
@@ -6003,7 +6046,19 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_IMAGE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_LINK'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_TAG'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_MENTION'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_PROFILE'
     _p ','
@@ -6024,26 +6079,52 @@ core_info_meta_config()
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_SELFHOSTED_DOMAIN'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE'
+    _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM'
     _p '}'
   else
+    _pn "BSKYSHCLI_POST_DEFAULT_LANGUAGES='${BSKYSHCLI_POST_DEFAULT_LANGUAGES}'"
+    _pn "BSKYSHCLI_POSTS_SEPARATOR_PREFIX='${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}'"
+    _pn "BSKYSHCLI_POST_VIA=${BSKYSHCLI_POST_VIA}"
     _pn "BSKYSHCLI_DEBUG=${BSKYSHCLI_DEBUG}"
     _pn "BSKYSHCLI_LIB_PATH=${BSKYSHCLI_LIB_PATH}"
     _pn "BSKYSHCLI_TZ=${BSKYSHCLI_TZ}"
     _pn "BSKYSHCLI_PROFILE=${BSKYSHCLI_PROFILE}"
+    _pn "BSKYSHCLI_URL_SHORT_BASELINE=${BSKYSHCLI_URL_SHORT_BASELINE}"
+    _pn "BSKYSHCLI_URL_SHORT_ABBREV='${BSKYSHCLI_URL_SHORT_ABBREV}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX='${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_PREFIX}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX='${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPLY_TO_POSTFIX}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX='${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_PREFIX}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX='${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_REPOSTED_BY_POSTFIX}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF='${BSKYSHCLI_VIEW_TEMPLATE_POST_AUX_SELF}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT='${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER='${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE='${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED='${BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL='${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_TAIL}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META='${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_META}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD='${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_HEAD}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY='${BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_IMAGE='${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_LINK='${BSKYSHCLI_VIEW_TEMPLATE_LINK}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_TAG='${BSKYSHCLI_VIEW_TEMPLATE_TAG}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_MENTION='${BSKYSHCLI_VIEW_TEMPLATE_MENTION}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_OUTPUT_ID}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON='${BSKYSHCLI_VIEW_TEMPLATE_PROFILE_NAVI_COMMON}'"
@@ -6054,6 +6135,9 @@ core_info_meta_config()
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}'"
+    _pn "BSKYSHCLI_SELFHOSTED_DOMAIN='${BSKYSHCLI_SELFHOSTED_DOMAIN}'"
+    _pn "BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=${BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE}"
+    _pn "BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='${BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM}'"
   fi
 
   debug 'core_info_meta_config' 'END'
@@ -6342,7 +6426,7 @@ sudo ${FILE_DIR}/bsky update"
   # expand tarball
   # tar root directory (bills-appworks-bsky-sh-cli-<commit ID>/) skip (--strip-components 1) 
   _p "Expand latest version assets..."
-  if tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
+  if LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 tar zxf "${update_temporary_path}/${tarball_filename}" --strip-components 1 -C "${update_temporary_path}"
   then
     :
   else
