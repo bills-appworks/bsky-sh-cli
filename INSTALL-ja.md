@@ -30,7 +30,7 @@ curl https://raw.githubusercontent.com/bills-appworks/bsky-sh-cli/main/download-
 
 スーパーユーザの場合：
 ```
-sudo sh download-install.sh
+sudo -s sh download-install.sh
 ```
 一般ユーザの場合：
 ```
@@ -70,7 +70,7 @@ sh download-install.sh
 
 スーパーユーザの場合：
 ```
-sudo ./install.sh
+sudo -s ./install.sh
 ```
 一般ユーザの場合：
 ```
