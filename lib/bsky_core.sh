@@ -408,7 +408,7 @@ core_url_shortening_middle()
   then
     # cut before host (cut command is 1 start index)
     cut_index=`expr "${before_host_length}" + 1`
-    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+    modified_url=`_p "${modified_url}" | cut -b "${cut_index}"-`
   fi
 
   host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
@@ -457,7 +457,7 @@ core_url_shortening_middle()
             tail_length=$?
             over_length=`expr "${temporary_modified_url_length}" - "${BSKYSHCLI_URL_SHORT_BASELINE}"`
             remain_length=`expr "${tail_length}" - "${over_length}" - "${abbrev_length}"`
-            tail_path=`_p "${tail_path}" | cut -c -"${remain_length}"`
+            tail_path=`_p "${tail_path}" | cut -b -"${remain_length}"`
             modified_url="${host_part}${BSKYSHCLI_URL_SHORT_ABBREV}${tail_path}${BSKYSHCLI_URL_SHORT_ABBREV}"
           else
             # host/...
@@ -503,7 +503,7 @@ core_url_shortening_tail()
   then
     # cut before host (cut command is 1 start index)
     cut_index=`expr "${before_host_length}" + 1`
-    modified_url=`_p "${modified_url}" | cut -c "${cut_index}"-`
+    modified_url=`_p "${modified_url}" | cut -b "${cut_index}"-`
   fi
 
   host_only_verify=`_p "${modified_url}" | sed 's_[^/]*__'`
@@ -532,7 +532,7 @@ core_url_shortening_tail()
           modified_url="${host_part}"
         else
           # cut to baseline (include abbrev length)
-          modified_url=`_p "${modified_url}" | cut -c -"${cut_base_length}"`
+          modified_url=`_p "${modified_url}" | cut -b -"${cut_base_length}"`
         fi
         modified_url="${modified_url}${BSKYSHCLI_URL_SHORT_ABBREV}"
       fi
@@ -620,7 +620,7 @@ core_build_text_rels_line()
       # until begin of url
       if [ "${url_index}" -gt 0 ]
       then
-        display_text_before_url=`_p "${original_line_text}" | cut -c "-${url_index}"`
+        display_text_before_url=`_p "${original_line_text}" | cut -b "-${url_index}"`
       else
         display_text_before_url=''
       fi
@@ -630,7 +630,7 @@ core_build_text_rels_line()
       # until end of url (cut command is 1 start index)
       original_cut_index=`expr "${url_index}" + "${original_url_length}" + 1`
       # cut until target url
-      original_line_text=`_p "${original_line_text}" | cut -c "${original_cut_index}"-`
+      original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
 
       # accumulate display length
       CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
@@ -669,7 +669,7 @@ core_build_text_rels_line()
       # cheat (use jq) for shortest match (countermeasure to same hash tag string in text)
       hash_tag_index=`_p "${text_work}" | jq -R 'index("'"${hash_tag}"'")'`
       # remove first hash (#)
-      tag=`_p "${hash_tag}" | cut -c 2-`
+      tag=`_p "${hash_tag}" | cut -b 2-`
       # tag facet
       # overall index of hash tag start
       overall_hash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}"`
@@ -681,7 +681,7 @@ core_build_text_rels_line()
       # until end of hash tag (cut command is 1 start index)
       text_work_cut_index=`expr "${hash_tag_index}" + "${hash_tag_length}" + 1`
       # cut until target hash tag
-      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+      text_work=`_p "${text_work}" | cut -b "${text_work_cut_index}"-`
 
       # accumulate display length
       tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${hash_tag_index}" + "${hash_tag_length}"`
@@ -714,7 +714,7 @@ core_build_text_rels_line()
       # cheat (use jq) for shortest match (countermeasure to same mention string in text)
       mention_index=`_p "${text_work}" | jq -R 'index("'"${mention}"'")'`
       # remove first at (@)
-      mention_handle=`_p "${mention}" | cut -c 2-`
+      mention_handle=`_p "${mention}" | cut -b 2-`
       # mention facet
       # overall index of mention start
       overall_mention_start=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}"`
@@ -730,7 +730,7 @@ core_build_text_rels_line()
       # until end of mention (cut command is 1 start index)
       text_work_cut_index=`expr "${mention_index}" + "${mention_length}" + 1`
       # cut until target mention
-      text_work=`_p "${text_work}" | cut -c "${text_work_cut_index}"-`
+      text_work=`_p "${text_work}" | cut -b "${text_work_cut_index}"-`
 
       # accumulate display length
       mention_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${mention_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${mention_index}" + "${mention_length}"`
@@ -863,8 +863,8 @@ core_text_size_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -3863,8 +3863,8 @@ core_posts_thread_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -4189,8 +4189,8 @@ core_posts_sibling_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option
@@ -4533,8 +4533,8 @@ core_posts_independence_lines()
       then  # separator line detected
         # directive
         separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -c 1`
-        directive_value=`_cut "${separator_remain}" -c 2-`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
         case $directive_operator in
           %)
             ## option

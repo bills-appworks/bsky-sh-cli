@@ -149,7 +149,7 @@ _startswith()
 
   _strlen "${param_startswith_substring}"
   substring_len=$?
-  compare_string=`_cut "${param_startswith_string}" -c "1-${substring_len}"`
+  compare_string=`_cut "${param_startswith_string}" -b "1-${substring_len}"`
   if [ "${compare_string}" = "${param_startswith_substring}" ]
   then
     status=0
@@ -448,10 +448,10 @@ get_option_type()
 {
   param_option_type_target=$1
 
-  case `_cut "${param_option_type_target}" -c 1` in
+  case `_cut "${param_option_type_target}" -b 1` in
     -)
       # '-...'
-      case `_cut "${param_option_type_target}" -c 2` in
+      case `_cut "${param_option_type_target}" -b 2` in
         -)
           _strlen "${param_option_type_target}"
           if [ $? -eq 2 ]
@@ -498,7 +498,7 @@ initialize_parameters_result()
     effective_name=`_strleft "${listitem}" ':'`
     # -O or --opt -> O or opt
     cut_start=`expr "${option_type}" + 1`
-    canonical_key=`_cut "${effective_name}" -c "${cut_start}"-`
+    canonical_key=`_cut "${effective_name}" -b "${cut_start}"-`
     # O or opt=value -> O or opt
     canonical_key=`_strleft "${canonical_key}" '='`
     # opt-foo -> opt_foo
@@ -628,7 +628,7 @@ parse_parameters()
         fi
         # -O or --opt -> O or opt
         cut_start=`expr "${option_type}" + 1`
-        canonical_key=`_cut "$1" -c "${cut_start}"-`
+        canonical_key=`_cut "$1" -b "${cut_start}"-`
         # O or opt=value -> O or opt
         canonical_key=`_strleft "${canonical_key}" '='`
         # opt-foo -> opt_foo
