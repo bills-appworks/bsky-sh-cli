@@ -2,6 +2,8 @@
 ## Add
 - Platform tuning
   - macOS
+  - cloud shell (SAKURA internet)
+  - Amazon Web Services CloudShell
 ## Fix
 - Corrected output configuration information (info meta)
 - Other minor fixes

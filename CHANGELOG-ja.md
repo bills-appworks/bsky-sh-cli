@@ -2,6 +2,8 @@
 ## 追加
 - プラットフォーム向けチューニング
   - macOS
+  - さくらのクラウドシェル
+  - Amazon Web Services CloudShell
 ## 修正
 - 出力構成情報の修正（info meta）
 - その他軽微な修正
