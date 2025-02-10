@@ -35,6 +35,6 @@ param_reverse=$5
 debug "${FILENAME}" 'START'
 
 debug_single "${FILENAME}"
-api_get 'com.atproto.repo.listRecords' '' 'repo' "${param_repo}" 'collection' "${param_collection}" 'limit' "${param_limit}" 'cursor' "${param_cursor}" 'reverse' "${param_reverse}" | tee "${WHTWNDSHCLI_DEBUG_SINGLE}"
+api_get 'com.atproto.repo.listRecords' '' 'repo' "${param_repo}" 'collection' "${param_collection}" 'limit' "${param_limit}" 'cursor' "${param_cursor}" 'reverse' "${param_reverse}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'
