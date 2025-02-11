@@ -106,7 +106,35 @@ api_get_raw_queries()
   fi
   header_authorization=`create_authorization_header "${bearer}"`
   debug_single 'api_get_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  case "${result_status}" in
+    301|302|307|308)
+      header_location=`_p "${result_header}" | sed -n -E -e 's/^Location: *([^\r]+)\r$/\1/ip'`
+      debug 'redirect header location' "${header_location}"
+      if [ "${BSKYSHCLI_API_REDIRECT}" = 'OFF' ]
+      then
+        _p "{\"Location\":\"${header_location}\"}"
+      else
+        debug_single 'api_get_raw_queries_redirected'
+        api_result=`curl -s -X GET "${header_location}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+        result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+        debug 'HTTP header' "${result_header}"
+        result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+        result_status=`_p "${api_result}" | tail -n 1`
+        debug 'HTTP status' "${result_status}"
+        _p "${result_body}"
+      fi
+      ;;
+    *)
+      _p "${result_body}"
+      ;;
+  esac
 
   debug 'api_get_raw_queries' 'END'
 }
@@ -152,7 +180,35 @@ api_get_nobearer_raw_queries()
   debug 'api_get_nobearer_raw_queries' "param_raw_queries:${param_raw_queries}"
 
   debug_single 'api_get_nobearer_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  case "${result_status}" in
+    301|302|307|308)
+      header_location=`_p "${result_header}" | sed -n -E -e 's/^Location: *([^\r]+)\r$/\1/ip'`
+      debug 'redirect header location' "${header_location}"
+      if [ "${BSKYSHCLI_API_REDIRECT}" = 'OFF' ]
+      then
+        _p "{\"Location\":\"${header_location}\"}"
+      else
+        debug_single 'api_get_nobearer_raw_queries_redirected'
+        api_result=`curl -s -X GET "${header_location}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+        result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+        debug 'HTTP header' "${result_header}"
+        result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+        result_status=`_p "${api_result}" | tail -n 1`
+        debug 'HTTP status' "${result_status}"
+        _p "${result_body}"
+      fi
+      ;;
+    *)
+      _p "${result_body}"
+      ;;
+  esac
 
   debug 'api_get_nobearer_raw_queries' 'END'
 }
