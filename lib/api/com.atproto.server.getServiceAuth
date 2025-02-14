@@ -1,0 +1,38 @@
+#!/bin/sh -
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implementation in shell script
+# Author Bluesky:@bills-appworks.blue
+# 
+# Copyright (c) 2024-2025 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# API Reference: https://docs.bsky.app/docs/api/com-atproto-server-get-service-auth
+IFS='
+ 	'
+umask 077
+FILENAME='com.atproto.server.getServiceAuth'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
+
+param_aud=$1
+param_exp=$2
+param_lxm=$3
+
+debug "${FILENAME}" 'START'
+
+debug_single "${FILENAME}"
+api_get 'com.atproto.server.getServiceAuth' '' 'aud' "${param_aud}" 'exp' "${param_exp}" 'lxm' "${param_lxm}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+debug "${FILENAME}" 'END'
