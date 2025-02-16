@@ -1553,6 +1553,211 @@ core_build_images_fragment()
   return "${actual_image_count}"
 }
 
+core_build_video_fragment_single()
+{
+  param_alt="$1"
+  param_video_filename="$2"
+
+  debug 'core_build_video_fragment_single' 'START'
+  debug 'core_build_video_fragment_single' "param_alt:${param_alt}"
+  debug 'core_build_video_fragment_single' "param_video_filename:${param_video_filename}"
+
+  # video upload sequence
+  # 1. (Optional) app.bsky.video.getUploadLimits
+  #   1-1. request to com.atproto.server.getServiceAuth
+  #     aud: 'did:web:video.bsky.app'
+  #     exp: (optional)
+  #     lxm: 'app.bsky.video.getUploadLimits'
+  #   1-2. request to app.bsky.video.getUploadLimits
+  #     Bearer: token in getServiceAuth response
+  # 2. app.bsky.video.uploadVideo
+  #   2-1. request to com.atproto.server.getServiceAuth
+  #     aud: 'did:web:<service endpoint domain in https://plc.directory/<user DID> response>'
+  #     exp: (optional)
+  #     lxm: 'com.atproto.repo.uploadBlob' (CAUTION: NOT 'app.bsky.video.uploadVideo')
+  #   2-2. request to app.bsky.video.uploadVideo
+  #     Bearer: token in getServiceAuth response
+  #     did: <user DID>
+  #     name: <video file name>
+  # 3. app.bsky.video.getJobStatus
+  #   3-1. request to com.atproto.server.getServiceAuth
+  #     aud: 'did:web:video.bsky.app'
+  #     exp: (optional)
+  #     lxm: 'app.bsky.video.getJobStatus'
+  #   3-2. request to app.bsky.video.getJobStatus
+  #     Bearer: token in getServiceAuth response
+  #     jobId: jobId in uploadVideo response
+
+  # omit app.bsky.video.getUploadLimits
+
+  if did_document=`get_did_document "${SESSION_DID}" ''`
+  then
+    service_endpoint=`_p "${did_document}" | jq -r '.service[0].serviceEndpoint'`
+    debug 'DID document service_endpoint' "${service_endpoint}"
+    if [ -n "${service_endpoint}" ]
+    then
+      aud=`_p "${service_endpoint}" | sed -e 's_https*://_did:web:_'`
+      debug 'aud' "${aud}"
+      if service_auth=`api com.atproto.server.getServiceAuth "${aud}" '' 'com.atproto.repo.uploadBlob'`
+      then
+        token=`_p "${service_auth}" | jq -r '.token'`
+        upload_video=`api app.bsky.video.uploadVideo "${token}" "${param_video_filename}" ''`
+        video_job_id=`_p "${upload_video}" | jq -r '.jobId // empty'`
+        debug 'uploadVideo job_id' "${video_job_id}"
+        video_state=`_p "${upload_video}" | jq -r '.state // empty'`
+        debug 'uploadVideo state' "${video_state}"
+        video_error=`_p "${upload_video}" | jq -r '.error // empty'`
+        debug 'uploadVideo error' "${video_error}"
+        video_message=`_p "${upload_video}" | jq -r '.message // empty'`
+        debug 'uploadVideo message' "${video_message}"
+        if [ -z "${video_error}" ] || [ "${video_error}" = 'already_exists' ]
+        then
+          case $video_state in
+            JOB_STATE_CREATED)
+              status=0
+              ;;
+            JOB_STATE_FAILED)
+              error_msg 'failed response from upload video'
+              status=1
+              ;;
+            JOB_STATE_COMPLETED)
+              # error: already_exists
+              status=0
+              ;;
+            *)
+              error_msg "unknown response from upload video: ${video_state}"
+              status=1
+              ;;
+          esac
+          if [ $status -eq 0 ]
+          then
+            # TODO: adjust expire time (default: 60 sec) or moderate refresh before getJobStatus
+            if service_auth=`api com.atproto.server.getServiceAuth 'did:web:video.bsky.app' '' 'app.bsky.video.getJobStatus'`
+            then
+              token=`_p "${service_auth}" | jq -r '.token'`
+              # wait upload job complete
+              while :
+              do
+                if video_job_status=`api app.bsky.video.getJobStatus "${token}" "${video_job_id}"`
+                then
+                  video_state=`_p "${video_job_status}" | jq -r '.jobStatus.state // empty'`
+                  debug 'getJobStatus video_state' "${video_state}"
+                  video_progress=`_p "${video_job_status}" | jq -r '.jobStatus.progress // empty'`
+                  debug 'getJobStatus progress' "${video_progress}"
+                  video_error=`_p "${video_job_status}" | jq -r '.error // empty'`
+                  debug 'getJobStatus error' "${video_error}"
+                  video_message=`_p "${video_job_status}" | jq -r '.message // empty'`
+                  debug 'getJobStatus message' "${video_message}"
+                  case $video_state in
+                    JOB_STATE_COMPLETED)
+                      status=0
+                      break
+                      ;;
+                    JOB_STATE_FAILED)
+                      error_msg 'failed response from job state'
+                      status=1
+                      break
+                      ;;
+                    JOB_STATE_ENCODING)
+                      status=0
+                      # progress property
+                      ;;
+                    JOB_STATE_SCANNING)
+                      status=0
+                      # after JOB_STATE_ENCODING
+                      ;;
+                    *)
+                      status=0
+                      ;;
+                  esac
+                else  # getJobStatus failed
+                  error_msg 'failed to get job status (or timeout)'
+                  status=1
+                  break
+                fi
+                sleep 1
+              done
+            else  # getServiceAuth failed
+              error_msg 'failed to get job status auth'
+              status=1
+            fi
+          fi
+        else  # uploadVideo failed
+          error_msg 'failed to upload video request'
+          status=1
+        fi
+      else  # getServiceAuth failed
+        error_msg 'failed to get upload auth'
+        status=1
+      fi
+    else  # service_endpoint is empty
+      error_msg 'service endpoint reference error'
+      status=1
+    fi
+  else  # get_did_document call failed
+    error_msg 'DID Document reference error'
+    status=1
+  fi
+
+  if [ $status -eq 0 ]
+  then
+    video_fragment_stack="\"alt\":\"${param_alt}\","
+    if check_required_command 'ffprobe'
+    then
+      if RESULT_ffprobe_size=`ffprobe -v error -select_streams v -show_entries stream=width,height -of json "${param_video_filename}"`
+      then
+        video_aspect_ratio_fragment=`_p "${RESULT_ffprobe_size}" | jq -c -M '.streams[0]'`
+        video_fragment_stack="${video_fragment_stack}\"aspectRatio\":${video_aspect_ratio_fragment},"
+      else
+        debug 'ffprobe command error'
+      fi
+    else
+      debug 'ffprobe command not found'
+    fi
+    video_blob_fragment=`_p "${video_job_status}" | jq -c -M '.jobStatus.blob'`
+    video_fragment_stack="${video_fragment_stack}\"video\":${video_blob_fragment}"
+    _p "${video_fragment_stack}"
+  fi
+
+  debug 'core_build_video_fragment_single' 'END'
+
+  return $status
+}
+
+core_build_video_fragment()
+{
+  param_video="$1"
+  param_alt="$2"
+
+  debug 'core_build_video_fragment' 'START'
+  debug 'core_build_video_fragment' "param_video:${param_video}"
+  debug 'core_build_video_fragment' "param_alt:${param_alt}"
+
+  # "$type" necessary based on AT Protocol requirements
+  # shellcheck disable=SC2016
+  fragment_stack='{"$type":"app.bsky.embed.video",'
+  result_single=`core_build_video_fragment_single "${param_alt}" "${param_video}"`
+  single_status=$?
+  if [ "${single_status}" -eq 0 ]
+  then
+    fragment_stack="${fragment_stack}${result_single}}"
+    _p "${fragment_stack}"
+    actual_video_count=1
+    status=0
+  else
+    status=1
+  fi
+
+  if [ $status -ne 0 ]
+  then
+    actual_video_count=255
+  fi
+
+  debug 'core_build_video_fragment' 'END'
+
+  return "${actual_video_count}"
+}
+
 core_build_link_facets_fragment()
 {
   param_core_build_link_facets_element="$1"
@@ -1927,9 +2132,11 @@ core_create_post_chunk()
     # escape for substitution at placeholder replacement 
     view_post_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
     view_post_feed_generator_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+    view_post_video_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_VIDEO_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
   else
     view_post_output_id=''
     view_post_feed_generator_output_id=''
+    view_post_video_output_id=''
   fi
   if [ -n "${param_output_via}" ]
   then
@@ -1948,6 +2155,7 @@ core_create_post_chunk()
   view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_video=`_p "${BSKYSHCLI_VIEW_TEMPLATE_VIDEO}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_video_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_separator_parent=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # disable via to quoted
@@ -1955,6 +2163,7 @@ core_create_post_chunk()
   view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_video=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_VIDEO}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_video_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_detached=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
@@ -1988,6 +2197,20 @@ core_create_post_chunk()
         foreach images[] as $image (0; . + 1;
           output_image(.; $image; is_quoted)
         )
+      ;
+      def output_video(video; is_quoted):
+        (video.alt // "") as $ALT |
+        video.cid as $CID |
+        video.playlist as $PLAYLIST |
+        video.thumbnail as $THUMBNAIL |
+        video.aspectRatio.height as $ASPECTRATIO_HEIGHT |
+        video.aspectRatio.width as $ASPECTRATIO_WIDTH |
+        if is_quoted
+        then
+          "'"${view_template_quoted_video}"'"
+        else
+          "'"${view_template_video}"'"
+        end
       ;
       def output_facets_features_link(link_index; uri):
         link_index as $LINK_INDEX |
@@ -2087,6 +2310,19 @@ core_create_post_chunk()
                     select($embed."$type" == "app.bsky.embed.recordWithMedia#view") |
                     select($embed.media."$type" == "app.bsky.embed.images#view") |
                     output_images($embed.media.images; true)
+                  ),
+                  (
+                    # quoted video
+                    # post_fragment/embeds[]/$type == app.bsky.embed.video#view
+                    select($embed."$type" == "app.bsky.embed.video#view") |
+                    output_video($embed; true)
+                  ),
+                  (
+                    # quoted video (with linkcard etc.)
+                    # post_fragment/embeds[]/$type == app.bsky.embed.recordWithMedia#view
+                    select($embed."$type" == "app.bsky.embed.recordWithMedia#view") |
+                    select($embed.media."$type" == "app.bsky.embed.video#view") |
+                    output_video($embed.media; true)
                   ),
                   (
                     # quoted linkcard
@@ -2234,6 +2470,10 @@ core_create_post_chunk()
                 output_images(post_fragment.embed.media.images; false)
               ),
               (
+                select(.embed.media."$type" == "app.bsky.embed.video#view") |
+                output_video(post_fragment.embed.media; false)
+              ),
+              (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
                 output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent; reply_fragment; reason_fragment)
               ),
@@ -2241,6 +2481,10 @@ core_create_post_chunk()
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewDetached") |
                 output_post_part_quote_detached
               )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.video#view") |
+              output_video(post_fragment.embed; false)
             ),
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |
@@ -3717,8 +3961,10 @@ core_post()
   param_output_json="$4"
   param_url="$5"
   param_preview="$6"
-  if [ $# -gt 5 ]
+  param_video="$7"
+  if [ $# -gt 6 ]
   then
+    shift
     shift
     shift
     shift
@@ -3734,6 +3980,7 @@ core_post()
   debug 'core_post' "param_output_json:${param_output_json}"
   debug 'core_post' "param_url:${param_url}"
   debug 'core_post' "param_preview:${param_preview}"
+  debug 'core_post' "param_video:${param_video}"
   debug 'core_post' "param_image_alt:$*"
 
   if [ -n "${param_preview}" ]
@@ -3747,8 +3994,27 @@ core_post()
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.post'
   created_at=`get_ISO8601UTCbs`
-  images_fragment=`core_build_images_fragment "$@"`
-  actual_image_count=$?
+  if [ -n "${param_video}" ]
+  then
+    if [ -z "${param_output_json}" ]
+    then
+      _pn '[Post processing in progress...]'
+    fi
+    images_fragment=''
+    actual_image_count=0
+    # $2 is --alt value
+    video_fragment=`core_build_video_fragment "${param_video}" "$2"`
+    actual_video_count=$?
+  else
+    images_fragment=`core_build_images_fragment "$@"`
+    actual_image_count=$?
+    video_fragment=''
+    actual_video_count=0
+  fi
+  if [ $actual_image_count -eq 255 ] || [ $actual_video_count -eq 255 ]
+  then
+    error 'post command failed'
+  fi
   core_build_text_rels "${param_text}" "${param_linkcard_index}" "${param_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
@@ -3761,10 +4027,13 @@ core_post()
   case $actual_image_count in
     0|1|2|3|4)
       record="{\"text\":\"${text}\",\"createdAt\":\"${created_at}\""
-      # image and external (link card) are exclusive, prioritize image specification
+      # image/video and external (link card) are exclusive, prioritize image/video specification
       if [ $actual_image_count -gt 0 ]
       then
         record="${record},\"embed\":${images_fragment}"
+      elif [ -n "${video_fragment}" ]
+      then
+        record="${record},\"embed\":${video_fragment}"
       elif [ -n "${external_fragment}" ]
       then
         record="${record},\"embed\":${external_fragment}"

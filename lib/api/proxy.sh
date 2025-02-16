@@ -24,6 +24,15 @@ else
 	ENDPOINT_BASE_URL='https://bsky.social/xrpc/'
 fi
 
+if [ -n "${BSKYSHCLI_VIDEO_SERVICE_DOMAIN}" ]
+then
+  VIDEO_SERVICE_ENDPOINT_BASE_URL="https://${BSKYSHCLI_VIDEO_SERVICE_DOMAIN}/xrpc/"
+else
+  # variable use at API script
+  # shellcheck disable=SC2034
+  VIDEO_SERVICE_ENDPOINT_BASE_URL='https://video.bsky.app/xrpc/'
+fi
+
 HEADER_ACCEPT='Accept: application/json'
 HEADER_AUTHORIZATION_PREFIX='Authorization: Bearer'
 HEADER_CONTENT_TYPE='Content-Type: application/json'
@@ -106,7 +115,35 @@ api_get_raw_queries()
   fi
   header_authorization=`create_authorization_header "${bearer}"`
   debug_single 'api_get_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  case "${result_status}" in
+    301|302|307|308)
+      header_location=`_p "${result_header}" | sed -n -E -e 's/^Location: *([^\r]+)\r$/\1/ip'`
+      debug 'redirect header location' "${header_location}"
+      if [ "${BSKYSHCLI_API_REDIRECT}" = 'OFF' ]
+      then
+        _p "{\"Location\":\"${header_location}\"}"
+      else
+        debug_single 'api_get_raw_queries_redirected'
+        api_result=`curl -s -X GET "${header_location}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+        result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+        debug 'HTTP header' "${result_header}"
+        result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+        result_status=`_p "${api_result}" | tail -n 1`
+        debug 'HTTP status' "${result_status}"
+        _p "${result_body}"
+      fi
+      ;;
+    *)
+      _p "${result_body}"
+      ;;
+  esac
 
   debug 'api_get_raw_queries' 'END'
 }
@@ -152,7 +189,35 @@ api_get_nobearer_raw_queries()
   debug 'api_get_nobearer_raw_queries' "param_raw_queries:${param_raw_queries}"
 
   debug_single 'api_get_nobearer_raw_queries'
-  curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X GET "${ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  case "${result_status}" in
+    301|302|307|308)
+      header_location=`_p "${result_header}" | sed -n -E -e 's/^Location: *([^\r]+)\r$/\1/ip'`
+      debug 'redirect header location' "${header_location}"
+      if [ "${BSKYSHCLI_API_REDIRECT}" = 'OFF' ]
+      then
+        _p "{\"Location\":\"${header_location}\"}"
+      else
+        debug_single 'api_get_nobearer_raw_queries_redirected'
+        api_result=`curl -s -X GET "${header_location}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+        result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+        debug 'HTTP header' "${result_header}"
+        result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+        result_status=`_p "${api_result}" | tail -n 1`
+        debug 'HTTP status' "${result_status}"
+        _p "${result_body}"
+      fi
+      ;;
+    *)
+      _p "${result_body}"
+      ;;
+  esac
 
   debug 'api_get_nobearer_raw_queries' 'END'
 }
@@ -261,20 +326,46 @@ api_post_content_type()
 api_post_content_type_binary_file()
 {
   param_endpoint="$1"
-  param_content_type="$2"
-  param_filename="$3"
+  param_bearer="$2"
+  param_content_type="$3"
+  param_filename="$4"
+  shift
+  shift
+  shift
+  shift
 
   debug 'api_post_content_type_binary_file' 'START'
   debug 'api_post_content_type_binary_file' "param_endpoint:${param_endpoint}"
   debug 'api_post_content_type_binary_file' "param_content_type:${param_content_type}"
   debug 'api_post_content_type_binary_file' "param_filename:${param_filename}"
+  debug 'api_get' "QUERIES:$*"
 
-  read_session_file
-  bearer="${SESSION_ACCESS_JWT}"
+  query_parameter=''
+  while [ $# -gt 0 ]
+  do
+    if [ $# -lt 2 ]
+    then
+      error "query key $1 must have query value"
+    fi
+    if [ "$2" != '''' ] && [ -n "$2" ]
+    then
+      query_parameter=`build_query_parameter "${query_parameter}" "$1" "$2"`
+    fi
+    shift
+    shift
+  done
+
+  if [ -n "${param_bearer}" ]
+  then
+    bearer="${param_bearer}"
+  else
+    read_session_file
+    bearer="${SESSION_ACCESS_JWT}"
+  fi
   header_authorization=`create_authorization_header "${bearer}"`
   header_content_type="${HEADER_CONTENT_TYPE_KEY}: ${param_content_type}"
   debug_single 'api_post_content_type_binary_file'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" --data-binary "@${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}${query_parameter}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" --data-binary "@${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
   debug 'api_post_content_type_binary_file' 'END'
 }
