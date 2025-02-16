@@ -1,3 +1,22 @@
+# v0.15.0
+## 追加
+- ビデオ投稿機能対応(post --video) #6
+- ポスト表示時のビデオ対応（関連情報のテキスト出力のみ）
+- 必要ツールに"ffprobe"コマンド（ffmpegパッケージ）を追加
+  - ビデオ投稿時のアスペクト比設定に必要（ツールが無ければアスペクト比指定無しで投稿）
+- APIラッパースクリプトを追加
+  - app.bsky.video.getJobStatus
+  - app.bsky.video.getUploadLimits
+  - app.bsky.video.uploadVideo
+  - com.atproto.server.describeServer
+  - com.atproto.server.getServiceAuth
+  - com.atproto.sync.getBlob
+  - com.atproto.sync.listBlobs
+## 変更
+- GET系APIでのリダイレクトに対応
+## 修正
+- その他軽微な修正
+
 # v0.14.0
 ## 追加
 - プラットフォーム向けチューニング
@@ -12,6 +31,8 @@
 ## 追加
 - セルフホストPDSに対応(BSKYSHCLI_SELFHOSTED_DOMAIN) #5
 - APIラッパースクリプト追加(searchPosts/listRecords)
+- 必要ツールに"/usr/bin/convert"コマンド（imagemagickパッケージ）を追加
+  - リンクカードOGP画像ファイルのリサイズに必要（ツールが無ければリサイズ無し）
 ## 変更
 - リンクカードOGP画像ファイルサイズが2MBを超える場合にリサイズを実施(imagemagick convert) #5
 ## 修正
