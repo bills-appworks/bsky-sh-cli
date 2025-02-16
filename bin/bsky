@@ -420,7 +420,11 @@ output_help_post()
   cat << 'EOS'
 bsky post help
 
-usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--linkcard-index <link index>] [--url <display mode] [--langs '<language code>[,...]'] [--preview] [--output-json]
+usage: bsky post [--text '<text>'] [--text-file '<path to text file>'] [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--preview] [--output-json]
+       or
+       bsky post [--text '<text>'] [--text-file '<path to text file>'] [--image<N> <path to image file> [--alt<N> '<alt text>']]... [--url <display mode>] [--langs '<language code>[,...]'] [--preview] [--output-json]
+       or
+       bsky post [--text '<text>'] [--text-file '<path to text file>'] [--video <path to video file> [--alt '<alt text>']] [--url <display mode>] [--langs '<language code>[,...]'] [--preview] [--output-json]
 
 parameters:
   --text '<text>'
@@ -432,19 +436,22 @@ parameters:
     Only a single file can be specified.
     If you specify standard input (pipe/redirect), this option is ignored.
 
-  --image<N> <path to image file>
-    Specify image file path.
-    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
-
-  --alt<N> '<alt text>'
-    Specify alternate text for image.
-    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
-
   --linkcard-index <link index>
     Specify which of the link URLs included in the text will generate (embed) a link card.
     <link index> specifies the appearance order number of multiple link URLs included in the text.
     If this option is omitted, the first appearing link URL will be targeted.
     If you specify 0 for the <link index>, no link card will be generated.
+
+  --image<N> <path to image file>
+    Specify image file path.
+    <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
+
+  --alt<N> '<alt text>'
+    Specify alternate text for image/video.
+    (image only) <N> is number from 1 to 4. if <N> not specified, it is equal to specified 1.
+
+  --video <path to video file>
+    Specify video file path.
 
   --url <display mode>
     Specify URL display (shortening) mode.
@@ -466,7 +473,7 @@ note:
   you must have started a Bluesky session with the login command.
   --text and --text-file are exclusive.
   Text can be specified from standard input (pipe/redirect/interactive). If none of the --text option, --text-file option, and standard input (pipe/redirect) are specified, input will be interactive.
-  image and link card are exclusive, prioritize image specification.
+  image/video and link card are exclusive, prioritize image/video specification.
 EOS
 
   debug 'output_help_post' 'END'
@@ -1424,7 +1431,7 @@ command_post()
   then
     output_help_post
   else
-    parse_parameters '--text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --linkcard-index:1 --langs:1 --preview:0 --output-json:0 --url:1' "$@"
+    parse_parameters '--text:1 --text-file:1 --image:1 --alt:1 --image1:1 --alt1:1 --image2:1 --alt2:1 --image3:1 --alt3:1 --image4:1 --alt4:1 --video:1 --linkcard-index:1 --langs:1 --preview:0 --output-json:0 --url:1' "$@"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1433,6 +1440,8 @@ command_post()
     verify_exclusive 1 '--image --image1' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_image1}"
     # shellcheck disable=SC2154
     verify_exclusive 1 '--alt --alt1' "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_alt1}"
+    # shellcheck disable=SC2154
+    verify_exclusive 1 '--image --video' "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_video}"
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
@@ -1463,7 +1472,7 @@ command_post()
     core_verify_param_url_omit "${PARSED_PARAM_KEYVALUE_url}"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${PARSED_PARAM_KEYONLY_preview}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
+    core_post "${post_text}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${PARSED_PARAM_KEYONLY_preview}" "${PARSED_PARAM_KEYVALUE_video}" "${PARSED_PARAM_KEYVALUE_image}" "${PARSED_PARAM_KEYVALUE_alt}" "${PARSED_PARAM_KEYVALUE_image1}" "${PARSED_PARAM_KEYVALUE_alt1}" "${PARSED_PARAM_KEYVALUE_image2}" "${PARSED_PARAM_KEYVALUE_alt2}" "${PARSED_PARAM_KEYVALUE_image3}" "${PARSED_PARAM_KEYVALUE_alt3}" "${PARSED_PARAM_KEYVALUE_image4}" "${PARSED_PARAM_KEYVALUE_alt4}"
   fi
 
   debug 'command_post' 'END'

@@ -49,8 +49,7 @@ fi
 
 # get SESSION_DID
 read_session_file
-#video_name=`_strright "${param_filename}" '/'`
-video_name="${param_filename}"
+video_name=`extract_filename "${param_filename}"`
 
 evacuated_endpoint_base_url="${ENDPOINT_BASE_URL}"
 ENDPOINT_BASE_URL="${VIDEO_SERVICE_ENDPOINT_BASE_URL}"
