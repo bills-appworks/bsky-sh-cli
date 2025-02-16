@@ -2132,9 +2132,11 @@ core_create_post_chunk()
     # escape for substitution at placeholder replacement 
     view_post_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
     view_post_feed_generator_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
+    view_post_video_output_id=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_VIDEO_OUTPUT_ID}" | sed 's/\\\\/\\\\\\\\/g'`
   else
     view_post_output_id=''
     view_post_feed_generator_output_id=''
+    view_post_video_output_id=''
   fi
   if [ -n "${param_output_via}" ]
   then
@@ -2153,6 +2155,7 @@ core_create_post_chunk()
   view_template_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_tail=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
+  view_template_video=`_p "${BSKYSHCLI_VIEW_TEMPLATE_VIDEO}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_video_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_separator=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   view_template_post_separator_parent=`_p "${BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR_PARENT}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g'`
   # disable via to quoted
@@ -2160,6 +2163,7 @@ core_create_post_chunk()
   view_template_quoted_post_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_post_body=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_BODY}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'/'"${view_post_output_via}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_image=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_IMAGE}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
+  view_template_quoted_video=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_VIDEO}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_video_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA_PLACEHOLDER}"'//g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_quoted_detached=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_QUOTE_DETACHED}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_meta=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_META}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
   view_template_post_feed_generator_head=`_p "${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}${BSKYSHCLI_VIEW_TEMPLATE_POST_FEED_GENERATOR_HEAD}" | sed 's/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER}"'/'"${view_post_feed_generator_output_id}"'/g; s/'"${BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_LANGS_PLACEHOLDER}"'/'"${view_post_output_langs}"'/g; s/\\\\n/\\\\n'"${BSKYSHCLI_VIEW_TEMPLATE_QUOTE}"'/g'`
@@ -2193,6 +2197,20 @@ core_create_post_chunk()
         foreach images[] as $image (0; . + 1;
           output_image(.; $image; is_quoted)
         )
+      ;
+      def output_video(video; is_quoted):
+        (video.alt // "") as $ALT |
+        video.cid as $CID |
+        video.playlist as $PLAYLIST |
+        video.thumbnail as $THUMBNAIL |
+        video.aspectRatio.height as $ASPECTRATIO_HEIGHT |
+        video.aspectRatio.width as $ASPECTRATIO_WIDTH |
+        if is_quoted
+        then
+          "'"${view_template_quoted_video}"'"
+        else
+          "'"${view_template_video}"'"
+        end
       ;
       def output_facets_features_link(link_index; uri):
         link_index as $LINK_INDEX |
@@ -2292,6 +2310,19 @@ core_create_post_chunk()
                     select($embed."$type" == "app.bsky.embed.recordWithMedia#view") |
                     select($embed.media."$type" == "app.bsky.embed.images#view") |
                     output_images($embed.media.images; true)
+                  ),
+                  (
+                    # quoted video
+                    # post_fragment/embeds[]/$type == app.bsky.embed.video#view
+                    select($embed."$type" == "app.bsky.embed.video#view") |
+                    output_video($embed; true)
+                  ),
+                  (
+                    # quoted video (with linkcard etc.)
+                    # post_fragment/embeds[]/$type == app.bsky.embed.recordWithMedia#view
+                    select($embed."$type" == "app.bsky.embed.recordWithMedia#view") |
+                    select($embed.media."$type" == "app.bsky.embed.video#view") |
+                    output_video($embed.media; true)
                   ),
                   (
                     # quoted linkcard
@@ -2439,6 +2470,10 @@ core_create_post_chunk()
                 output_images(post_fragment.embed.media.images; false)
               ),
               (
+                select(.embed.media."$type" == "app.bsky.embed.video#view") |
+                output_video(post_fragment.embed.media; false)
+              ),
+              (
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewRecord") |
                 output_post_part(true; view_index; post_fragment.embed.record.record; true; is_parent; reply_fragment; reason_fragment)
               ),
@@ -2446,6 +2481,10 @@ core_create_post_chunk()
                 select(.embed.record.record."$type" == "app.bsky.embed.record#viewDetached") |
                 output_post_part_quote_detached
               )
+            ),
+            (
+              select(.embed."$type" == "app.bsky.embed.video#view") |
+              output_video(post_fragment.embed; false)
             ),
             (
               select(.embed."$type" == "app.bsky.embed.record#view") |

@@ -82,6 +82,10 @@
 #BSKYSHCLI_VIEW_TEMPLATE_POST_EXTERNAL_BODY='\($EXTERNAL_DESCRIPTION)'
 # template for embedded image in post
 #BSKYSHCLI_VIEW_TEMPLATE_IMAGE=' [image-\($IMAGE_INDEX)] \($ALT)  \($FULLSIZE)'
+# template for output id field in post embedded video
+#BSKYSHCLI_VIEW_TEMPLATE_POST_VIDEO_OUTPUT_ID='\n cid: \($CID)'
+# template for embedded video in post
+#BSKYSHCLI_VIEW_TEMPLATE_VIDEO=' [video]\n \($ALT)\n playlist: \($PLAYLIST)\n thumbnail: \($THUMBNAIL)<VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>'
 # template for link in post
 #BSKYSHCLI_VIEW_TEMPLATE_LINK=' [link-\($LINK_INDEX)] \($URI)'
 # template for tag in post
