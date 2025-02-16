@@ -3,15 +3,15 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
-# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-list-records
+# API Reference: https://docs.bsky.app/docs/api/com-atproto-sync-get-blob
 IFS='
  	'
 umask 077
-FILENAME='com.atproto.repo.listRecords'
+FILENAME='com.atproto.sync.getBlob'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -26,15 +26,12 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-param_repo=$1
-param_collection=$2
-param_limit=$3
-param_cursor=$4
-param_reverse=$5
+param_did=$1
+param_cid=$2
 
 debug "${FILENAME}" 'START'
 
 debug_single "${FILENAME}"
-api_get 'com.atproto.repo.listRecords' '' 'repo' "${param_repo}" 'collection' "${param_collection}" 'limit' "${param_limit}" 'cursor' "${param_cursor}" 'reverse' "${param_reverse}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_get 'com.atproto.sync.getBlob' '' 'did' "${param_did}" 'cid' "${param_cid}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'

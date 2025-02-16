@@ -3,15 +3,15 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 # 
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
-# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
+# API Reference: https://docs.bsky.app/docs/api/app-bsky-video-upload-video
 IFS='
  	'
 umask 077
-FILENAME='com.atproto.repo.uploadBlob'
+FILENAME='app.bsky.video.uploadVideo'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -26,8 +26,9 @@ fi
 # shellcheck source=SCRIPTDIR/proxy.sh
 . "${BSKYSHCLI_API_PATH}/proxy.sh"
 
-param_filename=$1
-param_content_type=$2
+param_token=$1
+param_filename=$2
+param_content_type=$3
 
 debug "${FILENAME}" 'START'
 debug "${FILENAME}" "filename:${param_filename}"
@@ -41,12 +42,21 @@ if [ -n "${param_content_type}" ]
 then
   content_type="${param_content_type}"
 else
-  content_type='*/*'
+  content_type='video/mp4'
 fi
 # omit log for big data
 #debug "${FILENAME}" "body:${body}"
 
+# get SESSION_DID
+read_session_file
+video_name=`extract_filename "${param_filename}"`
+
+evacuated_endpoint_base_url="${ENDPOINT_BASE_URL}"
+ENDPOINT_BASE_URL="${VIDEO_SERVICE_ENDPOINT_BASE_URL}"
+
 debug_single "${FILENAME}"
-api_post_content_type_binary_file 'com.atproto.repo.uploadBlob' '' "${content_type}" "${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_post_content_type_binary_file 'app.bsky.video.uploadVideo' "${param_token}" "${content_type}" "${param_filename}" 'did' "${SESSION_DID}" 'name' "${video_name}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+ENDPOINT_BASE_URL="${evacuated_endpoint_base_url}"
 
 debug "${FILENAME}" 'END'
