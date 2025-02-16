@@ -145,6 +145,8 @@ Reply:<リプライ件数> Repost:<リポスト件数 Quote:<引用件数> Like:
 - convert (imagemagick)
   - 画像利用時のみ
 - curl
+- ffprobe (ffmpeg)
+  - ビデオ利用時のみ
 - file (libmagic)
   - 画像利用時のみ
 - jq

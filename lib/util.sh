@@ -205,6 +205,13 @@ get_ISO8601UTCbs()
   date -u '+%Y-%m-%dT%H:%M:%S.000Z'
 }
 
+extract_filename()
+{
+  param_filepath=$1
+
+  _p "${param_filepath}" | sed -e 's_.*/__'
+}
+
 debug_mode_suppress()
 {
   EVACUATED_BSKYSHCLI_DEBUG="${BSKYSHCLI_DEBUG}"
@@ -1212,6 +1219,49 @@ inputyn()
     fi
   done
   return $status
+}
+
+get_did_document()
+{
+  param_did="$1"
+  param_path="$2"
+
+  debug 'get_did_document' 'START'
+  debug 'get_did_document' "param_did:${param_did}"
+  debug 'get_did_document' "param_path:${param_path}"
+
+  debug_single 'get_did_document'
+  api_result=`curl -s -X GET "https://plc.directory/${param_did}${param_path}" -H "${HEADER_ACCEPT}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  case "${result_status}" in
+    301|302|307|308)
+      header_location=`_p "${result_header}" | sed -n -E -e 's/^Location: *([^\r]+)\r$/\1/ip'`
+      debug 'redirect header location' "${header_location}"
+      if [ "${BSKYSHCLI_API_REDIRECT}" = 'OFF' ]
+      then
+        _p "{\"Location\":\"${header_location}\"}"
+      else
+        debug_single 'get_did_document_redirected'
+        api_result=`curl -s -X GET "${header_location}" -H "${HEADER_ACCEPT}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+        result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+        debug 'HTTP header' "${result_header}"
+        result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+        result_status=`_p "${api_result}" | tail -n 1`
+        debug 'HTTP status' "${result_status}"
+        _p "${result_body}"
+      fi
+      ;;
+    *)
+      _p "${result_body}"
+      ;;
+  esac
+
+  debug 'get_did_document' 'END'
 }
 
 # ifndef BSKYSHCLI_DEFINE_UTIL

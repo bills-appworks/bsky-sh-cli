@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.2.0'
+BSKYSHCLI_INSTALLER_VERSION='0.3.0'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -127,6 +127,16 @@ verify_required_tools()
     _pn '[OK]'
   else
     _pn '[WARNING] : Command /usr/bin/convert (imagemagick) not found. Images and link card some functions cannot be used.'
+  fi
+  # ffprobe (ffmpeg)
+  _p 'ffprobe (ffmpeg) ... ' 
+  which ffprobe > /dev/null
+  result_ffprobe=$?
+  if [ $result_ffprobe -eq 0 ]
+  then
+    _pn '[OK]'
+  else
+    _pn '[WARNING] : Command ffprobe (ffmpeg) not found. Video some functions cannot be used.'
   fi
 
   if [ $STATUS_TOOLS -ne 0 ]

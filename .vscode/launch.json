@@ -164,6 +164,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "bsky (post --text '<text>' --video <video file path> --alt '<alt text>')",
+            "program": "${workspaceFolder}/bin/bsky",
+            "terminalKind": "integrated",
+            "argsString": "${input:profile} post --text '${input:post_text}' --video ${input:post_video} --alt '${input:post_alt}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "bsky (posts [--mode <posts mode>] --text '<text>' [--langs '<language code>[,...]'])",
             "program": "${workspaceFolder}/bin/bsky",
             "terminalKind": "integrated",
@@ -895,6 +903,12 @@
             "type": "promptString",
             "id": "post_image",
             "description": "input image file path",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "post_video",
+            "description": "input video file path",
             "default": ""
         },
         {

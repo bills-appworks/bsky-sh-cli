@@ -146,6 +146,8 @@ We would like to thank everyone who provides and maintains the execution environ
 - convert (imagemagick)
   - Only when using images
 - curl
+- ffprobe (ffmpeg)
+  - Only when using video
 - file (libmagic)
   - Only when using images
 - jq

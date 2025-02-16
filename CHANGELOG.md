@@ -1,4 +1,23 @@
-# v0.1４.0
+# v0.15.0
+## Add
+- Video posting function supported (post --video)
+- Video support when viewing posts (only text output of related information)
+- command "ffprobe" (ffmpeg) add to required tools
+  - Required to set the aspect ratio when posting videos (if there is no tool, post without specifying the aspect ratio)
+- Add to API wrapper script
+  - app.bsky.video.getJobStatus
+  - app.bsky.video.getUploadLimits
+  - app.bsky.video.uploadVideo
+  - com.atproto.server.describeServer
+  - com.atproto.server.getServiceAuth
+  - com.atproto.sync.getBlob
+  - com.atproto.sync.listBlobs
+## Modify
+- Supports redirection in GET APIs
+## Fix
+- Other minor fixes
+
+# v0.14.0
 ## Add
 - Platform tuning
   - macOS
@@ -12,6 +31,8 @@
 ## Add
 - Support for self-hosted PDS (BSKYSHCLI_SELFHOSTED_DOMAIN) #5
 - Added API wrapper script (searchPosts/listRecords)
+- command "/usr/bin/convert" (imagemagick) add to required tools
+  - Required for resizing link card OGP image files (no resizing without the tool)
 ## Modify
 - Link card OGP image file size is resized if it exceeds 2MB (imagemagick convert) #5
 ## Fix
