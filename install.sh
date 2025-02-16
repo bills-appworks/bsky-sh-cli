@@ -128,6 +128,16 @@ verify_required_tools()
   else
     _pn '[WARNING] : Command /usr/bin/convert (imagemagick) not found. Images and link card some functions cannot be used.'
   fi
+  # ffprobe (ffmpeg)
+  _p 'ffprobe (ffmpeg) ... ' 
+  which ffprobe > /dev/null
+  result_ffprobe=$?
+  if [ $result_ffprobe -eq 0 ]
+  then
+    _pn '[OK]'
+  else
+    _pn '[WARNING] : Command ffprobe (ffmpeg) not found. Video some functions cannot be used.'
+  fi
 
   if [ $STATUS_TOOLS -ne 0 ]
   then
