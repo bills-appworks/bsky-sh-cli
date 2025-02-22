@@ -173,6 +173,27 @@ It is currently under development, and we will expand the compatible API in the 
 > - There is no API file parameter that specifies the profile. Please specify it using the shell variable `BSKYSHCLI_PROFILE` during execution.
 >    - ```BSKYSHCLI_PROFILE=<profile name> sh <API file name>```
 
+## Environments in which operation has been confirmed
+Below are the environments in which this tool has been confirmed to work.
+
+I pay careful attention to the implementation, but we do not check all environments and functions with each version upgrade, so it may not work in some cases.
+
+Depending on the operating system, especially the installation situation of tool commands that correspond to GNU Core Utilities (coreutils), there may be cases where they do not work due to compatibility reasons.
+
+The login shell is intended for the PATH setting during installation. The runtime for tool execution is `/bin/sh`.
+
+- Operating system/platform
+  - Ubuntu
+  - Debian GNU/Linux
+  - macOS
+  - FreeBSD
+  - SAKURA Internet cloud shell
+  - Amazon Web Services CloudShell
+
+- Login shell
+  - bash
+  - zsh
+
 ## Disclaimer
 > [!WARNING]
 > The author cannot be held responsible for any damages or troubles incurred as a result of use.
