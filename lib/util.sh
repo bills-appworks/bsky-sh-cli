@@ -182,6 +182,33 @@ _join()
   _p "${result}"
 }
 
+_tmpdir()
+{
+  if [ -n "${TMPDIR}" ]
+  then
+    result="${TMPDIR}"
+  else
+    result='/tmp'
+  fi
+  _p "${result}"
+}
+
+_mktemp_dir()
+{
+  _mktemp_dir_template="$1"
+
+  tmpdir=`_tmpdir`
+  mktemp -d "${tmpdir}/${_mktemp_dir_template}"
+}
+
+_mktemp_file()
+{
+  _mktemp_file_template="$1"
+
+  tmpdir=`_tmpdir`
+  mktemp "${tmpdir}/${_mktemp_file_template}"
+}
+
 set_timezone()
 {
   if [ -n "${BSKYSHCLI_TZ}" ]

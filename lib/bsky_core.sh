@@ -1909,7 +1909,7 @@ core_build_external_fragment()
             check_result=$?
             if [ $check_result -eq 0 ]
             then
-              image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
+              image_temporary_path=`_mktemp_file bsky_sh_cli.XXXXXXXXXX`
               mktemp_status=$?
               debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
               if [ $mktemp_status -eq 0 ]
@@ -6675,7 +6675,7 @@ sudo ${FILE_DIR}/bsky update"
     error "GitHub latest version query error: ${github_latest_url}"
   fi
   release_tag=`_p "${github_latest}" | jq -r '.tag_name'`
-  if update_temporary_path=`mktemp --tmpdir -d bsky_sh_cli.XXXXXXXXXX`
+  if update_temporary_path=`_mktemp_dir bsky_sh_cli.XXXXXXXXXX`
   then
     :
   else

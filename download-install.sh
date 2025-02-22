@@ -62,7 +62,13 @@ else
   exit 1
 fi
 release_tag=`printf "%s" "${github_latest}" | jq -r '.tag_name'`
-if install_temporary_path=`mktemp --tmpdir -d bsky_sh_cli.XXXXXXXXXX`
+if [ -n "${TMPDIR}" ]
+then
+  tmpdir="${TMPDIR}"
+else
+  tmpdir='/tmp'
+fi
+if install_temporary_path=`mktemp -d "${tmpdir}/bsky_sh_cli.XXXXXXXXXX"`
 then
   :
 else
