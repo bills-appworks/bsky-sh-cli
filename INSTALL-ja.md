@@ -96,10 +96,10 @@ sudo -s ./install.sh
        - `$HOME/.local/bsky_sh_cli`
 4. インストールディレクトリ配下のbinサブディレクトリへの環境変数`PATH`の設定状態を確認し、設定されていない場合はログインスクリプトの作成または修正（追記）を提案します。提案が希望と異なる場合は、変更することが可能です。
    - インストール実行ユーザがスーパーユーザ（sudoでの実行や、rootの場合）：
-     - `$SHELL`が`/bin/zsh`の場合
-       - `/etc/zprofile`
-     - `$SHELL`が`/bin/zsh`以外の場合
-       - `/etc/profile.d/bsky_sh_cli.sh`
+     - どのログインシェルでも有効とするように以下の複数ファイルをコロン(:)区切りで提示します。
+       - `/etc/profile.d/bsky_sh_cli.sh` (bash等向け)
+       - `/etc/profile.d/bsky_sh_cli.csh` (csh/tcsh向け)
+       - `/etc/zprofile` (zsh向け)
    - インストール実行ユーザが一般ユーザの場合：
      - `$SHELL`が`/bin/bash`の場合
        - 以下を順次確認して見つかったファイル
@@ -110,15 +110,26 @@ sudo -s ./install.sh
        - 以下を順次確認して見つかったファイル
          1. `$HOME/.zshrc`
          2. `$HOME/.zlogin`
-     - 実行シェルが`/bin/bash`以外、または上記でファイルが見つからなかった場合：
+     - `$SHELL`が`/bin/csh`または`/bin/tcsh`の場合
+       - 以下を順次確認して見つかったファイル
+         1. `$HOME/.cshrc`
+         2. `$HOME/.login`
+     - 上記でファイルが見つからなかった場合：
        - `$SHELL`が`/bin/zsh`の場合
          - `$HOME/.zprofile`
-     - `$SHELL`が`/bin/zsh`以外の場合
+       - `$SHELL`が`/bin/csh`または`/bin/tcsh`の場合
+         - `$HOME/.login`
+       - `$SHELL`が上記以外の場合
          - `$HOME/.profile`
    - 以下の行を追加（ファイルが存在しない場合は作成）します。
+     - 対象ファイルの拡張子が`.csh`、`.cshrc`、`.login`**以外**の場合
      ```
      PATH=$PATH:<指定したインストールディレクトリ>/bin
      export PATH
+     ```
+     - 対象ファイルの拡張子が`.csh`、`.cshrc`、`.login`の場合
+     ```
+     set path = ($path <指定したインストールディレクトリ>/bin)
      ```
 5. このツールのカスタマイズ設定を行うRun Commandsファイルのインストールを提案します。不要の場合はスキップすることが可能です。
    - Run Commandsファイルのインストール先は以下になります。
