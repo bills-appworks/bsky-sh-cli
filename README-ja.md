@@ -192,6 +192,8 @@ Reply:<リプライ件数> Repost:<リポスト件数 Quote:<引用件数> Like:
 - ログインシェル
   - bash
   - zsh
+  - csh
+  - tcsh
 
 ## 免責事項
 > [!WARNING]

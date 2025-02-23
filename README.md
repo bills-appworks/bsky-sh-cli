@@ -193,6 +193,8 @@ The login shell is intended for the PATH setting during installation. The runtim
 - Login shell
   - bash
   - zsh
+  - csh
+  - tcsh
 
 ## Disclaimer
 > [!WARNING]
