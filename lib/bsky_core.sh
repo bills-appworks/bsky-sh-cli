@@ -569,44 +569,149 @@ core_build_text_rels_line()
   original_line_text="${param_core_build_text_rels_line_text}"
   evacuated_CORE_BUILD_TEXT_RELS_accum_display_length=$CORE_BUILD_TEXT_RELS_accum_display_length
   display_line_text=''
+
+  # text link or URL
   # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
+  # <any char or nothing>[text](url) | url
+  link=`echo "${original_line_text}" | grep -o -i -E "(.?\[[^][]*\]\(${PATTERN_URL}\))|(${PATTERN_URL})"`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  set -- $url
+  set -- $link
   while [ -n "${original_line_text}" ]
   do
-    # URL
-    url=$1
-    if [ -n "${url}" ]
+    link=$1
+    if [ -n "${link}" ]
     then
+      if _startswith "${link}" 'http'  # assumption: url
+      then
+        # fall through to normal url procedure
+        :
+      elif _startswith "${link}" "\\"  # assumption: \[text](url)
+      then
+        # escaped text link - output literally without escape backslash
+        # extract '[text](' and its length
+        display_text_before_url=`_p "${link}" | sed -E -e 's|.?(\[[^][]*\]\().*|\1|'`
+        _strlen "${display_text_before_url}"
+        display_text_before_url_length=$?
+
+        # cheat (use jq)
+        # protect backslash at top of link in jq query
+        # get index of backslash at top of link
+        link_index=`_p "${original_line_text}" | jq -R 'index("'"\\\\${link}"'")'`
+
+        # display text
+        # until before url
+        # original_line_text:       AAAAAA\[text](url)BBBBBB
+        # display_text_before_link: AAAAAA
+        if [ "${link_index}" -gt 0 ]
+        then
+          display_text_before_link=`_p "${original_line_text}" | cut -b "-${link_index}"`
+        else
+          display_text_before_link=''
+        fi
+        # <same line before proceed text> + 'AAAAAA' + '[text]('
+        display_line_text="${display_line_text}${display_text_before_link}${display_text_before_url}"
+
+        # original text next part
+        # original_line_text before: AAAAAA\[text](url)BBBBBB
+        # original_line_text after:  url)BBBBBB
+        # until before url (+1: escaped '\' skip, cut command is 1 start index)
+        original_cut_index=`expr "${link_index}" + 1 + "${display_text_before_url_length}" + 1`
+        # cut until target link
+        original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
+
+        # accumulate display length
+        # += length('AAAAAA') + length('[text](')
+        CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}" + "${display_text_before_url_length}"`        
+
+        # override variable 'link' value (for normal url procedure)
+        # \[text](url) -> url
+        link=`_p "${link}" | sed -E -e 's|.?\[[^][]*\]\((.*)\)|\1|'`
+        # fall through to normal url procedure
+      else  # assumption: <other than '\' or nothing>[text](url)
+        _strlen "${link}"
+        link_length=$?
+        # extract <other than '\' or nothing> and its length
+        before_char=`_p "${link}" | sed -E -e 's|(.?)\[[^][]*\]\(.*\)|\1|'`
+        _strlen "${before_char}"
+        before_char_length=$?
+        # extract 'text' and its length
+        link_text=`_p "${link}" | sed -E -e 's|.?\[([^][]*)\]\(.*\)|\1|'`
+        _strlen "${link_text}"
+        link_text_length=$?
+        # extract 'url'
+        link_url=`_p "${link}" | sed -E -e 's|.?\[[^][]*\]\((.*)\)|\1|'`
+
+        # cheat (use jq)
+        # get index of <other than '\' or nothing>
+        link_index=`_p "${original_line_text}" | jq -R 'index("'"${link}"'")'`
+
+        # link facet
+        # overall index of url start
+        # += (index of <other than '\' or nothing>) + (length of <other than '\' or nothing>) (== index of 'text')
+        overall_url_start=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}" + "${before_char_length}"`
+        # overall index of url end
+        # + length('text')
+        overall_url_end=`expr "${overall_url_start}" + "${link_text_length}"`
+        # stack on result set (url, actual index of url start, actual index of url end)
+        CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${link_url} ${overall_url_start} ${overall_url_end}"
+
+        # display text
+        # until begin of link
+        # original_line_text:       AAAAAA<other than '\' or nothing>[text](url)BBBBBB
+        # display_text_before_link: AAAAAA
+        if [ "${link_index}" -gt 0 ]
+        then
+          display_text_before_link=`_p "${original_line_text}" | cut -b "-${link_index}"`
+        else
+          display_text_before_link=''
+        fi
+        # <same line before proceed text> + 'AAAAAA' + <other than '\' or nothing> + 'text'
+        display_line_text="${display_line_text}${display_text_before_link}${before_char}${link_text}"
+
+        # original text next part
+        # original_line_text before: AAAAAA<other than '\' or nothing>[text](url)BBBBBB
+        # original_line_text after:  BBBBBB
+        # until end of link (cut command is 1 start index)
+        original_cut_index=`expr "${link_index}" + "${link_length}" + 1`
+        # cut until target link
+        original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
+
+        # accumulate display length
+        # += (index of <other than '\' or nothing>) + (length of <other than '\' or nothing>) + length('text')
+        CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}" + "${before_char_length}" + "${link_text_length}"`        
+        # shift to next link
+        shift
+        continue
+      fi
+
       # extract link card target url
       CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
       if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
       then
-        RESULT_core_build_text_rels_linkcard_url="${url}"
+        RESULT_core_build_text_rels_linkcard_url="${link}"
       fi
 
       # URL modify
-      _strlen "${url}"
+      _strlen "${link}"
       original_url_length=$?
       case $param_core_build_text_rels_line_url in
         full)
-          display_url_literal="${url}"
+          display_url_literal="${link}"
           display_url_length=$original_url_length
           ;;
         omit-middle)
-          display_url_literal=`core_url_shortening_middle "${url}"`
+          display_url_literal=`core_url_shortening_middle "${link}"`
           display_url_length=$?
           ;;
         omit-tail|*)
-          display_url_literal=`core_url_shortening_tail "${url}"`
+          display_url_literal=`core_url_shortening_tail "${link}"`
           display_url_length=$?
           ;;
       esac
 
       # cheat (use jq) for shortest match (countermeasure to same URL string in text)
-      url_index=`_p "${original_line_text}" | jq -R 'index("'"${url}"'")'`
+      url_index=`_p "${original_line_text}" | jq -R 'index("'"${link}"'")'`
 
       # link facet
       # overall index of url start
@@ -614,7 +719,7 @@ core_build_text_rels_line()
       # overall index of url end
       overall_url_end=`expr "${overall_url_start}" + "${display_url_length}"`
       # stack on result set (url, actual index of url start, actual index of url end)
-      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${url} ${overall_url_start} ${overall_url_end}"
+      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${link} ${overall_url_start} ${overall_url_end}"
 
       # display text
       # until begin of url
@@ -634,7 +739,7 @@ core_build_text_rels_line()
 
       # accumulate display length
       CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
-      # shift to next url
+      # shift to next link
       shift
     else
       display_line_text="${display_line_text}${original_line_text}"
