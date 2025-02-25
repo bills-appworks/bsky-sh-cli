@@ -117,7 +117,7 @@
 # linkcard OGP image upload resize base file size (KB).
 #BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=2000
 # linkcard OPG image resize parameter (imagemagick convert command -resize)
-#BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='800x512!'
+#BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='800x512'
 # Video service domain
 #BSKYSHCLI_VIDEO_SERVICE_DOMAIN='video.bsky.app'
 # Video service DID
