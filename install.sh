@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.3.0'
+BSKYSHCLI_INSTALLER_VERSION='0.4.0'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -183,6 +183,15 @@ get_candidate_user_config()
         config="${HOME}/.zlogin"
       fi
       ;;
+    /bin/csh|/bin/tcsh)
+      if [ -f "${HOME}/.cshrc" ]
+      then
+        config="${HOME}/.cshrc"
+      elif [ -f "${HOME}/.login" ]
+      then
+        config="${HOME}/.login"
+      fi
+      ;;
     *)
       ;;
   esac
@@ -191,6 +200,9 @@ get_candidate_user_config()
     case $SHELL in
       /bin/zsh)
         config="${HOME}/.zprofile"
+        ;;
+      /bin/csh|/bin/tcsh)
+        config="${HOME}/.login"
         ;;
       *)
         config="${HOME}/.profile"
@@ -213,20 +225,57 @@ is_already_set_path()
   return $status
 }
 
+add_path_config_single()
+{
+  param_config_file_single="$1"
+  param_install_dir_single="$2"
+
+  echo "# Configuration add by bsky-sh-cli (Bluesky in the shell) installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}" >> "${param_config_file_single}"
+  ext_check=`echo "${param_config_file_single}" | sed -E -e 's/.+\.csh$//'`
+  ext_check2=`echo "${param_config_file_single}" | sed -E -e 's/.+\.cshrc$//'`
+  ext_check3=`echo "${param_config_file_single}" | sed -E -e 's/.+\.login$//'`
+  if [ "${param_config_file_single}" != "${ext_check}" ] || [ "${param_config_file_single}" != "${ext_check2}" ] || [ "${param_config_file_single}" != "${ext_check3}" ]
+  then  # *.csh *.cshrc *.login
+    # '$path' use literally
+    # shellcheck disable=SC2016
+    echo 'set path = ($path '"${param_install_dir_single}/bin"')' >> "${param_config_file_single}"
+    # refer to echo result
+    # shellcheck disable=SC2320
+    result=$?
+  else  # Other
+    {
+      # '$PATH' use literally
+      # shellcheck disable=SC2016
+      echo 'PATH=$PATH:'"${param_install_dir_single}/bin"
+      echo 'export PATH'
+    } >> "${param_config_file_single}"
+    # refer to echo result
+    # shellcheck disable=SC2320
+    result=$?
+  fi
+
+  return $result
+}
+
 add_path_config()
 {
   param_config_file="$1"
   param_install_dir="$2"
-  {
-    echo "# Configuration add by bsky-sh-cli (Bluesky in the shell) installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}"
-    # '$PATH' use literally
-    # shellcheck disable=SC2016
-    echo 'PATH=$PATH:'"${param_install_dir}/bin"
-    echo 'export PATH'
-  } >> "${param_config_file}"
-  # refer to echo result
-  # shellcheck disable=SC2320
-  return $?
+
+  config_file_work="${param_config_file}"
+  while [ -n "${config_file_work}" ]
+  do
+    extract_config_file=`echo "${config_file_work}" | sed -E -e 's/:.*//'`
+    if add_path_config_single "${extract_config_file}" "${param_install_dir}"
+    then
+      echo "configured: ${extract_config_file}"
+    else
+      echo "config failed: ${extract_config_file}"
+      return 1
+    fi
+    config_file_work=`echo "${config_file_work}" | sed -E -e "s|^${extract_config_file}:*||"`
+  done
+  return 0
 }
 
 inputYn()
@@ -308,14 +357,21 @@ verify_required_tools
 if is_super_user
 then
   install_dir='/opt/bsky_sh_cli'
-  case $SHELL in
-    /bin/zsh)
-      config_path_file='/etc/zprofile'
-      ;;
-    *)
-      config_path_file='/etc/profile.d/bsky_sh_cli.sh'
-      ;;
-  esac
+# all known login shell pattern
+#  case $SHELL in
+#    /bin/zsh)
+#      config_path_file='/etc/zprofile'
+#      ;;
+#    /bin/csh|/bin/tcsh)
+#      config_path_file='/etc/profile.d/bsky_sh_cli.csh'
+#      ;;
+#    *)
+#      config_path_file='/etc/profile.d/bsky_sh_cli.sh'
+#      ;;
+#  esac
+  config_path_file='/etc/zprofile'
+  config_path_file="${config_path_file}:"'/etc/profile.d/bsky_sh_cli.csh'
+  config_path_file="${config_path_file}:"'/etc/profile.d/bsky_sh_cli.sh'
 else
   install_dir="${HOME}/.local/bsky_sh_cli"
   config_path_file=`get_candidate_user_config`
@@ -419,7 +475,7 @@ else
         _pn "Login script file path is specified: '${PARSED_PARAM_KEYVALUE_config_path_file}'"
       else
         _pn "Suggests '${config_path_file}' as a login script file in the environment variable PATH."
-        _p 'Are you sure you want to create or make changes to this file? [Y/n]: '
+        _p 'Are you sure you want to create or make changes to above file? [Y/n]: '
         if inputYn
         then
           _pn "Configure login script file: ${config_path_file}"
@@ -542,10 +598,15 @@ then
   _pn "  Path of the file to set the environment variable PATH: ${config_path_file}"
   _pn '  Add following lines:'
   _pn "  # Configuration add by bsky-sh-cli (Bluesky in the shell) installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}"
+  _pn '  (Other than csh/tcsh)'
   # '$PATH' use literally
   # shellcheck disable=SC2016
   _pn '  PATH=$PATH:'"${install_dir}/bin"
   _pn '  export PATH'
+  _pn '  (csh/tcsh)'
+  # '$PATH' use literally
+  # shellcheck disable=SC2016
+  _pn '  set path = ($path '"${install_dir}/bin"')'
 else
   _pn 'No'
 fi
