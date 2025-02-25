@@ -262,7 +262,14 @@ api_post_nobearer()
 #  debug_json 'api_post_nobearer' "param_body:${param_body}"
 # WARNING: response may contain sensitive information (e.g. JWT) and will remain in the debug log
 #  debug_single 'api_post_nobearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -d "${param_body}"
+  api_result=`curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -d "${param_body}" -w "\n%{response_code}" -i`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
 
   debug 'api_post_nobearer' 'END'
 }
@@ -278,7 +285,14 @@ api_post_bearer()
   header_authorization=`create_authorization_header "${param_bearer}"`
 # WARNING: response may contain sensitive information (e.g. JWT) and will remain in the debug log
 #  debug_single 'api_post_bearer'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_ACCEPT}" -H "${header_authorization}"
+  api_result=`curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
 
   debug 'api_post_bearer' 'END'
 }
@@ -296,7 +310,14 @@ api_post()
   bearer="${SESSION_ACCESS_JWT}"
   header_authorization=`create_authorization_header "${bearer}"`
   debug_single 'api_post'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
 
   debug 'api_post' 'END'
 }
@@ -318,7 +339,14 @@ api_post_content_type()
   header_authorization=`create_authorization_header "${bearer}"`
   header_content_type="${HEADER_CONTENT_TYPE_KEY}: ${param_content_type}"
   debug_single 'api_post_content_type'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
 
   debug 'api_post_content_type' 'END'
 }
@@ -365,7 +393,14 @@ api_post_content_type_binary_file()
   header_authorization=`create_authorization_header "${bearer}"`
   header_content_type="${HEADER_CONTENT_TYPE_KEY}: ${param_content_type}"
   debug_single 'api_post_content_type_binary_file'
-  curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}${query_parameter}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" --data-binary "@${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+  api_result=`curl -s -X POST "${ENDPOINT_BASE_URL}${param_endpoint}${query_parameter}" -H "${header_content_type}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i --data-binary "@${param_filename}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
 
   debug 'api_post_content_type_binary_file' 'END'
 }
