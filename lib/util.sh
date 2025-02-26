@@ -391,7 +391,8 @@ decode_keyvalue_list()
   debug 'decode_keyvalue_list' 'START'
 
   evaluated_IFS=$IFS
-  IFS=`printf '\t\n'`
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $param_keyvalue_list
