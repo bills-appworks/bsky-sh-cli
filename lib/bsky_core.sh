@@ -574,9 +574,14 @@ core_build_text_rels_line()
   # grep -o:output only match string, -i:ignore case, -E:extended regular expression
   # <any char or nothing>[text](url) | url
   link=`echo "${original_line_text}" | grep -o -i -E "(.?\[[^][]*\]\(${PATTERN_URL}\))|(${PATTERN_URL})"`
+  # not separate by space character
+  evacuated_IFS=$IFS
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $link
+  IFS=$evacuated_IFS
   while [ -n "${original_line_text}" ]
   do
     link=$1
@@ -654,7 +659,8 @@ core_build_text_rels_line()
         # + length('text')
         overall_url_end=`expr "${overall_url_start}" + "${link_text_length}"`
         # stack on result set (url, actual index of url start, actual index of url end)
-        CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${link_url} ${overall_url_start} ${overall_url_end}"
+        # CAUTION: each values are separated by tab characters
+        CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}	${link_url}	${overall_url_start}	${overall_url_end}"
 
         # display text
         # until begin of link
@@ -719,7 +725,8 @@ core_build_text_rels_line()
       # overall index of url end
       overall_url_end=`expr "${overall_url_start}" + "${display_url_length}"`
       # stack on result set (url, actual index of url start, actual index of url end)
-      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${link} ${overall_url_start} ${overall_url_end}"
+      # CAUTION: each values are separated by tab characters
+      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}	${link}	${overall_url_start}	${overall_url_end}"
 
       # display text
       # until begin of url
@@ -1872,9 +1879,14 @@ core_build_link_facets_fragment()
 
   element_count=0
   link_facets_fragment=''
+  # not separate by space character
+  evacuated_IFS=$IFS
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $param_core_build_link_facets_element
+  IFS=$evacuated_IFS
   while [ $# -gt 0 ]
   do
     url=$1
