@@ -674,6 +674,13 @@ core_build_text_rels_line()
           debug 'link_text' "${link_text}"
           debug 'link_url' "${link_url}"
 
+          # extract link card target url
+          CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
+          if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
+          then
+            RESULT_core_build_text_rels_linkcard_url="${link_url}"
+          fi
+
           # link facet
           # overall index of url start
           # += (index of 'text')
