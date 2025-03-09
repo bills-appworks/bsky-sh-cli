@@ -97,9 +97,11 @@ sudo -s ./install.sh
 4. インストールディレクトリ配下のbinサブディレクトリへの環境変数`PATH`の設定状態を確認し、設定されていない場合はログインスクリプトの作成または修正（追記）を提案します。提案が希望と異なる場合は、変更することが可能です。
    - インストール実行ユーザがスーパーユーザ（sudoでの実行や、rootの場合）：
      - どのログインシェルでも有効とするように以下の複数ファイルをコロン(:)区切りで提示します。
-       - `/etc/profile.d/bsky_sh_cli.sh` (bash等向け)
-       - `/etc/profile.d/bsky_sh_cli.csh` (csh/tcsh向け)
+       - `/etc/profile.d/bsky_sh_cli.sh` (bash等向け *1)
+       - `/etc/profile.d/bsky_sh_cli.csh` (csh/tcsh向け *1)
        - `/etc/zprofile` (zsh向け)
+       
+       *1：/etc/profile.dディレクトリが存在する場合のみ
    - インストール実行ユーザが一般ユーザの場合：
      - `$SHELL`が`/bin/bash`の場合
        - 以下を順次確認して見つかったファイル

@@ -95,9 +95,11 @@ For general users:
 4. Check the setting status of the environment variable `PATH` to the `bin` subdirectory under the installation directory, and if it is not set, we will suggest creating or modifying (adding) a login script. If the proposal is not what you want, you can change it.
    - The installation execution user is a super user (when executed with sudo or root):
      - The following multiple files are separated by colons (:) to make them valid for any login shell.
-       - `/etc/profile.d/bsky_sh_cli.sh` (for bash, etc.)
-       - `/etc/profile.d/bsky_sh_cli.csh` (for csh/tcsh)
+       - `/etc/profile.d/bsky_sh_cli.sh` (for bash, etc. *1)
+       - `/etc/profile.d/bsky_sh_cli.csh` (for csh/tcsh *1)
        - `/etc/zprofile` (for zsh)
+
+       *1: Only if the /etc/profile.d directory exists
    - If the installation execution user is a general user:
      - If `$SHELL` is `/bin/bash`
        - Files found by checking the following sequentially
