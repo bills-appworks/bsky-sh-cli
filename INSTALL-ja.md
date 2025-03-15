@@ -83,7 +83,7 @@ sudo -s ./install.sh
    - 必須
      - `curl`
      - `jq`
-     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。Macの場合は`brew install gnu-sed`等で導入してください。
+     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。Macの場合は`brew install gnu-sed`等で導入してください。FreeBSDの場合は`pkg install gsed`等で導入してください。
    - 推奨
      - `convert` (imagemagick) : 存在しない場合は画像やリンクカードの一部機能が使用できないことを示す警告を表示してインストールを続行します。
      - `file` (libmagic) : 存在しない場合は画像投稿やリンクカードが使用できないことを示す警告を表示してインストールを続行します。
