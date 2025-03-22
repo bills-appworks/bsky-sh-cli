@@ -82,7 +82,7 @@ For general users:
    - Required
      - `curl`
      - `jq`
-     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc.
+     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc. For FreeBSD, please install it with `pkg install gsed` etc.
    - Recommendation
      - `convert` (imagemagick): If it does not exist, display a warning that some image posting and link card functions cannot be used and continue the installation.
      - `file` (libmagic): If it does not exist, display a warning that image posting and link cards cannot be used and continue the installation.
