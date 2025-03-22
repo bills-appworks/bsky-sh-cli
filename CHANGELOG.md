@@ -2,7 +2,7 @@
 ## Add
 - Supports text link posting (`[text](URL)`)
 - Supports csh/tcsh login shell (installer PATH setting)
-- Confirmed to work on FreeBSD
+- Platform tuning (FreeBSD)
 - Listed environments where work has been confirmed in README
 ## Modify
 - Changed ImageMagick convert resize parameter from `800x512!` to `800x812` when link card OGP image size is large (changed to keep aspect ratio)
