@@ -119,7 +119,7 @@ _cut()
   param_cut_string=$1
   shift
 
-  _p "`_p "${param_cut_string}" | cut "$@" | "${BSKYSHCLI_SED}" -z -e 's/\n//g'`"
+  _p "`_p "${param_cut_string}" | cut "$@"`"
 }
 
 _slice()
