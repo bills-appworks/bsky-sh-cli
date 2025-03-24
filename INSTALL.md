@@ -97,6 +97,7 @@ For general users:
      - The following multiple files are separated by colons (:) to make them valid for any login shell.
        - `/etc/profile.d/bsky_sh_cli.sh` (for bash, etc. *1)
        - `/etc/profile.d/bsky_sh_cli.csh` (for csh/tcsh *1)
+       - `/etc/csh.cshrc` (for csh/tcsh)
        - `/etc/zprofile` (for zsh)
 
        *1: Only if the /etc/profile.d directory exists
