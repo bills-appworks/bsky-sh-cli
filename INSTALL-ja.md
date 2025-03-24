@@ -99,6 +99,7 @@ sudo -s ./install.sh
      - どのログインシェルでも有効とするように以下の複数ファイルをコロン(:)区切りで提示します。
        - `/etc/profile.d/bsky_sh_cli.sh` (bash等向け *1)
        - `/etc/profile.d/bsky_sh_cli.csh` (csh/tcsh向け *1)
+       - `/etc/csh.cshrc` (csh/tcsh向け)
        - `/etc/zprofile` (zsh向け)
        
        *1：/etc/profile.dディレクトリが存在する場合のみ
