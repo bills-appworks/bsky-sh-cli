@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.4.1'
+BSKYSHCLI_INSTALLER_VERSION='0.4.2'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -370,6 +370,7 @@ then
 #      ;;
 #  esac
   config_path_file='/etc/zprofile'
+  config_path_file="${config_path_file}:"'/etc/csh.cshrc'
   if [ -d /etc/profile.d ]
   then
     config_path_file="${config_path_file}:"'/etc/profile.d/bsky_sh_cli.csh'
