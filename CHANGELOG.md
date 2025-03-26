@@ -1,6 +1,7 @@
 # v0.16.0
 ## Add
 - Supports text link posting (`[text](URL)`)
+- Support for the link card output target specification option (--linkcard-index) in the thread posting function (posts) (command line option and delimited section option directive)
 - Supports csh/tcsh login shell (installer PATH setting)
 - Platform tuning (FreeBSD)
 - Listed environments where work has been confirmed in README
