@@ -490,7 +490,7 @@ output_help_posts()
   cat << 'EOS'
 bsky posts help
 
-usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--url <display mode>] [--langs '<language code>[,...]'] [--separator-prefix '<delimiter string>'] [--preview] [--output-json]
+usage: bsky posts [--mode <posts mode>] [--text '<text>'] [--text-files '<file path>[:...]'] [--linkcard-index <link index>] [--url <display mode>] [--langs '<language code>[,...]'] [--separator-prefix '<delimiter string>'] [--preview] [--output-json]
 
 parameters:
   --mode <posts mode>
@@ -506,6 +506,12 @@ parameters:
   --text-files '<file path>[:...]'
     Specify the path of text files to post.
     Separate multiple path of text files with colons (e.g. --text-files '/path/to/a.txt:/path/to/b.txt').
+
+  --linkcard-index <link index>
+    Specify which of the link URLs included in the text will generate (embed) a link card.
+    <link index> specifies the appearance order number of multiple link URLs included in the text.
+    If this option is omitted, the first appearing link URL will be targeted.
+    If you specify 0 for the <link index>, no link card will be generated.
 
   --url <display mode>
     Specify URL display (shortening) mode.
