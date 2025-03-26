@@ -951,6 +951,7 @@ core_parse_directive_option()
   debug 'core_parse_directive_option' "param_directive_option_value:${param_directive_option_value}"
 
   # initialize result
+  unset RESULT_parse_directive_option_linkcard_index
   unset RESULT_parse_directive_option_langs
   unset RESULT_parse_directive_option_url
 
@@ -959,8 +960,10 @@ core_parse_directive_option()
   debug 'core_parse_directive_option' "directive_option_value:${directive_option_value}"
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  parse_parameters '--langs:1 --url:1' $directive_option_value
+  parse_parameters '--linkcard-index:1 --langs:1 --url:1' $directive_option_value
   # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
   # shellcheck disable=SC2154
   RESULT_parse_directive_option_langs="${PARSED_PARAM_KEYVALUE_langs}"
   # shellcheck disable=SC2154
@@ -3782,15 +3785,17 @@ core_output_post()
 core_posts_single()
 {
   param_core_posts_single_text="$1"
-  param_core_posts_single_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_core_posts_single_url="$5"
-  param_preview_mode="$6"
-  param_view_index="$7"
+  param_core_posts_single_linkcard_index="$2"
+  param_core_posts_single_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_core_posts_single_url="$6"
+  param_preview_mode="$7"
+  param_view_index="$8"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
+  debug 'core_posts_single' "param_core_posts_single_linkcard_index:${param_core_posts_single_linkcard_index}"
   debug 'core_posts_single' "param_core_posts_single_langs:${param_core_posts_single_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
@@ -3813,7 +3818,7 @@ core_posts_single()
       generate_external_thumb='(defined)'
       ;;
   esac
-  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_core_posts_single_url}"
+  core_build_text_rels "${param_core_posts_single_text}" "${param_core_posts_single_linkcard_index}" "${param_core_posts_single_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
@@ -4230,16 +4235,18 @@ core_post()
 core_posts_thread_lines()
 {
   param_core_posts_thread_lines_text="$1"
-  param_core_posts_thread_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_thread_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_thread_lines_linkcard_index="$2"
+  param_core_posts_thread_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_thread_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_linkcard_index:${param_core_posts_thread_lines_linkcard_index}"
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_langs:${param_core_posts_thread_lines_langs}"
   debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
@@ -4256,8 +4263,10 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_root_uri=''
   #RESULT_core_posts_thread_lines_uri_list=''
   RESULT_core_posts_thread_lines_count=0
+  unset RESULT_core_posts_thread_lines_directive_option_linkcard_index
   unset RESULT_core_posts_thread_lines_directive_option_url
   unset RESULT_core_posts_thread_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_thread_lines_linkcard_index}"
   apply_option_url="${param_core_posts_thread_lines_url}"
   apply_option_langs="${param_core_posts_thread_lines_langs}"
   status_core_posts_thread_lines=0
@@ -4286,6 +4295,11 @@ core_posts_thread_lines()
           %)
             ## option
             core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_thread_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
             if [ -n "${RESULT_parse_directive_option_url}" ]
             then
               apply_option_url="${RESULT_parse_directive_option_url}"
@@ -4316,7 +4330,7 @@ core_posts_thread_lines()
             done
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4365,7 +4379,7 @@ core_posts_thread_lines()
         done
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4397,7 +4411,7 @@ core_posts_thread_lines()
       done
     fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4427,16 +4441,18 @@ core_posts_thread()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_thread_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_thread_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_thread_linkcard_index="$4"
+  param_core_posts_thread_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_thread_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
   debug 'core_posts_thread' "param_text_files:${param_text_files}"
+  debug 'core_posts_thread' "param_core_posts_thread_linkcard_index:${param_core_posts_thread_linkcard_index}"
   debug 'core_posts_thread' "param_core_posts_thread_langs:${param_core_posts_thread_langs}"
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
@@ -4448,12 +4464,13 @@ core_posts_thread()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_thread_linkcard_index}"
   apply_option_langs="${param_core_posts_thread_langs}"
   apply_option_url="${param_core_posts_thread_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4462,6 +4479,10 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4477,7 +4498,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4486,6 +4507,10 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4518,7 +4543,7 @@ core_posts_thread()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_thread_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4527,6 +4552,10 @@ core_posts_thread()
           thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+        if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4556,16 +4585,18 @@ core_posts_thread()
 core_posts_sibling_lines()
 {
   param_core_posts_sibling_lines_text="$1"
-  param_core_posts_sibling_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_sibling_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_sibling_lines_linkcard_index="$2"
+  param_core_posts_sibling_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_sibling_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_linkcard_index:${param_core_posts_sibling_lines_linkcard_index}"
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_langs:${param_core_posts_sibling_lines_langs}"
   debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
@@ -4582,8 +4613,10 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_root_uri=''
   #RESULT_core_posts_sibling_lines_uri_list=''
   RESULT_core_posts_sibling_lines_count=0
+  unset RESULT_core_posts_sibling_lines_directive_option_linkcard_index
   unset RESULT_core_posts_sibling_lines_directive_option_url
   unset RESULT_core_posts_sibling_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_sibling_lines_linkcard_index}"
   apply_option_url="${param_core_posts_sibling_lines_url}"
   apply_option_langs="${param_core_posts_sibling_lines_langs}"
   status_core_posts_sibling_lines=0
@@ -4612,6 +4645,11 @@ core_posts_sibling_lines()
           %)
             ## option
             core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_sibling_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
             if [ -n "${RESULT_parse_directive_option_url}" ]
             then
               apply_option_url="${RESULT_parse_directive_option_url}"
@@ -4636,7 +4674,7 @@ core_posts_sibling_lines()
             specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -4685,7 +4723,7 @@ core_posts_sibling_lines()
         specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -4717,7 +4755,7 @@ core_posts_sibling_lines()
       specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
     fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -4753,16 +4791,18 @@ core_posts_sibling()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_sibling_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_sibling_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_sibling_linkcard_index="$4"
+  param_core_posts_sibling_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_sibling_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
   debug 'core_posts_sibling' "param_text_files:${param_text_files}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_linkcard_index:${param_core_posts_sibling_linkcard_index}"
   debug 'core_posts_sibling' "param_core_posts_sibling_langs:${param_core_posts_sibling_langs}"
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
@@ -4774,12 +4814,13 @@ core_posts_sibling()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_sibling_linkcard_index}"
   apply_option_langs="${param_core_posts_sibling_langs}"
   apply_option_url="${param_core_posts_sibling_url}"
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4794,6 +4835,10 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4809,7 +4854,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4824,6 +4869,10 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4856,7 +4905,7 @@ core_posts_sibling()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_sibling_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -4871,6 +4920,10 @@ core_posts_sibling()
           thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+        if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4900,16 +4953,18 @@ core_posts_sibling()
 core_posts_independence_lines()
 {
   param_core_posts_independence_lines_text="$1"
-  param_core_posts_independence_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_independence_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_independence_lines_linkcard_index="$2"
+  param_core_posts_independence_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_independence_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_linkcard_index:${param_core_posts_independence_lines_linkcard_index}"
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_langs:${param_core_posts_independence_lines_langs}"
   debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
@@ -4926,8 +4981,10 @@ core_posts_independence_lines()
   #RESULT_core_posts_independence_lines_root_uri=''
   RESULT_core_posts_independence_lines_uri_list=''
   RESULT_core_posts_independence_lines_count=0
+  unset RESULT_core_posts_independence_lines_directive_option_linkcard_index
   unset RESULT_core_posts_independence_lines_directive_option_url
   unset RESULT_core_posts_independence_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_independence_lines_linkcard_index}"
   apply_option_url="${param_core_posts_independence_lines_url}"
   apply_option_langs="${param_core_posts_independence_lines_langs}"
   status_core_posts_independence_lines=0
@@ -4956,6 +5013,11 @@ core_posts_independence_lines()
           %)
             ## option
             core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_independence_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
             if [ -n "${RESULT_parse_directive_option_url}" ]
             then
               apply_option_url="${RESULT_parse_directive_option_url}"
@@ -4975,7 +5037,7 @@ core_posts_independence_lines()
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           specify_index=`expr "${param_view_index_lines}" + "${count}"`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -5013,7 +5075,7 @@ core_posts_independence_lines()
     then
       count=`expr "${count}" + 1`
       specify_index=`expr "${param_view_index_lines}" + "${count}"`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -5034,7 +5096,7 @@ core_posts_independence_lines()
   else  # separator not specified : all lines as single content
     count=1
     specify_index=`expr "${param_view_index_lines}" + "${count}"`
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -5064,16 +5126,18 @@ core_posts_independence()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_independence_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_independence_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_independence_linkcard_index="$4"
+  param_core_posts_independence_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_independence_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
   debug 'core_posts_independence' "param_text_files:${param_text_files}"
+  debug 'core_posts_independence' "param_core_posts_independence_linkcard_index:${param_core_posts_independence_linkcard_index}"
   debug 'core_posts_independence' "param_core_posts_independence_langs:${param_core_posts_independence_langs}"
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
@@ -5085,18 +5149,23 @@ core_posts_independence()
   thread_root_uri=''
   post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_independence_linkcard_index}"
   apply_option_langs="${param_core_posts_independence_langs}"
   apply_option_url="${param_core_posts_independence_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -5112,13 +5181,17 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -5151,13 +5224,17 @@ core_posts_independence()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_independence_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
         #thread_root_uri=''
         post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+        if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -5189,10 +5266,12 @@ core_posts()
   param_stdin_text="$2"
   param_specified_text="$3"
   param_text_files="$4"
-  param_langs="$5"
-  param_separator_prefix="$6"
-  param_output_json="$7"
-  param_url="$8"
+  param_linkcard_index="$5"
+  param_langs="$6"
+  param_separator_prefix="$7"
+  param_output_json="$8"
+  param_url="$9"
+  shift
   param_preview_mode="$9"
 
   debug 'core_posts' 'START'
@@ -5200,6 +5279,7 @@ core_posts()
   debug 'core_posts' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts' "param_specified_text:${param_specified_text}"
   debug 'core_posts' "param_text_files:${param_text_files}"
+  debug 'core_posts' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_posts' "param_langs:${param_langs}"
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
@@ -5223,15 +5303,15 @@ core_posts()
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
   esac
