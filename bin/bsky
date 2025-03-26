@@ -1490,7 +1490,7 @@ command_posts()
   then
     output_help_posts
   else
-    parse_parameters '--mode:1 --text:1 --text-files:1 --langs:1 --output-json:0 --url:1 --separator-prefix:1 --preview:0 --preview-mode:1' "$@"
+    parse_parameters '--mode:1 --text:1 --text-files:1 --linkcard-index:1 --langs:1 --output-json:0 --url:1 --separator-prefix:1 --preview:0 --preview-mode:1' "$@"
 
     separator_prefix="${BSKYSHCLI_POSTS_SEPARATOR_PREFIX}"
     if [ -n "${PARSED_PARAM_KEYVALUE_separator_prefix}" ]
@@ -1504,6 +1504,21 @@ command_posts()
     if [ -z "${stdin_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text}" ] && [ -z "${PARSED_PARAM_KEYVALUE_text_files}" ]
     then
       error "text must be specify (--text or --text-files or standard input)"
+    fi
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
+    if [ -n "${linkcard_index}" ]
+    then
+      _isnumeric "${linkcard_index}"
+      is_numeric=$?
+      if [ $is_numeric -ne 0 ]
+      then
+        error "--linkcard-index parameter must be numeric value: ${depth}"
+      fi
+    else
+      linkcard_index=1
     fi
 
     if [ -n "${PARSED_PARAM_KEYVALUE_mode}" ]
@@ -1568,7 +1583,7 @@ command_posts()
 
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
-    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${PARSED_PARAM_KEYVALUE_langs}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${preview_mode}"
+    core_posts "${PARSED_PARAM_KEYVALUE_mode}" "${stdin_text}" "${specified_text}" "${PARSED_PARAM_KEYVALUE_text_files}" "${linkcard_index}" "${PARSED_PARAM_KEYVALUE_langs}" "${separator_prefix}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYVALUE_url}" "${preview_mode}"
   fi
 
   debug 'command_posts' 'END'
