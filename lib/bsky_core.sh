@@ -4287,33 +4287,6 @@ core_posts_thread_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
-        # directive
-        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -b 1`
-        directive_value=`_cut "${separator_remain}" -b 2-`
-        case $directive_operator in
-          %)
-            ## option
-            core_parse_directive_option "${directive_value}"
-            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
-            then
-              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
-              RESULT_core_posts_thread_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
-            fi
-            if [ -n "${RESULT_parse_directive_option_url}" ]
-            then
-              apply_option_url="${RESULT_parse_directive_option_url}"
-              RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
-            fi
-            if [ -n "${RESULT_parse_directive_option_langs}" ]
-            then
-              apply_option_langs="${RESULT_parse_directive_option_langs}"
-              RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
-            fi
-            ;;
-          *)
-            ;;
-        esac
         # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
@@ -4349,6 +4322,33 @@ core_posts_thread_lines()
             break
           fi
         fi
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_thread_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
         # clear single post content
         lines=''
       else  # separator not detected

@@ -10,6 +10,7 @@
 - Compatible with `mktemp` command in environments where the `--tmpdir(-p)` option cannot be used
 - Changed to update initial setting files for all types of login shells (bash/zsh/csh/tcsh) that have been supported during installation with administrator privileges
 ## Fix
+- Fixed a case where the delimited section option directive for thread posts was applied to the previous section
 - Other minor fixes
 
 # v0.15.0
