@@ -1,3 +1,18 @@
+# v0.16.0
+## Add
+- Supports text link posting (`[text](URL)`)
+- Support for the link card output target specification option (--linkcard-index) in the thread posting function (posts) (command line option and delimited section option directive)
+- Supports csh/tcsh login shell (installer PATH setting)
+- Platform tuning (FreeBSD)
+- Listed environments where work has been confirmed in README
+## Modify
+- Changed ImageMagick convert resize parameter from `800x512!` to `800x812` when link card OGP image size is large (changed to keep aspect ratio) (BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM)
+- Compatible with `mktemp` command in environments where the `--tmpdir(-p)` option cannot be used
+- Changed to update initial setting files for all types of login shells (bash/zsh/csh/tcsh) that have been supported during installation with administrator privileges
+## Fix
+- Fixed a case where the delimited section option directive for thread posts was applied to the previous section
+- Other minor fixes
+
 # v0.15.0
 ## Add
 - Video posting function supported (post --video)

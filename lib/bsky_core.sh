@@ -569,44 +569,186 @@ core_build_text_rels_line()
   original_line_text="${param_core_build_text_rels_line_text}"
   evacuated_CORE_BUILD_TEXT_RELS_accum_display_length=$CORE_BUILD_TEXT_RELS_accum_display_length
   display_line_text=''
+
+  # text link or URL
   # grep -o:output only match string, -i:ignore case, -E:extended regular expression
-  url=`echo "${original_line_text}" | grep -o -i -E "${PATTERN_URL}"`
+  # <any char or nothing>[text](url) | url
+  link=`echo "${original_line_text}" | grep -o -i -E "(\[[^][]*\]\(${PATTERN_URL}\))|(${PATTERN_URL})"`
+  debug 'extract link' "${link}"
+  # not separate by space character
+  evacuated_IFS=$IFS
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  set -- $url
+  set -- $link
+  IFS=$evacuated_IFS
   while [ -n "${original_line_text}" ]
   do
-    # URL
-    url=$1
-    if [ -n "${url}" ]
+    link=$1
+    if [ -n "${link}" ]
     then
+      debug 'divided link' "${link}"
+
+      if _startswith "${link}" 'http'  # assumption: url
+      then
+        debug 'link type' 'http'
+        # fall through to normal url procedure
+        :
+      else  # assumption: \[text](url) or [text](url)
+        # cheat (use jq)
+        # get index of [text](url)
+        link_index=`_p "${original_line_text}" | jq -R 'index("'"${link}"'")'`
+        if [ "${link_index}" -gt 0 ]
+        then
+          before_text=`_p "${original_line_text}" | cut -b "-${link_index}"`
+        else  # there are no more links
+          before_text=''
+        fi
+        debug 'before_text' "${before_text}"
+        _strlen "${before_text}"
+        before_text_length=$?
+        if [ $before_text_length -gt 0 ]
+        then
+          before_char=`_p "${before_text}" | cut -b "${before_text_length}-"`
+        else
+          before_char=''
+        fi
+        debug 'before_char' "${before_char}"
+
+        if [ "${before_char}" = "\\" ]  # assumption: \[text](url)
+        then
+          debug 'link type' 'escaped text link'
+          # escaped text link - output literally without escape backslash
+          # extract '[text](' and its length
+          display_text_before_url=`_p "${link}" | sed -E -e 's|(\[[^][]*\]\().*|\1|'`
+          debug 'display_text_before_url' "${display_text_before_url}"
+          _strlen "${display_text_before_url}"
+          display_text_before_url_length=$?
+
+          # get index of backslash at top of link
+          link_index=`expr "${link_index}" - 1`
+
+          # display text
+          # until before url
+          # original_line_text:       AAAAAA\[text](url)BBBBBB
+          # display_text_before_link: AAAAAA
+          if [ "${link_index}" -gt 0 ]
+          then
+            display_text_before_link=`_p "${original_line_text}" | cut -b "-${link_index}"`
+          else
+            display_text_before_link=''
+          fi
+          debug 'display_text_before_link' "${display_text_before_link}"
+          # <same line before proceed text> + 'AAAAAA' + '[text]('
+          display_line_text="${display_line_text}${display_text_before_link}${display_text_before_url}"
+
+          # original text next part
+          # original_line_text before: AAAAAA\[text](url)BBBBBB
+          # original_line_text after:  url)BBBBBB
+          # until before url (+1: escaped '\' skip, cut command is 1 start index)
+          original_cut_index=`expr "${link_index}" + 1 + "${display_text_before_url_length}" + 1`
+          # cut until target link
+          original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
+
+          # accumulate display length
+          # += length('AAAAAA') + length('[text](')
+          CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}" + "${display_text_before_url_length}"`        
+
+          # override variable 'link' value (for normal url procedure)
+          # \[text](url) -> url
+          link=`_p "${link}" | sed -E -e 's|.?\[[^][]*\]\((.*)\)|\1|'`
+          debug 'link' "${link}"
+          # fall through to normal url procedure
+        else  # assumption: [text](url)
+          debug 'link type' 'text link'
+          _strlen "${link}"
+          link_length=$?
+          # extract 'text' and its length
+          link_text=`_p "${link}" | sed -E -e 's|\[([^][]*)\]\(.*\)|\1|'`
+          _strlen "${link_text}"
+          link_text_length=$?
+          # extract 'url'
+          link_url=`_p "${link}" | sed -E -e 's|\[[^][]*\]\((.*)\)|\1|'`
+          debug 'before_char' "${before_char}"
+          debug 'link_text' "${link_text}"
+          debug 'link_url' "${link_url}"
+
+          # extract link card target url
+          CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
+          if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
+          then
+            RESULT_core_build_text_rels_linkcard_url="${link_url}"
+          fi
+
+          # link facet
+          # overall index of url start
+          # += (index of 'text')
+          overall_url_start=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}"`
+          # overall index of url end
+          # + length('text')
+          overall_url_end=`expr "${overall_url_start}" + "${link_text_length}"`
+          # stack on result set (url, actual index of url start, actual index of url end)
+          # CAUTION: each values are separated by tab characters
+          CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}	${link_url}	${overall_url_start}	${overall_url_end}"
+
+          # display text
+          # until begin of link
+          # original_line_text:       AAAAAA[text](url)BBBBBB
+          # display_text_before_link: AAAAAA
+          if [ "${link_index}" -gt 0 ]
+          then
+            display_text_before_link="${before_text}"
+          else
+            display_text_before_link=''
+          fi
+          # <same line before proceed text> + 'AAAAAA' + 'text'
+          display_line_text="${display_line_text}${display_text_before_link}${link_text}"
+
+          # original text next part
+          # original_line_text before: AAAAAA[text](url)BBBBBB
+          # original_line_text after:  BBBBBB
+          # until end of link (cut command is 1 start index)
+          original_cut_index=`expr "${link_index}" + "${link_length}" + 1`
+          # cut until target link
+          original_line_text=`_p "${original_line_text}" | cut -b "${original_cut_index}"-`
+
+          # accumulate display length
+          # += (index of 'text') + length('text')
+          CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${link_index}" + "${link_text_length}"`        
+          # shift to next link
+          shift
+          continue
+        fi
+      fi
+
       # extract link card target url
       CORE_BUILD_TEXT_RELS_extract_link_count=`expr "${CORE_BUILD_TEXT_RELS_extract_link_count}" + 1`
       if [ "${CORE_BUILD_TEXT_RELS_extract_link_count}" -eq "${param_core_build_text_rels_line_linkcard_index}" ]
       then
-        RESULT_core_build_text_rels_linkcard_url="${url}"
+        RESULT_core_build_text_rels_linkcard_url="${link}"
       fi
 
       # URL modify
-      _strlen "${url}"
+      _strlen "${link}"
       original_url_length=$?
       case $param_core_build_text_rels_line_url in
         full)
-          display_url_literal="${url}"
+          display_url_literal="${link}"
           display_url_length=$original_url_length
           ;;
         omit-middle)
-          display_url_literal=`core_url_shortening_middle "${url}"`
+          display_url_literal=`core_url_shortening_middle "${link}"`
           display_url_length=$?
           ;;
         omit-tail|*)
-          display_url_literal=`core_url_shortening_tail "${url}"`
+          display_url_literal=`core_url_shortening_tail "${link}"`
           display_url_length=$?
           ;;
       esac
 
       # cheat (use jq) for shortest match (countermeasure to same URL string in text)
-      url_index=`_p "${original_line_text}" | jq -R 'index("'"${url}"'")'`
+      url_index=`_p "${original_line_text}" | jq -R 'index("'"${link}"'")'`
 
       # link facet
       # overall index of url start
@@ -614,7 +756,8 @@ core_build_text_rels_line()
       # overall index of url end
       overall_url_end=`expr "${overall_url_start}" + "${display_url_length}"`
       # stack on result set (url, actual index of url start, actual index of url end)
-      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element} ${url} ${overall_url_start} ${overall_url_end}"
+      # CAUTION: each values are separated by tab characters
+      CORE_BUILD_TEXT_RELS_link_facets_element="${CORE_BUILD_TEXT_RELS_link_facets_element}	${link}	${overall_url_start}	${overall_url_end}"
 
       # display text
       # until begin of url
@@ -634,7 +777,7 @@ core_build_text_rels_line()
 
       # accumulate display length
       CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${CORE_BUILD_TEXT_RELS_accum_display_length}" + "${url_index}" + "${display_url_length}"`
-      # shift to next url
+      # shift to next link
       shift
     else
       display_line_text="${display_line_text}${original_line_text}"
@@ -808,6 +951,7 @@ core_parse_directive_option()
   debug 'core_parse_directive_option' "param_directive_option_value:${param_directive_option_value}"
 
   # initialize result
+  unset RESULT_parse_directive_option_linkcard_index
   unset RESULT_parse_directive_option_langs
   unset RESULT_parse_directive_option_url
 
@@ -816,8 +960,10 @@ core_parse_directive_option()
   debug 'core_parse_directive_option' "directive_option_value:${directive_option_value}"
   # no double quote for use word splitting
   # shellcheck disable=SC2086
-  parse_parameters '--langs:1 --url:1' $directive_option_value
+  parse_parameters '--linkcard-index:1 --langs:1 --url:1' $directive_option_value
   # dynamic assignment in parse_parameters
+  # shellcheck disable=SC2154
+  RESULT_parse_directive_option_linkcard_index="${PARSED_PARAM_KEYVALUE_linkcard_index}"
   # shellcheck disable=SC2154
   RESULT_parse_directive_option_langs="${PARSED_PARAM_KEYVALUE_langs}"
   # shellcheck disable=SC2154
@@ -1767,9 +1913,14 @@ core_build_link_facets_fragment()
 
   element_count=0
   link_facets_fragment=''
+  # not separate by space character
+  evacuated_IFS=$IFS
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $param_core_build_link_facets_element
+  IFS=$evacuated_IFS
   while [ $# -gt 0 ]
   do
     url=$1
@@ -1909,7 +2060,7 @@ core_build_external_fragment()
             check_result=$?
             if [ $check_result -eq 0 ]
             then
-              image_temporary_path=`mktemp --tmpdir bsky_sh_cli.XXXXXXXXXX`
+              image_temporary_path=`_mktemp_file bsky_sh_cli.XXXXXXXXXX`
               mktemp_status=$?
               debug 'core_build_external_fragment' "image_temporary_path:${image_temporary_path}"
               if [ $mktemp_status -eq 0 ]
@@ -3634,15 +3785,17 @@ core_output_post()
 core_posts_single()
 {
   param_core_posts_single_text="$1"
-  param_core_posts_single_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_core_posts_single_url="$5"
-  param_preview_mode="$6"
-  param_view_index="$7"
+  param_core_posts_single_linkcard_index="$2"
+  param_core_posts_single_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_core_posts_single_url="$6"
+  param_preview_mode="$7"
+  param_view_index="$8"
 
   debug 'core_posts_single' 'START'
   debug 'core_posts_single' "param_core_posts_single_text:${param_core_posts_single_text}"
+  debug 'core_posts_single' "param_core_posts_single_linkcard_index:${param_core_posts_single_linkcard_index}"
   debug 'core_posts_single' "param_core_posts_single_langs:${param_core_posts_single_langs}"
   debug 'core_posts_single' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_single' "param_parent_cid:${param_parent_cid}"
@@ -3665,7 +3818,7 @@ core_posts_single()
       generate_external_thumb='(defined)'
       ;;
   esac
-  core_build_text_rels "${param_core_posts_single_text}" 1 "${param_core_posts_single_url}"
+  core_build_text_rels "${param_core_posts_single_text}" "${param_core_posts_single_linkcard_index}" "${param_core_posts_single_url}"
   core_verify_display_text_size "${RESULT_core_build_text_rels_display_text}"
   text=`escape_text_json_value "${RESULT_core_build_text_rels_display_text}"`
   link_facets_fragment=`core_build_link_facets_fragment "${RESULT_core_build_text_rels_link_facets_element}"`
@@ -4082,16 +4235,18 @@ core_post()
 core_posts_thread_lines()
 {
   param_core_posts_thread_lines_text="$1"
-  param_core_posts_thread_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_thread_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_thread_lines_linkcard_index="$2"
+  param_core_posts_thread_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_thread_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_thread_lines' 'START'
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_text:${param_core_posts_thread_lines_text}"
+  debug 'core_posts_thread_lines' "param_core_posts_thread_lines_linkcard_index:${param_core_posts_thread_lines_linkcard_index}"
   debug 'core_posts_thread_lines' "param_core_posts_thread_lines_langs:${param_core_posts_thread_lines_langs}"
   debug 'core_posts_thread_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_thread_lines' "param_parent_cid:${param_parent_cid}"
@@ -4108,8 +4263,10 @@ core_posts_thread_lines()
   RESULT_core_posts_thread_lines_root_uri=''
   #RESULT_core_posts_thread_lines_uri_list=''
   RESULT_core_posts_thread_lines_count=0
+  unset RESULT_core_posts_thread_lines_directive_option_linkcard_index
   unset RESULT_core_posts_thread_lines_directive_option_url
   unset RESULT_core_posts_thread_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_thread_lines_linkcard_index}"
   apply_option_url="${param_core_posts_thread_lines_url}"
   apply_option_langs="${param_core_posts_thread_lines_langs}"
   status_core_posts_thread_lines=0
@@ -4130,28 +4287,6 @@ core_posts_thread_lines()
     do
       if _startswith "$1" "${param_separator_prefix}"
       then  # separator line detected
-        # directive
-        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
-        directive_operator=`_cut "${separator_remain}" -b 1`
-        directive_value=`_cut "${separator_remain}" -b 2-`
-        case $directive_operator in
-          %)
-            ## option
-            core_parse_directive_option "${directive_value}"
-            if [ -n "${RESULT_parse_directive_option_url}" ]
-            then
-              apply_option_url="${RESULT_parse_directive_option_url}"
-              RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
-            fi
-            if [ -n "${RESULT_parse_directive_option_langs}" ]
-            then
-              apply_option_langs="${RESULT_parse_directive_option_langs}"
-              RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
-            fi
-            ;;
-          *)
-            ;;
-        esac
         # (before) section process
         if core_is_post_text_meaningful "${lines}"
         then  # post text is meaningful
@@ -4168,7 +4303,7 @@ core_posts_thread_lines()
             done
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
             core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4187,6 +4322,33 @@ core_posts_thread_lines()
             break
           fi
         fi
+        # directive
+        separator_remain=`_strchompleft "$1" "${param_separator_prefix}"`
+        directive_operator=`_cut "${separator_remain}" -b 1`
+        directive_value=`_cut "${separator_remain}" -b 2-`
+        case $directive_operator in
+          %)
+            ## option
+            core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_thread_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_url}" ]
+            then
+              apply_option_url="${RESULT_parse_directive_option_url}"
+              RESULT_core_posts_thread_lines_directive_option_url="${RESULT_parse_directive_option_url}"
+            fi
+            if [ -n "${RESULT_parse_directive_option_langs}" ]
+            then
+              apply_option_langs="${RESULT_parse_directive_option_langs}"
+              RESULT_core_posts_thread_lines_directive_option_langs="${RESULT_parse_directive_option_langs}"
+            fi
+            ;;
+          *)
+            ;;
+        esac
         # clear single post content
         lines=''
       else  # separator not detected
@@ -4217,7 +4379,7 @@ core_posts_thread_lines()
         done
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
         core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4249,7 +4411,7 @@ core_posts_thread_lines()
       done
     fi
     count=1
-    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_thread_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_thread_lines_parent_uri}" "${core_posts_thread_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_thread_lines_parent_uri="${RESULT_core_posts_single_uri}"
       core_posts_thread_lines_parent_cid="${RESULT_core_posts_single_cid}"
@@ -4279,16 +4441,18 @@ core_posts_thread()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_thread_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_thread_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_thread_linkcard_index="$4"
+  param_core_posts_thread_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_thread_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_thread' 'START'
   debug 'core_posts_thread' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_thread' "param_specified_text:${param_specified_text}"
   debug 'core_posts_thread' "param_text_files:${param_text_files}"
+  debug 'core_posts_thread' "param_core_posts_thread_linkcard_index:${param_core_posts_thread_linkcard_index}"
   debug 'core_posts_thread' "param_core_posts_thread_langs:${param_core_posts_thread_langs}"
   debug 'core_posts_thread' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_thread' "param_output_json:${param_output_json}"
@@ -4300,12 +4464,13 @@ core_posts_thread()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_thread_linkcard_index}"
   apply_option_langs="${param_core_posts_thread_langs}"
   apply_option_url="${param_core_posts_thread_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4314,6 +4479,10 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4329,7 +4498,7 @@ core_posts_thread()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_thread_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_thread_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       parent_uri="${RESULT_core_posts_thread_lines_uri}"
       parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4338,6 +4507,10 @@ core_posts_thread()
         thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+      if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4370,7 +4543,7 @@ core_posts_thread()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_thread_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_thread_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         parent_uri="${RESULT_core_posts_thread_lines_uri}"
         parent_cid="${RESULT_core_posts_thread_lines_cid}"
@@ -4379,6 +4552,10 @@ core_posts_thread()
           thread_root_uri="${RESULT_core_posts_thread_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_thread_lines_count}"`
+        if [ -n "${RESULT_core_posts_thread_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_thread_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_thread_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_thread_lines_directive_option_langs}"
@@ -4408,16 +4585,18 @@ core_posts_thread()
 core_posts_sibling_lines()
 {
   param_core_posts_sibling_lines_text="$1"
-  param_core_posts_sibling_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_sibling_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_sibling_lines_linkcard_index="$2"
+  param_core_posts_sibling_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_sibling_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_sibling_lines' 'START'
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_text:${param_core_posts_sibling_lines_text}"
+  debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_linkcard_index:${param_core_posts_sibling_lines_linkcard_index}"
   debug 'core_posts_sibling_lines' "param_core_posts_sibling_lines_langs:${param_core_posts_sibling_lines_langs}"
   debug 'core_posts_sibling_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_sibling_lines' "param_parent_cid:${param_parent_cid}"
@@ -4434,8 +4613,10 @@ core_posts_sibling_lines()
   RESULT_core_posts_sibling_lines_root_uri=''
   #RESULT_core_posts_sibling_lines_uri_list=''
   RESULT_core_posts_sibling_lines_count=0
+  unset RESULT_core_posts_sibling_lines_directive_option_linkcard_index
   unset RESULT_core_posts_sibling_lines_directive_option_url
   unset RESULT_core_posts_sibling_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_sibling_lines_linkcard_index}"
   apply_option_url="${param_core_posts_sibling_lines_url}"
   apply_option_langs="${param_core_posts_sibling_lines_langs}"
   status_core_posts_sibling_lines=0
@@ -4464,6 +4645,11 @@ core_posts_sibling_lines()
           %)
             ## option
             core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_sibling_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
             if [ -n "${RESULT_parse_directive_option_url}" ]
             then
               apply_option_url="${RESULT_parse_directive_option_url}"
@@ -4488,7 +4674,7 @@ core_posts_sibling_lines()
             specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
           fi
           count=`expr "${count}" + 1`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             if [ -z "${core_posts_sibling_lines_parent_uri}" ]
             then
@@ -4537,7 +4723,7 @@ core_posts_sibling_lines()
         specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
       fi
       count=`expr "${count}" + 1`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         if [ -z "${core_posts_sibling_lines_parent_uri}" ]
         then
@@ -4569,7 +4755,7 @@ core_posts_sibling_lines()
       specify_index=`expr "${param_view_index_lines}" + "${count}" + 1`
     fi
     count=1
-    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_sibling_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_sibling_lines_parent_uri}" "${core_posts_sibling_lines_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       if [ -z "${core_posts_sibling_lines_parent_uri}" ]
       then
@@ -4605,16 +4791,18 @@ core_posts_sibling()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_sibling_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_sibling_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_sibling_linkcard_index="$4"
+  param_core_posts_sibling_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_sibling_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_sibling' 'START'
   debug 'core_posts_sibling' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_sibling' "param_specified_text:${param_specified_text}"
   debug 'core_posts_sibling' "param_text_files:${param_text_files}"
+  debug 'core_posts_sibling' "param_core_posts_sibling_linkcard_index:${param_core_posts_sibling_linkcard_index}"
   debug 'core_posts_sibling' "param_core_posts_sibling_langs:${param_core_posts_sibling_langs}"
   debug 'core_posts_sibling' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_sibling' "param_output_json:${param_output_json}"
@@ -4626,12 +4814,13 @@ core_posts_sibling()
   thread_root_uri=''
   #post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_sibling_linkcard_index}"
   apply_option_langs="${param_core_posts_sibling_langs}"
   apply_option_url="${param_core_posts_sibling_url}"
 
   if [ -n "${param_stdin_text}" ]
   then
-    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4646,6 +4835,10 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4661,7 +4854,7 @@ core_posts_sibling()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_sibling_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       if [ -z "${parent_uri}" ]
       then
@@ -4676,6 +4869,10 @@ core_posts_sibling()
         thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
       fi
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+      if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4708,7 +4905,7 @@ core_posts_sibling()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_sibling_lines "${file_content}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_sibling_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${parent_uri}" "${parent_cid}" "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         if [ -z "${parent_uri}" ]
         then
@@ -4723,6 +4920,10 @@ core_posts_sibling()
           thread_root_uri="${RESULT_core_posts_sibling_lines_root_uri}"
         fi
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_sibling_lines_count}"`
+        if [ -n "${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_sibling_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_sibling_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_sibling_lines_directive_option_langs}"
@@ -4752,16 +4953,18 @@ core_posts_sibling()
 core_posts_independence_lines()
 {
   param_core_posts_independence_lines_text="$1"
-  param_core_posts_independence_lines_langs="$2"
-  param_parent_uri="$3"
-  param_parent_cid="$4"
-  param_separator_prefix="$5"
-  param_core_posts_independence_lines_url="$6"
-  param_preview_mode="$7"
-  param_view_index_lines="$8"
+  param_core_posts_independence_lines_linkcard_index="$2"
+  param_core_posts_independence_lines_langs="$3"
+  param_parent_uri="$4"
+  param_parent_cid="$5"
+  param_separator_prefix="$6"
+  param_core_posts_independence_lines_url="$7"
+  param_preview_mode="$8"
+  param_view_index_lines="$9"
 
   debug 'core_posts_independence_lines' 'START'
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_text:${param_core_posts_independence_lines_text}"
+  debug 'core_posts_independence_lines' "param_core_posts_independence_lines_linkcard_index:${param_core_posts_independence_lines_linkcard_index}"
   debug 'core_posts_independence_lines' "param_core_posts_independence_lines_langs:${param_core_posts_independence_lines_langs}"
   debug 'core_posts_independence_lines' "param_parent_uri:${param_parent_uri}"
   debug 'core_posts_independence_lines' "param_parent_cid:${param_parent_cid}"
@@ -4778,8 +4981,10 @@ core_posts_independence_lines()
   #RESULT_core_posts_independence_lines_root_uri=''
   RESULT_core_posts_independence_lines_uri_list=''
   RESULT_core_posts_independence_lines_count=0
+  unset RESULT_core_posts_independence_lines_directive_option_linkcard_index
   unset RESULT_core_posts_independence_lines_directive_option_url
   unset RESULT_core_posts_independence_lines_directive_option_langs
+  apply_option_linkcard_index="${param_core_posts_independence_lines_linkcard_index}"
   apply_option_url="${param_core_posts_independence_lines_url}"
   apply_option_langs="${param_core_posts_independence_lines_langs}"
   status_core_posts_independence_lines=0
@@ -4808,6 +5013,11 @@ core_posts_independence_lines()
           %)
             ## option
             core_parse_directive_option "${directive_value}"
+            if [ -n "${RESULT_parse_directive_option_linkcard_index}" ]
+            then
+              apply_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+              RESULT_core_posts_independence_lines_directive_option_linkcard_index="${RESULT_parse_directive_option_linkcard_index}"
+            fi
             if [ -n "${RESULT_parse_directive_option_url}" ]
             then
               apply_option_url="${RESULT_parse_directive_option_url}"
@@ -4827,7 +5037,7 @@ core_posts_independence_lines()
         then  # post text is meaningful
           count=`expr "${count}" + 1`
           specify_index=`expr "${param_view_index_lines}" + "${count}"`
-          if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+          if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
           then  # post succeeded
             core_posts_independence_parent_uri=''
             core_posts_independence_parent_cid=''
@@ -4865,7 +5075,7 @@ core_posts_independence_lines()
     then
       count=`expr "${count}" + 1`
       specify_index=`expr "${param_view_index_lines}" + "${count}"`
-      if core_posts_single "${lines}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+      if core_posts_single "${lines}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
       then  # post succeeded
         core_posts_independence_parent_uri=''
         core_posts_independence_parent_cid=''
@@ -4886,7 +5096,7 @@ core_posts_independence_lines()
   else  # separator not specified : all lines as single content
     count=1
     specify_index=`expr "${param_view_index_lines}" + "${count}"`
-    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
+    if core_posts_single "${param_core_posts_independence_lines_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" "${core_posts_independence_parent_uri}" "${core_posts_independence_parent_cid}" "${apply_option_url}" "${param_preview_mode}" "${specify_index}"
     then  # post succeeded
       core_posts_independence_parent_uri=''
       core_posts_independence_parent_cid=''
@@ -4916,16 +5126,18 @@ core_posts_independence()
   param_stdin_text="$1"
   param_specified_text="$2"
   param_text_files="$3"
-  param_core_posts_independence_langs="$4"
-  param_separator_prefix="$5"
-  param_output_json="$6"
-  param_core_posts_independence_url="$7"
-  param_preview_mode="$8"
+  param_core_posts_independence_linkcard_index="$4"
+  param_core_posts_independence_langs="$5"
+  param_separator_prefix="$6"
+  param_output_json="$7"
+  param_core_posts_independence_url="$8"
+  param_preview_mode="$9"
 
   debug 'core_posts_independence' 'START'
   debug 'core_posts_independence' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts_independence' "param_specified_text:${param_specified_text}"
   debug 'core_posts_independence' "param_text_files:${param_text_files}"
+  debug 'core_posts_independence' "param_core_posts_independence_linkcard_index:${param_core_posts_independence_linkcard_index}"
   debug 'core_posts_independence' "param_core_posts_independence_langs:${param_core_posts_independence_langs}"
   debug 'core_posts_independence' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts_independence' "param_output_json:${param_output_json}"
@@ -4937,18 +5149,23 @@ core_posts_independence()
   thread_root_uri=''
   post_uri_list=''
   view_index_posts=0
+  apply_option_linkcard_index="${param_core_posts_independence_linkcard_index}"
   apply_option_langs="${param_core_posts_independence_langs}"
   apply_option_url="${param_core_posts_independence_url}"
 
   if [ -n "${param_stdin_text}" ]
   then  # standard input (pipe/redirect)
-    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_stdin_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -4964,13 +5181,17 @@ core_posts_independence()
 
   if [ -n "${param_specified_text}" ]
   then
-    if core_posts_independence_lines "${param_specified_text}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+    if core_posts_independence_lines "${param_specified_text}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
     then
       #parent_uri=''
       #parent_cid=''
       #thread_root_uri=''
       post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
       view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+      if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+      then
+        apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+      fi
       if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
       then
         apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -5003,13 +5224,17 @@ core_posts_independence()
         fi
         error "Specified file is not readable: ${target_file}"
       fi
-      if core_posts_independence_lines "${file_content}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
+      if core_posts_independence_lines "${file_content}" "${apply_option_linkcard_index}" "${apply_option_langs}" '' '' "${param_separator_prefix}" "${apply_option_url}" "${param_preview_mode}" "${view_index_posts}"
       then
         #parent_uri=''
         #parent_cid=''
         #thread_root_uri=''
         post_uri_list="${post_uri_list} ${RESULT_core_posts_independence_lines_uri_list}"
         view_index_posts=`expr "${view_index_posts}" + "${RESULT_core_posts_independence_lines_count}"`
+        if [ -n "${RESULT_core_posts_independence_lines_directive_option_linkcard_index}" ]
+        then
+          apply_option_linkcard_index="${RESULT_core_posts_independence_lines_directive_option_linkcard_index}"
+        fi
         if [ -n "${RESULT_core_posts_independence_lines_directive_option_langs}" ]
         then
           apply_option_langs="${RESULT_core_posts_independence_lines_directive_option_langs}"
@@ -5041,10 +5266,12 @@ core_posts()
   param_stdin_text="$2"
   param_specified_text="$3"
   param_text_files="$4"
-  param_langs="$5"
-  param_separator_prefix="$6"
-  param_output_json="$7"
-  param_url="$8"
+  param_linkcard_index="$5"
+  param_langs="$6"
+  param_separator_prefix="$7"
+  param_output_json="$8"
+  param_url="$9"
+  shift
   param_preview_mode="$9"
 
   debug 'core_posts' 'START'
@@ -5052,6 +5279,7 @@ core_posts()
   debug 'core_posts' "param_stdin_text:${param_stdin_text}"
   debug 'core_posts' "param_specified_text:${param_specified_text}"
   debug 'core_posts' "param_text_files:${param_text_files}"
+  debug 'core_posts' "param_linkcard_index:${param_linkcard_index}"
   debug 'core_posts' "param_langs:${param_langs}"
   debug 'core_posts' "param_separator_prefix:${param_separator_prefix}"
   debug 'core_posts' "param_output_json:${param_output_json}"
@@ -5075,15 +5303,15 @@ core_posts()
 
   case $param_mode in
     sibling)
-      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_sibling "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
     independence)
-      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_independence "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
     thread|*)
-      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
+      core_posts_thread "${param_stdin_text}" "${param_specified_text}" "${param_text_files}" "${param_linkcard_index}" "${param_langs}" "${param_separator_prefix}" "${param_output_json}" "${param_url}" "${param_preview_mode}"
       posts_count=$?
       ;;
   esac
@@ -6675,7 +6903,7 @@ sudo ${FILE_DIR}/bsky update"
     error "GitHub latest version query error: ${github_latest_url}"
   fi
   release_tag=`_p "${github_latest}" | jq -r '.tag_name'`
-  if update_temporary_path=`mktemp --tmpdir -d bsky_sh_cli.XXXXXXXXXX`
+  if update_temporary_path=`_mktemp_dir bsky_sh_cli.XXXXXXXXXX`
   then
     :
   else

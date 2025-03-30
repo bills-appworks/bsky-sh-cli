@@ -119,7 +119,7 @@ _cut()
   param_cut_string=$1
   shift
 
-  _p "`_p "${param_cut_string}" | cut "$@" | tr -d '\n'`"
+  _p "`_p "${param_cut_string}" | cut "$@"`"
 }
 
 _slice()
@@ -180,6 +180,33 @@ _join()
   done
 
   _p "${result}"
+}
+
+_tmpdir()
+{
+  if [ -n "${TMPDIR}" ]
+  then
+    result="${TMPDIR}"
+  else
+    result='/tmp'
+  fi
+  _p "${result}"
+}
+
+_mktemp_dir()
+{
+  _mktemp_dir_template="$1"
+
+  tmpdir=`_tmpdir`
+  mktemp -d "${tmpdir}/${_mktemp_dir_template}"
+}
+
+_mktemp_file()
+{
+  _mktemp_file_template="$1"
+
+  tmpdir=`_tmpdir`
+  mktemp "${tmpdir}/${_mktemp_file_template}"
 }
 
 set_timezone()
@@ -364,7 +391,8 @@ decode_keyvalue_list()
   debug 'decode_keyvalue_list' 'START'
 
   evaluated_IFS=$IFS
-  IFS=`printf '\t\n'`
+  # CAUTION: command substitution eliminates trailing newline
+  IFS=`printf '\n\t'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $param_keyvalue_list
