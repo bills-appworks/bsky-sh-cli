@@ -82,7 +82,7 @@ For general users:
    - Required
      - `curl`
      - `jq`
-     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc.
+     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc. For FreeBSD, please install it with `pkg install gsed` etc.
    - Recommendation
      - `convert` (imagemagick): If it does not exist, display a warning that some image posting and link card functions cannot be used and continue the installation.
      - `file` (libmagic): If it does not exist, display a warning that image posting and link cards cannot be used and continue the installation.
@@ -94,10 +94,13 @@ For general users:
        - `$HOME/.local/bsky_sh_cli`
 4. Check the setting status of the environment variable `PATH` to the `bin` subdirectory under the installation directory, and if it is not set, we will suggest creating or modifying (adding) a login script. If the proposal is not what you want, you can change it.
    - The installation execution user is a super user (when executed with sudo or root):
-     - If `$SHELL` is `/bin/zsh`
-       - `/etc/zprofile`
-     - If `$SHELL` is not `/bin/zsh`
-       - `/etc/profile.d/bsky_sh_cli.sh`
+     - The following multiple files are separated by colons (:) to make them valid for any login shell.
+       - `/etc/profile.d/bsky_sh_cli.sh` (for bash, etc. *1)
+       - `/etc/profile.d/bsky_sh_cli.csh` (for csh/tcsh *1)
+       - `/etc/csh.cshrc` (for csh/tcsh)
+       - `/etc/zprofile` (for zsh)
+
+       *1: Only if the /etc/profile.d directory exists
    - If the installation execution user is a general user:
      - If `$SHELL` is `/bin/bash`
        - Files found by checking the following sequentially
@@ -108,15 +111,26 @@ For general users:
        - Files found by checking the following sequentially
          1. `$HOME/.zshrc`
          2. `$HOME/.zlogin`
-     - If the the file is not found above:
+     - If `$SHELL` is `/bin/csh` or `/bin/tcsh`
+       - Files found by checking the following sequentially
+         1. `$HOME/.cshrc`
+         2. `$HOME/.login`
+     - If the file is not found above:
        - If `$SHELL` is `/bin/zsh`
          - `$HOME/.zprofile`
-       - If `$SHELL` is not `/bin/zsh`
+       - If `$SHELL` is `/bin/csh` or `/bin/tcsh`
+         - `$HOME/.login`
+       - If `$SHELL` is anything other than the above
          - `$HOME/.profile`
    - Add the following line (create the file if it doesn't exist):
+     - If the target file extension is **NOT** `.csh`, `.cshrc`, or `.login`
      ````
      PATH=$PATH:<specified installation directory>/bin
      export PATH
+     ````
+     - If the target file extension is `.csh`, `.cshrc`, or `.login`
+     ````
+     set path = ($path <specified installation directory>/bin)
      ````
 5. Suggests the installation of a Run Commands file that provides customization settings for this tool. You can skip it if you don't need it.
    - The installation location of the Run Commands file is as follows.
