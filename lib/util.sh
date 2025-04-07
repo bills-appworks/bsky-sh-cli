@@ -893,6 +893,33 @@ verify_profile_name()
   debug 'verify_profile_name' 'END'
 }
 
+get_profile_run_commands_filepath()
+{
+  debug 'get_profile_run_commands_filepath' 'START'
+  if [ -n "${BSKYSHCLI_PROFILE}" ]
+  then
+    profile_run_commands_filename="${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_PREFIX}${BSKYSHCLI_PROFILE}${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_SUFFIX}"
+  else
+    profile_run_commands_filename=''
+  fi
+  # overwrite with global profile option
+  if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
+  then
+    profile_run_commands_filename="${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_PREFIX}${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_SUFFIX}"
+  fi
+
+  profile_run_commands_filepath=''
+  if [ -n "${profile_run_commands_filename}" ]
+  then
+    profile_run_commands_filepath="${HOME}/${profile_run_commands_filename}"
+  fi
+
+  debug 'get_profile_run_commands_filepath' "profile_run_commands_filepath:${profile_run_commands_filepath}"
+  debug 'get_profile_run_commands_filepath' 'END'
+
+  _p "${profile_run_commands_filepath}"
+}
+
 get_session_filepath()
 {
   debug 'get_session_filepath' 'START'
