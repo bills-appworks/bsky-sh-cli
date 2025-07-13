@@ -1,3 +1,9 @@
+# v0.17.0
+## Add
+- Supports profile-specific customization configuration files (`$HOME/.bsky_sh_cli_<profile name>_rc`)
+- Supports GNU sed path specification (environment variable `BSKYSHCLI_GNU_SED_PATH`)
+- Supports GNU sed path specification in the installer (`install.sh --config-gsed-path`)
+
 # v0.16.0
 ## Add
 - Supports text link posting (`[text](URL)`)
