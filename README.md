@@ -6,9 +6,7 @@ Bluesky CLI (Command Line Interface) implementation in shell script
 ## Summary
 This is a tool for using Bluesky (bsky.social/bsky.app) from the command line in a Unix-like environment shell.
 
-The goal of this tool is to be able to run it using a shell script execution environment similar to the sh:Bourne Shell family and some dependent tools.
-
-It is currently under development and will be enriched with functionality in the future.
+The goal of this tool is to make it executable within a shell script environment that is compatible with most Unix-like systems and the necessary dependent tools.
 
 ## How to use
 By downloading and running one file in the GitHub repository, you can download and install the latest release archive.
@@ -135,6 +133,8 @@ In addition to the provided files to be deployed, generate and use the following
   - When you run this tool, it will generate this directory and some files under it. Files such as the session information management file and debug information file (when the debug function is enabled) are stored.
 - `$HOME/.bsky_sh_cli_rc` file
   - A file that describes settings to customize this tool. Not created by default. The `.bsky_sh_cli_rc.sample` file included in the provided files is a sample. If you want to customize this tool, rename this file, deploy it to your `$HOME` directory, and configure it.
+- `$HOME/.bsky_sh_cli_<profile name>_rc` file
+  - This file describes the settings to be customized for each profile. Not created by default. If this file exists when executing a profile specification, you can overwrite the settings of `.bsky_sh_cli_rc` and set profile-specific settings (with the exception of some settings).
 - Create a file under the `/tmp/` directory
   - Use the /tmp/ directory (depend on system configuration) as a temporary file creation directory for attaching image files, etc.
 

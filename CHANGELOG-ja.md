@@ -1,3 +1,12 @@
+# v0.17.0
+## 追加
+- プロファイル個別カスタマイズ設定ファイル対応（`$HOME/.bsky_sh_cli_<プロファイル名>_rc`）
+- GNU sedパス指定対応（環境変数`BSKYSHCLI_GNU_SED_PATH`）
+- インストーラのGNU sedパス指定対応（`install.sh --config-gsed-path`）
+- 構成情報出力にGNU sedパス指定情報追加（`info meta --path (BSKYSHCLI_GNU_SED_PATH)`）
+## 修正
+- その他軽微な修正
+
 # v0.16.0
 ## 追加
 - テキストリンク投稿機能対応（`[テキスト](URL)`）

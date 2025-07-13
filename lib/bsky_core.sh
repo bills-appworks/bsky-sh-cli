@@ -6458,13 +6458,15 @@ core_info_meta_path()
     _p "\"BSKYSHCLI_RUN_COMMANDS_PATH\":\"${BSKYSHCLI_RUN_COMMANDS_PATH}\","
     _p "\"BSKYSHCLI_TOOLS_WORK_DIR\":\"${BSKYSHCLI_TOOLS_WORK_DIR}\","
     _p "\"BSKYSHCLI_LIB_PATH\":\"${BSKYSHCLI_LIB_PATH}\","
-    _p "\"BSKYSHCLI_API_PATH\":\"${BSKYSHCLI_API_PATH}\""
+    _p "\"BSKYSHCLI_API_PATH\":\"${BSKYSHCLI_API_PATH}\","
+    _p "\"BSKYSHCLI_GNU_SED_PATH\":\"${BSKYSHCLI_GNU_SED_PATH}\""
     _p '}'
   else
     _pn "Run Commands (BSKYSHCLI_RUN_COMMANDS_PATH): ${BSKYSHCLI_RUN_COMMANDS_PATH}"
     _pn "work for session, debug log, etc. (BSKYSHCLI_TOOLS_WORK_DIR): ${BSKYSHCLI_TOOLS_WORK_DIR}"
     _pn "library (BSKYSHCLI_LIB_PATH): ${BSKYSHCLI_LIB_PATH}"
     _pn "api (BSKYSHCLI_API_PATH): ${BSKYSHCLI_API_PATH}"
+    _pn "GNU sed (BSKYSHCLI_GNU_SED_PATH): ${BSKYSHCLI_GNU_SED_PATH}"
   fi
 
   debug 'core_info_meta_path' 'END'

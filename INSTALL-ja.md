@@ -83,7 +83,7 @@ sudo -s ./install.sh
    - 必須
      - `curl`
      - `jq`
-     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。Macの場合は`brew install gnu-sed`等で導入してください。FreeBSDの場合は`pkg install gsed`等で導入してください。
+     - `sed` : GNU sedが必要となります。`-z`オプション指定時のエラー有無で確認をします。Macの場合は`brew install gnu-sed`等で導入してください。FreeBSDの場合は`pkg install gsed`等で導入してください。GNU sedの実行にパス指定が必要な場合は`--config-gsed-path`オプションを利用してください。
    - 推奨
      - `convert` (imagemagick) : 存在しない場合は画像やリンクカードの一部機能が使用できないことを示す警告を表示してインストールを続行します。
      - `file` (libmagic) : 存在しない場合は画像投稿やリンクカードが使用できないことを示す警告を表示してインストールを続行します。
@@ -148,6 +148,8 @@ sudo -s ./install.sh
   - `<ディレクトリパス>`で指定するパスを、インストール先のディレクトリとして指定します。
 - `--config-path-file <ログインスクリプトファイルパス>`
   - 環境変数`PATH`に関する設定処理対象のログインスクリプトファイルのパスを指定します。
+- `--config-gsed-path <GNU sed実行ファイルパス>`
+  - GNU sedが環境変数`PATH`で示されるディレクトリに存在せずフルパス指定での実行が必要な場合、GNU sedのパスを指定します。指定するパスにはGNU sed実行ファイル名も含みます。指定したパスは環境変数`BSKYSHCLI_GNU_SED_PATH`に設定されます。
 - `--skip-config-path`
   - 環境変数`PATH`に関するログインスクリプトの設定処理をスキップします。
   - `--config-path-file`オプションの指定は無視されます。
@@ -175,6 +177,20 @@ sudo -s ./install.sh
               - `--config-path-file`オプションに指定したファイルパスになります。
             - `--config-path-file`オプション未指定時：
               - インストーラが提案するファイルになります。提案するファイルは[`install.sh`が実行する内容](#installshが実行する内容)を参照してください。
+    - 環境変数`BSKYSHCLI_GNU_SED_PATH`に関するログインスクリプトの作成または修正処理の実行確認：
+      - `--skip-config-path`オプション指定時：
+        - 処理実行されません。
+      - `--skip-config-path`オプション未指定時：
+        - `--config-gsed-path`オプション指定時：
+          - `--config-gsed-path`オプションの指定と環境変数`BSKYSHCLI_GNU_SED_PATH`の値が同じ場合：
+            - 処理実行されません。
+          - `--config-gsed-path`オプションの指定と環境変数`BSKYSHCLI_GNU_SED_PATH`の値が異なる場合：
+            - 処理を実行する動作となります。
+            - 対象となるログインスクリプトファイルは以下になります。
+              - `--config-path-file`オプション指定時：
+                - `--config-path-file`オプションに指定したファイルパスになります。
+              - `--config-path-file`オプション未指定時：
+                - インストーラが提案するファイルになります。提案するファイルは[`install.sh`が実行する内容](#installshが実行する内容)を参照してください。
     - Run Commandsファイルのインストール($HOME/.bsky_sh_cli_rc)：
       - `--skip-rcfile-copy`オプション指定時：
         - 処理実行されません。
@@ -202,6 +218,8 @@ sudo -s ./install.sh
       - `<言語コード>`の記述方法については[`install.sh`コマンドのオプション](#installshコマンドのオプション)の`--config-langs`オプションの説明を参照してください。
 
 パス指定無しで`bsky`コマンドを実行するためには、環境に応じてログインスクリプトを編集し、環境変数`PATH`に`bin`ディレクトリのフルパスを追加してください。
+
+GNU sedが環境変数`PATH`で示されるディレクトリに存在せずフルパス指定での実行が必要な場合、環境変数`BSKYSHCLI_GNU_SED_PATH`にGNU sed実行ファイルのフルパスを設定してください。指定するパスにはGNU sed実行ファイル名も含みます。
 
 ## セルフホストPDS
 
