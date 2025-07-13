@@ -11,7 +11,7 @@ IFS='
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
-BSKYSHCLI_INSTALLER_VERSION='0.4.2'
+BSKYSHCLI_INSTALLER_VERSION='0.5.0'
 
 rcfile_name='.bsky_sh_cli_rc'
 
@@ -58,6 +58,35 @@ verify_required_tool()
   return $tool_exist
 }
 
+verify_specified_GNU_sed()
+{
+  param_specified_target="$1"
+  param_specified_path="$2"
+
+  result_verify_specified_GNU_sed=0
+  if [ -n "${param_specified_path}" ]
+  then
+    # specified GNU sed path
+    if [ -x "${param_specified_path}" ]
+    then
+      "${param_specified_path}" -z 's///' < /dev/null > /dev/null 2>&1
+      result_specified_sed=$?
+      if [ $result_specified_sed -eq 0 ]
+      then
+        _pn "[OK] : ${param_specified_path}"
+      else
+        _pn "[NG] : Specified sed(${param_specified_target}=${param_specified_path}) -z option is disabled)."
+        result_verify_specified_GNU_sed=1
+      fi
+    else
+      _pn "[NG] : Specified sed(${param_specified_target}=${param_specified_path}) is not executable)."
+      result_verify_specified_GNU_sed=1
+    fi
+  fi
+
+  return $result_verify_specified_GNU_sed
+}
+
 verify_required_tools()
 {
   STATUS_TOOLS=0
@@ -65,47 +94,60 @@ verify_required_tools()
   verify_required_tool 'jq'
   # GNU sed
   _p 'GNU sed ... '
-  which sed > /dev/null
-  result_sed=$?
-  if [ $result_sed -eq 0 ]
+  result_sed=1
+  if [ -n "${PARSED_PARAM_KEYVALUE_config_gsed_path}" ]
   then
-    # check GNU sed -z option
-    sed -z 's///' < /dev/null > /dev/null 2>&1
-    result_sed=$?
-    if [ $result_sed -eq 0 ]
-    then
-      _pn '[OK] : sed'
-    else
-      # try to gsed
-      #_pn '[NG] : Command GNU sed not found (sed -z option is disabled).'
-      #STATUS_TOOLS=1
-      :
-    fi
+    verify_specified_GNU_sed '--config-gsed-path' "${PARSED_PARAM_KEYVALUE_config_gsed_path}"
+    STATUS_TOOLS=$?
   else
-    # try to gsed
-    #_pn '[NG] : Command "sed" not found.'
-    #STATUS_TOOLS=1
-    :
-  fi
-  # gsed
-  if [ $result_sed -ne 0 ]
-  then
-    which gsed > /dev/null
-    result_sed=$?
-    if [ $result_sed -eq 0 ]
+    if [ -n "${BSKYSHCLI_GNU_SED_PATH}" ]
     then
-      gsed -z 's///' < /dev/null > /dev/null 2>&1
+      verify_specified_GNU_sed 'BSKYSHCLI_GNU_SED_PATH' "${BSKYSHCLI_GNU_SED_PATH}"
+      STATUS_TOOLS=$?
+    else
+      which sed > /dev/null
       result_sed=$?
       if [ $result_sed -eq 0 ]
       then
-        _pn '[OK] : gsed'
+        # check GNU sed -z option
+        sed -z 's///' < /dev/null > /dev/null 2>&1
+        result_sed=$?
+        if [ $result_sed -eq 0 ]
+        then
+          _pn '[OK] : sed'
+        else
+          # try to gsed
+          #_pn '[NG] : Command GNU sed not found (sed -z option is disabled).'
+          #STATUS_TOOLS=1
+          :
+        fi
       else
-        _pn '[NG] : Command GNU sed not found (gsed -z option is disabled).'
-        STATUS_TOOLS=1
+        # try to gsed
+        #_pn '[NG] : Command "sed" not found.'
+        #STATUS_TOOLS=1
+        :
       fi
-    else
-      _pn '[NG] : Command GNU sed not found.'
-      STATUS_TOOLS=1
+      # gsed
+      if [ $result_sed -ne 0 ]
+      then
+        which gsed > /dev/null
+        result_sed=$?
+        if [ $result_sed -eq 0 ]
+        then
+          gsed -z 's///' < /dev/null > /dev/null 2>&1
+          result_sed=$?
+          if [ $result_sed -eq 0 ]
+          then
+            _pn '[OK] : gsed'
+          else
+            _pn '[NG] : Command GNU sed not found (gsed -z option is disabled).'
+            STATUS_TOOLS=1
+          fi
+        else
+          _pn '[NG] : Command GNU sed not found.'
+          STATUS_TOOLS=1
+        fi
+      fi
     fi
   fi
   # file (libmagic)
@@ -278,6 +320,57 @@ add_path_config()
   return 0
 }
 
+add_bskyshcli_path_config_single()
+{
+  param_config_file_single="$1"
+  param_variable_name_single="$2"
+  param_variable_value_single="$3"
+
+  echo "# Configuration add by bsky-sh-cli (Bluesky in the shell) installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}" >> "${param_config_file_single}"
+  ext_check=`echo "${param_config_file_single}" | sed -E -e 's/.+\.csh$//'`
+  ext_check2=`echo "${param_config_file_single}" | sed -E -e 's/.+\.cshrc$//'`
+  ext_check3=`echo "${param_config_file_single}" | sed -E -e 's/.+\.login$//'`
+  if [ "${param_config_file_single}" != "${ext_check}" ] || [ "${param_config_file_single}" != "${ext_check2}" ] || [ "${param_config_file_single}" != "${ext_check3}" ]
+  then  # *.csh *.cshrc *.login
+    echo "setenv ${param_variable_name_single} ${param_variable_value_single}" >> "${param_config_file_single}"
+    # refer to echo result
+    # shellcheck disable=SC2320
+    result=$?
+  else  # Other
+    {
+      echo "${param_variable_name_single}=${param_variable_value_single}"
+      echo "export ${param_variable_name_single}"
+    } >> "${param_config_file_single}"
+    # refer to echo result
+    # shellcheck disable=SC2320
+    result=$?
+  fi
+
+  return $result
+}
+
+add_bskyshcli_path_config()
+{
+  param_config_file="$1"
+  param_variable_name="$2"
+  param_variable_value="$3"
+
+  config_file_work="${param_config_file}"
+  while [ -n "${config_file_work}" ]
+  do
+    extract_config_file=`echo "${config_file_work}" | sed -E -e 's/:.*//'`
+    if add_bskyshcli_path_config_single "${extract_config_file}" "${param_variable_name}" "${param_variable_value}"
+    then
+      echo "configured: ${extract_config_file}"
+    else
+      echo "config failed: ${extract_config_file}"
+      return 1
+    fi
+    config_file_work=`echo "${config_file_work}" | sed -E -e "s|^${extract_config_file}:*||"`
+  done
+  return 0
+}
+
 inputYn()
 {
   read prompt_input
@@ -343,7 +436,7 @@ fi
 . "${lib_util_path}"
 
 # parameter parse & check
-parse_parameters '--install-dir:1 --config-path-file:1 --skip-config-path:0 --skip-rcfile-copy:0 --config-langs:1 --skip-confirm:0' "$@"
+parse_parameters '--install-dir:1 --config-path-file:1 --skip-config-path:0 --skip-rcfile-copy:0 --config-langs:1 --skip-confirm:0 --config-gsed-path:1' "$@"
 
 # install source files verification
 _pn '>>>> Verify file part of organization'
@@ -494,6 +587,68 @@ else
   fi
 fi
 
+# configure BSKYSHCLI_GNU_SED_PATH environment variable
+_pn '>>>> Configure BSKYSHCLI_GNU_SED_PATH environment variable'
+config_gnu_sed_path_file="${config_path_file}"
+if [ -n "${PARSED_PARAM_KEYONLY_skip_config_path}" ]
+then
+  _pn 'Skip configure the environment variable BSKYSHCLI_GNU_SED_PATH.'
+  config_gnu_sed_path=1
+else
+  if [ -n "${PARSED_PARAM_KEYVALUE_config_gsed_path}" ]
+  then
+    if [ "${PARSED_PARAM_KEYVALUE_config_gsed_path}" = "${BSKYSHCLI_GNU_SED_PATH}" ]
+    then
+      _pn "Specified GNU sed '${PARSED_PARAM_KEYVALUE_config_gsed_path}' is already set in the environment variable BSKYSHCLI_GNU_SED_PATH. Skip configuring the environment variable BSKYSHCLI_GNU_SED_PATH."
+      config_gnu_sed_path=1
+    else
+      if [ -n "${PARSED_PARAM_KEYONLY_skip_confirm}" ]
+      then
+        _pn 'Configure the environment variable BSKYSHCLI_GNU_SED_PATH.'
+        config_gnu_sed_path=0
+      else
+        _p 'Do you want to configure the environment variable BSKYSHCLI_GNU_SED_PATH? [Y/n]: '
+        if inputYn
+        then
+          _pn 'Configure the environment variable BSKYSHCLI_GNU_SED_PATH.'
+          config_gnu_sed_path=0
+        else
+          _pn 'Skip configure the environment variable BSKYSHCLI_GNU_SED_PATH.'
+          config_gnu_sed_path=1
+        fi
+      fi
+    fi
+
+    if [ $config_gnu_sed_path -eq 0 ]
+    then
+      if [ -n "${PARSED_PARAM_KEYONLY_skip_confirm}" ]
+      then
+        _pn "Configure login script_file: ${config_gnu_sed_path_file}"
+      else
+        if [ -n "${PARSED_PARAM_KEYVALUE_config_path_file}" ]
+        then
+          _pn "Login script file path is specified: '${PARSED_PARAM_KEYVALUE_config_path_file}'"
+        else
+          _pn "Suggests '${config_gnu_sed_path_file}' as a login script file in the environment variable BSKYSHCLI_GNU_SED_PATH."
+          _p 'Are you sure you want to create or make changes to above file? [Y/n]: '
+          if inputYn
+          then
+            _pn "Configure login script file: ${config_gnu_sed_path_file}"
+          else
+            _pn 'Please specify the path of the file to set the environment variable BSKYSHCLI_GNU_SED_PATH, and press the enter key.'
+            _p 'file path: '
+            read config_gnu_sed_path_file
+          fi
+        fi
+        _pn "NOTE: Please confirm that the login script file is read and the BSKYSHCLI_GNU_SED_PATH is set when login in again."
+      fi
+    fi
+  else  # PARSED_PARAM_KEYVALUE_config_gsed_path not specified
+    _pn 'Skip configure the environment variable BSKYSHCLI_GNU_SED_PATH.'
+    config_gnu_sed_path=1
+  fi
+fi
+
 # Run Commands file copy
 _pn '>>>> Configure Run Commands file'
 if [ -n "${PARSED_PARAM_KEYONLY_skip_rcfile_copy}" ]
@@ -614,6 +769,25 @@ then
 else
   _pn 'No'
 fi
+_p  'Configure the environment variable BSKYSHCLI_GNU_SED_PATH: '
+if [ $config_gnu_sed_path -eq 0 ]
+then
+  _pn 'Yes'
+  _pn "  Path of the file to set the environment variable BSKYSHCLI_GNU_SED_PATH: ${config_gnu_sed_path_file}"
+  _pn '  Add following lines:'
+  _pn "  # Configuration add by bsky-sh-cli (Bluesky in the shell) installer (install.sh) version ${BSKYSHCLI_INSTALLER_VERSION}"
+  _pn '  (Other than csh/tcsh)'
+  # '$BSKYSHCLI_GNU_SED_PATH' use literally
+  # shellcheck disable=SC2016
+  _pn '  BSKYSHCLI_GNU_SED_PATH='"${PARSED_PARAM_KEYVALUE_config_gsed_path}"
+  _pn '  export BSKYSHCLI_GNU_SED_PATH'
+  _pn '  (csh/tcsh)'
+  # '$BSKYSHCLI_GNU_SED_PATH' use literally
+  # shellcheck disable=SC2016
+  _pn '  setenv BSKYSHCLI_GNU_SED_PATH '"${PARSED_PARAM_KEYVALUE_config_gsed_path}"
+else
+  _pn 'No'
+fi
 _p  "Put the Run Commands file in '${HOME}/${rcfile_name}: "
 if [ $rcfile_copy -eq 0 ]
 then
@@ -668,6 +842,17 @@ if [ $config_path -eq 0 ]
 then
   _p "Add the environment variable PATH set lines in '${config_path_file}' ... "
   if add_path_config "${config_path_file}" "${install_dir}"
+  then
+    _pn 'Complete'
+  else
+    _pn 'Failed'
+    exit 1
+  fi
+fi
+if [ $config_gnu_sed_path -eq 0 ]
+then
+  _p "Add the environment variable BSKYSHCLI_GNU_SED_PATH set lines in '${config_gnu_sed_path_file}' ... "
+  if add_bskyshcli_path_config "${config_gnu_sed_path_file}" 'BSKYSHCLI_GNU_SED_PATH' "${PARSED_PARAM_KEYVALUE_config_gsed_path}"
   then
     _pn 'Complete'
   else

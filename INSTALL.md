@@ -82,7 +82,7 @@ For general users:
    - Required
      - `curl`
      - `jq`
-     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc. For FreeBSD, please install it with `pkg install gsed` etc.
+     - `sed` : Requires GNU sed. Check for errors when specifying the `-z` option. For Mac, please install it with `brew install gnu-sed` etc. For FreeBSD, please install it with `pkg install gsed` etc. If you need to specify the path to run GNU sed, use the `--config-gsed-path` option.
    - Recommendation
      - `convert` (imagemagick): If it does not exist, display a warning that some image posting and link card functions cannot be used and continue the installation.
      - `file` (libmagic): If it does not exist, display a warning that image posting and link cards cannot be used and continue the installation.
@@ -146,6 +146,8 @@ You can change the behavior by specifying the following options when running `in
   - Specify the path specified by `<directory path>` as the installation destination directory.
 - `--config-path-file <login script file path>`
   - Specify the path of the login script file for setting processing regarding the environment variable `PATH`.
+- `--config-gsed-path <path to GNU sed executable file>`
+  - If GNU sed is not in the directory specified by the environment variable `PATH` and you need to execute it by specifying the full path, specify the path to GNU sed. The specified path includes the GNU sed executable file name. The specified path will be set to the environment variable `BSKYSHCLI_GNU_SED_PATH`.
 - `--skip-config-path`
   - Skips the login script setting process regarding the environment variable `PATH`.
   - The specification of the `--config-path-file` option is ignored.
@@ -173,6 +175,20 @@ You can change the behavior by specifying the following options when running `in
               - This will be the file path specified in the `--config-path-file` option.
             - When `--config-path-file` option is not specified:
               - This will be the file suggested by the installer. For suggested files, see [What `install.sh` does](#what-installsh-does).
+    - Confirm execution of login script creation or modification process regarding environment variable `BSKYSHCLI_GNU_SED_PATH`:
+      - When specifying `--skip-config-path` option:
+        - Processing will not be executed.
+      - When `--skip-config-path` option is not specified:
+        - When specifying `--config-gsed-path` option:
+          - If the `--config-gsed-path` option is specified and the value of the environment variable `BSKYSHCLI_GNU_SED_PATH` is the same:
+            - Processing will not be executed.
+          - If the `--config-gsed-path` option is specified and the value of the environment variable `BSKYSHCLI_GNU_SED_PATH` is different:
+            - This is an action that executes a process.
+            - The target login script file is as follows.
+              - When specifying the `--config-path-file` option:
+                - This will be the file path specified in the `--config-path-file` option.
+              - When `--config-path-file` option is not specified:
+                - This will be the file suggested by the installer. For suggested files, see [What `install.sh` does](#what-installsh-does).
     - Install Run Commands file (`$HOME/.bsky_sh_cli_rc`):
       - When specifying the `--skip-rcfile-copy` option:
         - Processing will not be executed.
@@ -200,6 +216,8 @@ Please copy the following directories and files included in the provided files t
       - For information on how to write `<language code>`, see [`install.sh` command options](#installsh-command-options), see the description of the `--config-langs` option.
 
 To run the `bsky` command without specifying a path, edit the login script according to your environment and add the full path of the `bin` directory to the environment variable `PATH`.
+
+If GNU sed does not exist in the directory specified by the environment variable `PATH` and you need to execute it by specifying the full path, set the full path of the GNU sed executable file to the environment variable `BSKYSHCLI_GNU_SED_PATH`. The specified path includes the GNU sed executable file name.
 
 ## Self hosted AT server (PDS)
 

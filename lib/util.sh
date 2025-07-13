@@ -332,42 +332,68 @@ check_required_command()
 
 set_sed_command()
 {
-  # sed
-  which sed > /dev/null
-  result_sed=$?
-  if [ $result_sed -eq 0 ]
+  result_sed=1
+  if [ -n "${BSKYSHCLI_GNU_SED_PATH}" ]
   then
-    # check GNU sed -z option
-    sed -z 's///' < /dev/null > /dev/null 2>&1
+    # specified GNU sed path
+    if [ -x "${BSKYSHCLI_GNU_SED_PATH}" ]
+    then
+      "${BSKYSHCLI_GNU_SED_PATH}" -z 's///' < /dev/null > /dev/null 2>&1
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        BSKYSHCLI_SED="${BSKYSHCLI_GNU_SED_PATH}"
+      else
+        # try to sed
+        :
+      fi
+    else
+      # try to sed
+      :
+    fi
+  else
+    # try to sed
+    :
+  fi
+  if [ $result_sed -ne 0 ]
+  then
+    # sed
+    which sed > /dev/null
     result_sed=$?
     if [ $result_sed -eq 0 ]
     then
-      BSKYSHCLI_SED='sed'
+      # check GNU sed -z option
+      sed -z 's///' < /dev/null > /dev/null 2>&1
+      result_sed=$?
+      if [ $result_sed -eq 0 ]
+      then
+        BSKYSHCLI_SED='sed'
+      else
+        # try to gsed
+        :
+      fi
     else
       # try to gsed
       :
     fi
-  else
-    # try to gsed
-    :
-  fi
-  # gsed
-  if [ $result_sed -ne 0 ]
-  then
-    which gsed > /dev/null
-    result_sed=$?
-    if [ $result_sed -eq 0 ]
+    # gsed
+    if [ $result_sed -ne 0 ]
     then
-      gsed -z 's///' < /dev/null > /dev/null 2>&1
+      which gsed > /dev/null
       result_sed=$?
       if [ $result_sed -eq 0 ]
       then
-        BSKYSHCLI_SED='gsed'
+        gsed -z 's///' < /dev/null > /dev/null 2>&1
+        result_sed=$?
+        if [ $result_sed -eq 0 ]
+        then
+          BSKYSHCLI_SED='gsed'
+        else
+          :
+        fi
       else
         :
       fi
-    else
-      :
     fi
   fi
 
@@ -891,6 +917,33 @@ verify_profile_name()
   fi
 
   debug 'verify_profile_name' 'END'
+}
+
+get_profile_run_commands_filepath()
+{
+  debug 'get_profile_run_commands_filepath' 'START'
+  if [ -n "${BSKYSHCLI_PROFILE}" ]
+  then
+    profile_run_commands_filename="${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_PREFIX}${BSKYSHCLI_PROFILE}${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_SUFFIX}"
+  else
+    profile_run_commands_filename=''
+  fi
+  # overwrite with global profile option
+  if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
+  then
+    profile_run_commands_filename="${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_PREFIX}${BSKYSHCLI_GLOBAL_OPTION_PROFILE}${BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_SUFFIX}"
+  fi
+
+  profile_run_commands_filepath=''
+  if [ -n "${profile_run_commands_filename}" ]
+  then
+    profile_run_commands_filepath="${HOME}/${profile_run_commands_filename}"
+  fi
+
+  debug 'get_profile_run_commands_filepath' "profile_run_commands_filepath:${profile_run_commands_filepath}"
+  debug 'get_profile_run_commands_filepath' 'END'
+
+  _p "${profile_run_commands_filepath}"
 }
 
 get_session_filepath()
