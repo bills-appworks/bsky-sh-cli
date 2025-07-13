@@ -22,6 +22,8 @@ BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR="${FILE_DIR}/../.."
 BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR=`(cd "${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}" && pwd)`
 BSKYSHCLI_DEFAULT_LIB_PATH="${BSKYSHCLI_DEFAULT_TOOLS_ROOT_DIR}/lib"
 BSKYSHCLI_DEFAULT_DEBUG_DIR="${BSKYSHCLI_DEFAULT_TOOLS_WORK_DIR}/debug"
+BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_PREFIX='.bsky_sh_cli_'
+BSKYSHCLI_DEFAULT_PROFILE_RUN_COMMANDS_FILENAME_SUFFIX='_rc'
 
 # read Run Commands
 if [ -z "${BSKYSHCLI_RUN_COMMANDS_PATH}" ]
@@ -81,6 +83,15 @@ then
 else
   echo "tools internal configured file proxy.sh is not readable: ${proxy_path}"
   exit 1
+fi
+
+# read Run Commands for profile
+profile_run_commands_filepath=`get_profile_run_commands_filepath`
+if [ -n "${profile_run_commands_filepath}" ] && [ -r "${profile_run_commands_filepath}" ]
+then
+  # SC1090 disable for Run Commands file generate on runtime
+  # shellcheck source=/dev/null
+  . "${profile_run_commands_filepath}"
 fi
 
 # ifndef BSKYSHCLI_DEFINE_API_COMMON

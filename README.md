@@ -135,6 +135,8 @@ In addition to the provided files to be deployed, generate and use the following
   - When you run this tool, it will generate this directory and some files under it. Files such as the session information management file and debug information file (when the debug function is enabled) are stored.
 - `$HOME/.bsky_sh_cli_rc` file
   - A file that describes settings to customize this tool. Not created by default. The `.bsky_sh_cli_rc.sample` file included in the provided files is a sample. If you want to customize this tool, rename this file, deploy it to your `$HOME` directory, and configure it.
+- `$HOME/.bsky_sh_cli_<profile name>_rc` file
+  - This file describes the settings to be customized for each profile. Not created by default. If this file exists when executing a profile specification, you can overwrite the settings of `.bsky_sh_cli_rc` and set profile-specific settings (with the exception of some settings).
 - Create a file under the `/tmp/` directory
   - Use the /tmp/ directory (depend on system configuration) as a temporary file creation directory for attaching image files, etc.
 
