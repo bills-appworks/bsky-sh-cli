@@ -6,9 +6,7 @@ Bluesky CLI (Command Line Interface) implementation in shell script
 ## Summary
 This is a tool for using Bluesky (bsky.social/bsky.app) from the command line in a Unix-like environment shell.
 
-The goal of this tool is to be able to run it using a shell script execution environment similar to the sh:Bourne Shell family and some dependent tools.
-
-It is currently under development and will be enriched with functionality in the future.
+The goal of this tool is to make it executable within a shell script environment that is compatible with most Unix-like systems and the necessary dependent tools.
 
 ## How to use
 By downloading and running one file in the GitHub repository, you can download and install the latest release archive.
