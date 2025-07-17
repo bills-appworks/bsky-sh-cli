@@ -6406,6 +6406,12 @@ core_info_session_index()
         # dynamic assignment in parse_parameters, variable use at this file include(source) script
         # shellcheck disable=SC2154,SC2034
         session_cid="${RESULT_slice_3}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        session_repost_via_uri="${RESULT_slice_4}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        session_repost_via_cid="${RESULT_slice_5}"
         
         if [ -n "${param_output_json}" ]
         then
@@ -6413,11 +6419,11 @@ core_info_session_index()
           then
             _p ','
           fi
-          _p "{\"index\":\"${session_index}\",\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\"}"
+          _p "{\"index\":\"${session_index}\",\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\",\"repostViaUri\":\"${session_repost_via_uri}\",\"repostViaCid\":\"${session_repost_via_cid}\"}"
         else
           if [ -n "${param_output_id}" ]
           then
-            printf "%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}"
+            printf "%s\t%s\t%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}" "${session_repost_via_uri}" "${session_repost_via_cid}"
           else
             _pn "${session_index}"
           fi
