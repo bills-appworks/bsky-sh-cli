@@ -2677,13 +2677,22 @@ core_create_session_chunk()
 
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)\"'
+  view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)|\($REPOST_VIA_URI)|\($REPOST_VIA_CID)\"'
   # shellcheck disable=SC2016
   _p 'def output_post(view_index; post_fragment; is_parent; reply_fragment; reason_fragment):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
-        "'"${view_session_placeholder}"'",
+        if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+        then
+          reason_fragment.uri as $REPOST_VIA_URI |
+          reason_fragment.cid as $REPOST_VIA_CID |
+          "'"${view_session_placeholder}"'"
+        else
+          "" as $REPOST_VIA_URI |
+          "" as $REPOST_VIA_CID |
+          "'"${view_session_placeholder}"'"
+        end,
         (
           post_fragment |
           if has("embed")
@@ -2699,6 +2708,8 @@ core_create_session_chunk()
                 ([view_index, "1"] | join("-")) as $VIEW_INDEX |
                 post_fragment.embed.record.record.uri as $URI |
                 post_fragment.embed.record.record.cid as $CID |
+                "" as $REPOST_VIA_URI |
+                "" as $REPOST_VIA_CID |
                 "'"${view_session_placeholder}"'"
               ),
               (
@@ -2715,6 +2726,8 @@ core_create_session_chunk()
               ([view_index, "1"] | join("-")) as $VIEW_INDEX |
               post_fragment.embed.record.uri as $URI |
               post_fragment.embed.record.cid as $CID |
+              "" as $REPOST_VIA_URI |
+              "" as $REPOST_VIA_CID |
               "'"${view_session_placeholder}"'"
             )
           else
