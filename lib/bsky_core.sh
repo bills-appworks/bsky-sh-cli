@@ -6413,7 +6413,7 @@ core_info_session_index()
           then
             _p ','
           fi
-          _p "{\"index\":${session_index},\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\"}"
+          _p "{\"index\":\"${session_index}\",\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\"}"
         else
           if [ -n "${param_output_id}" ]
           then
