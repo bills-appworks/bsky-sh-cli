@@ -2264,6 +2264,20 @@ core_build_subject_fragment()
   debug 'core_build_subject_fragment' 'END'
 }
 
+core_build_via_fragment()
+{
+  param_via_uri=$1
+  param_via_cid=$2
+
+  debug 'core_build_via_fragment' 'START'
+  debug 'core_build_via_fragment' "param_via_uri:${param_via_uri}"
+  debug 'core_build_via_fragment' "param_via_cid:${param_via_cid}"
+
+  _p "\"via\":{\"uri\":\"${param_via_uri}\",\"cid\":\"${param_via_cid}\"}"
+
+  debug 'core_build_via_fragment' 'END'
+}
+
 core_build_quote_record_fragment()
 {
   param_quote_uri=$1
