@@ -5640,20 +5640,31 @@ core_like()
 {
   param_target_uri="$1"
   param_target_cid="$2"
-  param_output_json="$3"
+  param_via_uri="$3"
+  param_via_cid="$4"
+  param_output_json="$5"
 
   debug 'core_like' 'START'
   debug 'core_like' "param_target_uri:${param_target_uri}"
   debug 'core_like' "param_target_cid:${param_target_cid}"
+  debug 'core_like' "param_via_uri:${param_via_uri}"
+  debug 'core_like' "param_via_cid:${param_via_cid}"
   debug 'core_like' "param_output_json:${param_output_json}"
 
   subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
+  if [ -n "${param_via_uri}" ] && [ -n "${param_via_cid}" ]
+  then
+    via_fragment=`core_build_via_fragment "${param_via_uri}" "${param_via_cid}"`
+    via_fragment=",${via_fragment}"
+  else
+    via_fragment=''
+  fi
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.like'
   created_at=`get_ISO8601UTCbs`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}${via_fragment}}"
 
   result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
   status=$?
