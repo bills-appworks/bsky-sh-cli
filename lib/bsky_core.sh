@@ -326,6 +326,11 @@ core_get_feed_view_index()
   then
     error "specified index is not found in session: ${param_feed_view_index}"
   fi
+  RESULT_slice_1=''
+  RESULT_slice_2=''
+  RESULT_slice_3=''
+  RESULT_slice_4=''
+  RESULT_slice_5=''
   _slice "${session_chunk}" '|'
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
@@ -336,6 +341,12 @@ core_get_feed_view_index()
   # dynamic assignment in parse_parameters, variable use at this file include(source) script
   # shellcheck disable=SC2154,SC2034
   FEED_VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
+  FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_URI="${RESULT_slice_4}"
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
+  FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_CID="${RESULT_slice_5}"
   if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" != "${param_feed_view_index}" ]
   then
     error "internal error: specified index:${param_feed_view_index} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
