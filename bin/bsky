@@ -723,7 +723,7 @@ bsky like help
 
 usage: bsky like --index <view index> [--output-json]
        or
-       bsky like --uri <uri> --cid <cid> [--output-json]
+       bsky like --uri <uri> --cid <cid> [--via-uri <uri> --via-cid <cid>] [--output-json]
 
 parameters:
   --index <view index>
@@ -733,6 +733,11 @@ parameters:
   --uri <uri>
   --cid <cid>
     Specify the AT URI and CID pointing to the feed to be liked to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --via-uri <uri>
+  --via-cid <cid>
+    Specify the AT URI and CID pointing to the reposted feed to be liked to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
 
   --output-json
@@ -1772,7 +1777,7 @@ command_like()
   then
     output_help_like
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --output-json:0' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --via-uri:1 --via-cid:1 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1780,22 +1785,35 @@ command_like()
     uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
     cid="${PARSED_PARAM_KEYVALUE_cid}"
+    # shellcheck disable=SC2154
+    via_uri="${PARSED_PARAM_KEYVALUE_via_uri}"
+    # shellcheck disable=SC2154
+    via_cid="${PARSED_PARAM_KEYVALUE_via_cid}"
     if [ -n "${view_index}" ]
     then
-      if [ -n "${uri}" ] || [ -n "${cid}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ] || [ -n "${via_uri}" ] || [ -n "${via_cid}" ]
       then
-        error "--index and --uri/--cid are exclusive"
+        error "--index and --uri/--cid/--via-uri/--via-cid are exclusive"
       fi
       core_get_feed_view_index "${view_index}"
       uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
       cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      via_uri="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_URI}"
+      via_cid="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_CID}"
     else
       if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
+      if [ -n "${via_uri}" ] && [ -z "${via_cid}" ]
+      then
+        error "parameter must either specify both --uri/--cid, or omit both"
+      elif  [ -z "${via_uri}" ] && [ -n "${via_cid}" ]
+      then
+        error "parameter must either specify both --uri/--cid, or omit both"
+      fi
     fi
-    core_like "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
+    core_like "${uri}" "${cid}" "${via_uri}" "${via_cid}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_like' 'END'
