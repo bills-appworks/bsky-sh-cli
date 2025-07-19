@@ -31,7 +31,7 @@ BSKYSHCLI_URL_SHORT_ABBREV='...'
 
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)] [repost via uri:\($REPOST_VIA_URI)] [repost via cid:\($REPOST_VIA_CID)]'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
 # shellcheck disable=SC2016

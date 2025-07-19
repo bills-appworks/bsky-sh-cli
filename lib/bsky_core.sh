@@ -2445,6 +2445,22 @@ core_create_post_chunk()
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent; reply_fragment; reason_fragment):
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
+        (
+          if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+          then
+            reason_fragment.uri
+          else
+            ""
+          end
+        ) as $REPOST_VIA_URI |
+        (
+          if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+          then
+            reason_fragment.cid
+          else
+            ""
+          end
+        ) as $REPOST_VIA_CID |
         "" as $VIA |
         "" as $LANGS |
         post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
