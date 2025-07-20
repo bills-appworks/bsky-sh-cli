@@ -5495,11 +5495,15 @@ core_repost()
 {
   param_target_uri="$1"
   param_target_cid="$2"
-  param_output_json="$3"
+  param_via_uri="$3"
+  param_via_cid="$4"
+  param_output_json="$5"
 
   debug 'core_repost' 'START'
   debug 'core_repost' "param_target_uri:${param_target_uri}"
   debug 'core_repost' "param_target_cid:${param_target_cid}"
+  debug 'core_repost' "param_via_uri:${param_via_uri}"
+  debug 'core_repost' "param_via_cid:${param_via_cid}"
   debug 'core_repost' "param_output_json:${param_output_json}"
 
   read_session_file
@@ -5507,7 +5511,14 @@ core_repost()
   collection='app.bsky.feed.repost'
   created_at=`get_ISO8601UTCbs`
   subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+  if [ -n "${param_via_uri}" ] && [ -n "${param_via_cid}" ]
+  then
+    via_fragment=`core_build_via_fragment "${param_via_uri}" "${param_via_cid}"`
+    via_fragment=",${via_fragment}"
+  else
+    via_fragment=''
+  fi
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}${via_fragment}}"
 
   result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
   status=$?
