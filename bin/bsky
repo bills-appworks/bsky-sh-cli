@@ -31,7 +31,7 @@ BSKYSHCLI_URL_SHORT_ABBREV='...'
 
 # $<variables> want to pass through for jq
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
+BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)] [repost via uri:\($REPOST_VIA_URI)] [repost via cid:\($REPOST_VIA_CID)]'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
 # shellcheck disable=SC2016
@@ -620,18 +620,26 @@ output_help_repost()
   cat << 'EOS'
 bsky repost help
 
-usage: bsky repost --index <view index> [--output-json]
+usage: bsky repost --index <view index> [--notify-origin-only] [--output-json]
        or
-       bsky repost --uri <uri> --cid <cid> [--output-json]
+       bsky repost --uri <uri> --cid <cid> [--via-uri <uri> --via-cid <cid>] [--output-json]
 
 parameters:
   --index <view index>
     Specify the index number pointing to the feed to be reposted to.
     The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
+  --notify-origin-only
+    Sends notifications only to the original post's author. Repost authors will not be notified.
+
   --uri <uri>
   --cid <cid>
     Specify the AT URI and CID pointing to the feed to be reposted to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --via-uri <uri>
+  --via-cid <cid>
+    Specify the AT URI and CID pointing to the reposted feed to be reposted to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
 
   --output-json
@@ -721,18 +729,26 @@ output_help_like()
   cat << 'EOS'
 bsky like help
 
-usage: bsky like --index <view index> [--output-json]
+usage: bsky like --index <view index> [--notify-origin-only] [--output-json]
        or
-       bsky like --uri <uri> --cid <cid> [--output-json]
+       bsky like --uri <uri> --cid <cid> [--via-uri <uri> --via-cid <cid>] [--output-json]
 
 parameters:
   --index <view index>
     Specify the index number pointing to the feed to be liked to.
     The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
+  --notify-origin-only
+    Sends notifications only to the original post's author. Repost authors will not be notified.
+
   --uri <uri>
   --cid <cid>
     Specify the AT URI and CID pointing to the feed to be liked to.
+    The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --via-uri <uri>
+  --via-cid <cid>
+    Specify the AT URI and CID pointing to the reposted feed to be liked to.
     The AT URI and CID will be output by specifying the "--output-id" option with te feed output command.
 
   --output-json
@@ -1670,7 +1686,7 @@ command_repost()
   then
     output_help_repost
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --output-json:0' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --via-uri:1 --via-cid:1 --notify-origin-only:0 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1678,22 +1694,47 @@ command_repost()
     uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
     cid="${PARSED_PARAM_KEYVALUE_cid}"
+    # shellcheck disable=SC2154
+    via_uri="${PARSED_PARAM_KEYVALUE_via_uri}"
+    # shellcheck disable=SC2154
+    via_cid="${PARSED_PARAM_KEYVALUE_via_cid}"
+    # shellcheck disable=SC2154
+    notify_origin_only="${PARSED_PARAM_KEYONLY_notify_origin_only}"
     if [ -n "${view_index}" ]
     then
-      if [ -n "${uri}" ] || [ -n "${cid}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ] || [ -n "${via_uri}" ] || [ -n "${via_cid}" ]
       then
-        error "--index and --uri/--cid are exclusive"
+        error "--index and --uri/--cid/--via-uri/--via-cid are exclusive"
       fi
       core_get_feed_view_index "${view_index}"
       uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
       cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      if [ -z "${notify_origin_only}" ] && [ "${BSKYSHCLI_NOTIFY_ORIGIN_ONLY}" != 'ON' ]
+      then
+        via_uri="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_URI}"
+        via_cid="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_CID}"
+      fi
     else
       if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
+      if [ -n "${via_uri}" ] && [ -z "${via_cid}" ]
+      then
+        error "parameter must either specify both --via-uri/--via-cid, or omit both"
+      elif  [ -z "${via_uri}" ] && [ -n "${via_cid}" ]
+      then
+        error "parameter must either specify both --via-uri/--via-cid, or omit both"
+      fi
     fi
-    core_repost "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
+    if [ -n "${notify_origin_only}" ]
+    then
+      if [ -n "${via_uri}" ] || [ -n "${via_cid}" ]
+      then
+        error "--notify-origin-only and --via-uri/--via-cid are exclusive"
+      fi
+    fi
+    core_repost "${uri}" "${cid}" "${via_uri}" "${via_cid}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_repost' 'END'
@@ -1772,7 +1813,7 @@ command_like()
   then
     output_help_like
   else
-    parse_parameters '--index:1 --uri:1 --cid:1 --output-json:0' "$@"
+    parse_parameters '--index:1 --uri:1 --cid:1 --via-uri:1 --via-cid:1 --notify-origin-only:0 --output-json:0' "$@"
     # dynamic assignment in parse_parameters
     # shellcheck disable=SC2154
     view_index="${PARSED_PARAM_KEYVALUE_index}"
@@ -1780,22 +1821,47 @@ command_like()
     uri="${PARSED_PARAM_KEYVALUE_uri}"
     # shellcheck disable=SC2154
     cid="${PARSED_PARAM_KEYVALUE_cid}"
+    # shellcheck disable=SC2154
+    via_uri="${PARSED_PARAM_KEYVALUE_via_uri}"
+    # shellcheck disable=SC2154
+    via_cid="${PARSED_PARAM_KEYVALUE_via_cid}"
+    # shellcheck disable=SC2154
+    notify_origin_only="${PARSED_PARAM_KEYONLY_notify_origin_only}"
     if [ -n "${view_index}" ]
     then
-      if [ -n "${uri}" ] || [ -n "${cid}" ]
+      if [ -n "${uri}" ] || [ -n "${cid}" ] || [ -n "${via_uri}" ] || [ -n "${via_cid}" ]
       then
-        error "--index and --uri/--cid are exclusive"
+        error "--index and --uri/--cid/--via-uri/--via-cid are exclusive"
       fi
       core_get_feed_view_index "${view_index}"
       uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
       cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
+      if [ -z "${notify_origin_only}" ] && [ "${BSKYSHCLI_NOTIFY_ORIGIN_ONLY}" != 'ON' ]
+      then
+        via_uri="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_URI}"
+        via_cid="${FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_CID}"
+      fi
     else
       if [ -z "${uri}" ] || [ -z "${cid}" ]
       then
         error "parameter must be specify --index or --uri/--cid"
       fi
+      if [ -n "${via_uri}" ] && [ -z "${via_cid}" ]
+      then
+        error "parameter must either specify both --uri/--cid, or omit both"
+      elif  [ -z "${via_uri}" ] && [ -n "${via_cid}" ]
+      then
+        error "parameter must either specify both --uri/--cid, or omit both"
+      fi
     fi
-    core_like "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
+    if [ -n "${notify_origin_only}" ]
+    then
+      if [ -n "${via_uri}" ] || [ -n "${via_cid}" ]
+      then
+        error "--notify-origin-only and --via-uri/--via-cid are exclusive"
+      fi
+    fi
+    core_like "${uri}" "${cid}" "${via_uri}" "${via_cid}" "${PARSED_PARAM_KEYONLY_output_json}"
   fi
 
   debug 'command_like' 'END'
