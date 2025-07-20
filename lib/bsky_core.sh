@@ -326,6 +326,11 @@ core_get_feed_view_index()
   then
     error "specified index is not found in session: ${param_feed_view_index}"
   fi
+  RESULT_slice_1=''
+  RESULT_slice_2=''
+  RESULT_slice_3=''
+  RESULT_slice_4=''
+  RESULT_slice_5=''
   _slice "${session_chunk}" '|'
   # dynamic assignment in parse_parameters
   # shellcheck disable=SC2154
@@ -336,6 +341,12 @@ core_get_feed_view_index()
   # dynamic assignment in parse_parameters, variable use at this file include(source) script
   # shellcheck disable=SC2154,SC2034
   FEED_VIEW_INDEX_ELEMENT_CID="${RESULT_slice_3}"
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
+  FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_URI="${RESULT_slice_4}"
+  # dynamic assignment in parse_parameters, variable use at this file include(source) script
+  # shellcheck disable=SC2154,SC2034
+  FEED_VIEW_INDEX_ELEMENT_REPOST_VIA_CID="${RESULT_slice_5}"
   if [ "${FEED_VIEW_INDEX_ELEMENT_INDEX}" != "${param_feed_view_index}" ]
   then
     error "internal error: specified index:${param_feed_view_index} session index:${FEED_VIEW_INDEX_ELEMENT_INDEX}" 
@@ -2253,6 +2264,20 @@ core_build_subject_fragment()
   debug 'core_build_subject_fragment' 'END'
 }
 
+core_build_via_fragment()
+{
+  param_via_uri=$1
+  param_via_cid=$2
+
+  debug 'core_build_via_fragment' 'START'
+  debug 'core_build_via_fragment' "param_via_uri:${param_via_uri}"
+  debug 'core_build_via_fragment' "param_via_cid:${param_via_cid}"
+
+  _p "\"via\":{\"uri\":\"${param_via_uri}\",\"cid\":\"${param_via_cid}\"}"
+
+  debug 'core_build_via_fragment' 'END'
+}
+
 core_build_quote_record_fragment()
 {
   param_quote_uri=$1
@@ -2420,6 +2445,22 @@ core_create_post_chunk()
       def output_post_part(is_before_embed; view_index; post_fragment; is_quoted; is_parent; reply_fragment; reason_fragment):
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
+        (
+          if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+          then
+            reason_fragment.uri
+          else
+            ""
+          end
+        ) as $REPOST_VIA_URI |
+        (
+          if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+          then
+            reason_fragment.cid
+          else
+            ""
+          end
+        ) as $REPOST_VIA_CID |
         "" as $VIA |
         "" as $LANGS |
         post_fragment.author.displayName as $AUTHOR_DISPLAYNAME |
@@ -2677,13 +2718,22 @@ core_create_session_chunk()
 
   # $<variables> want to pass through for jq
   # shellcheck disable=SC2016
-  view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)\"'
+  view_session_placeholder='\($VIEW_INDEX)|\($URI)|\($CID)|\($REPOST_VIA_URI)|\($REPOST_VIA_CID)\"'
   # shellcheck disable=SC2016
   _p 'def output_post(view_index; post_fragment; is_parent; reply_fragment; reason_fragment):
         view_index as $VIEW_INDEX |
         post_fragment.uri as $URI |
         post_fragment.cid as $CID |
-        "'"${view_session_placeholder}"'",
+        if (reason_fragment."$type" == "app.bsky.feed.defs#reasonRepost")
+        then
+          reason_fragment.uri as $REPOST_VIA_URI |
+          reason_fragment.cid as $REPOST_VIA_CID |
+          "'"${view_session_placeholder}"'"
+        else
+          "" as $REPOST_VIA_URI |
+          "" as $REPOST_VIA_CID |
+          "'"${view_session_placeholder}"'"
+        end,
         (
           post_fragment |
           if has("embed")
@@ -2699,6 +2749,8 @@ core_create_session_chunk()
                 ([view_index, "1"] | join("-")) as $VIEW_INDEX |
                 post_fragment.embed.record.record.uri as $URI |
                 post_fragment.embed.record.record.cid as $CID |
+                "" as $REPOST_VIA_URI |
+                "" as $REPOST_VIA_CID |
                 "'"${view_session_placeholder}"'"
               ),
               (
@@ -2715,6 +2767,8 @@ core_create_session_chunk()
               ([view_index, "1"] | join("-")) as $VIEW_INDEX |
               post_fragment.embed.record.uri as $URI |
               post_fragment.embed.record.cid as $CID |
+              "" as $REPOST_VIA_URI |
+              "" as $REPOST_VIA_CID |
               "'"${view_session_placeholder}"'"
             )
           else
@@ -5441,11 +5495,15 @@ core_repost()
 {
   param_target_uri="$1"
   param_target_cid="$2"
-  param_output_json="$3"
+  param_via_uri="$3"
+  param_via_cid="$4"
+  param_output_json="$5"
 
   debug 'core_repost' 'START'
   debug 'core_repost' "param_target_uri:${param_target_uri}"
   debug 'core_repost' "param_target_cid:${param_target_cid}"
+  debug 'core_repost' "param_via_uri:${param_via_uri}"
+  debug 'core_repost' "param_via_cid:${param_via_cid}"
   debug 'core_repost' "param_output_json:${param_output_json}"
 
   read_session_file
@@ -5453,7 +5511,14 @@ core_repost()
   collection='app.bsky.feed.repost'
   created_at=`get_ISO8601UTCbs`
   subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+  if [ -n "${param_via_uri}" ] && [ -n "${param_via_cid}" ]
+  then
+    via_fragment=`core_build_via_fragment "${param_via_uri}" "${param_via_cid}"`
+    via_fragment=",${via_fragment}"
+  else
+    via_fragment=''
+  fi
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}${via_fragment}}"
 
   result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
   status=$?
@@ -5602,20 +5667,31 @@ core_like()
 {
   param_target_uri="$1"
   param_target_cid="$2"
-  param_output_json="$3"
+  param_via_uri="$3"
+  param_via_cid="$4"
+  param_output_json="$5"
 
   debug 'core_like' 'START'
   debug 'core_like' "param_target_uri:${param_target_uri}"
   debug 'core_like' "param_target_cid:${param_target_cid}"
+  debug 'core_like' "param_via_uri:${param_via_uri}"
+  debug 'core_like' "param_via_cid:${param_via_cid}"
   debug 'core_like' "param_output_json:${param_output_json}"
 
   subject_fragment=`core_build_subject_fragment "${param_target_uri}" "${param_target_cid}"`
+  if [ -n "${param_via_uri}" ] && [ -n "${param_via_cid}" ]
+  then
+    via_fragment=`core_build_via_fragment "${param_via_uri}" "${param_via_cid}"`
+    via_fragment=",${via_fragment}"
+  else
+    via_fragment=''
+  fi
 
   read_session_file
   repo="${SESSION_HANDLE}"
   collection='app.bsky.feed.like'
   created_at=`get_ISO8601UTCbs`
-  record="{\"createdAt\":\"${created_at}\",${subject_fragment}}"
+  record="{\"createdAt\":\"${created_at}\",${subject_fragment}${via_fragment}}"
 
   result=`api com.atproto.repo.createRecord "${repo}" "${collection}" '' '' "${record}" ''`
   status=$?
@@ -6393,6 +6469,12 @@ core_info_session_index()
         # dynamic assignment in parse_parameters, variable use at this file include(source) script
         # shellcheck disable=SC2154,SC2034
         session_cid="${RESULT_slice_3}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        session_repost_via_uri="${RESULT_slice_4}"
+        # dynamic assignment in parse_parameters, variable use at this file include(source) script
+        # shellcheck disable=SC2154,SC2034
+        session_repost_via_cid="${RESULT_slice_5}"
         
         if [ -n "${param_output_json}" ]
         then
@@ -6400,11 +6482,11 @@ core_info_session_index()
           then
             _p ','
           fi
-          _p "{\"index\":${session_index},\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\"}"
+          _p "{\"index\":\"${session_index}\",\"uri\":\"${session_uri}\",\"cid\":\"${session_cid}\",\"repostViaUri\":\"${session_repost_via_uri}\",\"repostViaCid\":\"${session_repost_via_cid}\"}"
         else
           if [ -n "${param_output_id}" ]
           then
-            printf "%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}"
+            printf "%s\t%s\t%s\t%s\t%s\n" "${session_index}" "${session_uri}" "${session_cid}" "${session_repost_via_uri}" "${session_repost_via_cid}"
           else
             _pn "${session_index}"
           fi

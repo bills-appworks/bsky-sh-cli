@@ -29,7 +29,7 @@
 # url shortening abbreviated string
 #BSKYSHCLI_URL_SHORT_ABBREV='...'
 # template for output id field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)]'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_ID=' [uri:\($URI)] [cid:\($CID)] [repost via uri:\($REPOST_VIA_URI)] [repost via cid:\($REPOST_VIA_CID)]'
 # template for output via field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_OUTPUT_VIA=' [via:\($VIA)]'
 # template for output langs field in post
@@ -122,3 +122,5 @@
 #BSKYSHCLI_VIDEO_SERVICE_DOMAIN='video.bsky.app'
 # Video service DID
 #BSKYSHCLI_VIDEO_SERVICE_DID='did:web:video.bsky.app'
+# If ON is specified, notifications will be sent only to the original post's author. Repost authors will not be notified. Unless the --via-uri/--via-cid parameters are specified in the command.
+#BSKYSHCLI_NOTIFY_ORIGIN_ONLY=ON
