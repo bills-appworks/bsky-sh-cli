@@ -1,3 +1,13 @@
+# v0.18.0
+## Add
+- Support for notifications to reposters when liking/reposting a repost (like/repost)
+- Added option to suppress notifications to reposters (--notify-origin-only)
+- Added repost URI/CID specification options for URI/CID specification format in like/repost commands (like/repost --via-uri/--via-cid)
+## Modify
+- Support for repost URI/CID output in ID output mode (--output-id)
+## Fix
+- Fixed JSON session information output to output feed index as string type instead of invalid numeric type when it contains hyphens in reply relationships etc. (info session --output-json)
+
 # v0.17.0
 ## Add
 - Supports profile-specific customization configuration files (`$HOME/.bsky_sh_cli_<profile name>_rc`)
