@@ -596,6 +596,14 @@
         {
             "type": "bashdb",
             "request": "launch",
+            "name": "com.atproto.repo.deleteRecord (<repo> <collection> <rkey> <[swapRecord]> <[swapCommit]>)",
+            "program": "${workspaceFolder}/lib/api/com.atproto.repo.deleteRecord",
+            "terminalKind": "integrated",
+            "argsString": "'${input:repo}' '${input:collection}' '${input:rkey}' '${input:swapRecord}' '${input:swapCommit}'"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
             "name": "com.atproto.repo.getRecord (<repo> <collection> [rkey] <[cid]>)",
             "program": "${workspaceFolder}/lib/api/com.atproto.repo.getRecord",
             "terminalKind": "integrated",
@@ -752,6 +760,12 @@
             "type": "promptString",
             "id": "swapCommit",
             "description": "input CID of previous commit for compare and swap",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "swapRecord",
+            "description": "input CID of previous record for compare and swap",
             "default": ""
         },
         {
