@@ -52,7 +52,8 @@ else
 fi
 if [ -n "${param_rkey}" ]
 then
-  rkey_len=`_strlen "${param_rkey}"`
+  _strlen "${param_rkey}"
+  rkey_len=$?
   if [ "${rkey_len}" -gt 15 ]
   then
     error "parameter rkey must be specify length <= 15 characters: ${param_rkey}"
@@ -81,7 +82,7 @@ else
 fi
 if [ -n "${param_swapcommit}" ]
 then
-  swapcommit=`create_json_keyvalue 'swapcommit' "${param_swapcommit}" 0`
+  swapcommit=`create_json_keyvalue 'swapCommit' "${param_swapcommit}" 0`
   body="${body},${swapcommit}"
 fi
 body="${body}}"
