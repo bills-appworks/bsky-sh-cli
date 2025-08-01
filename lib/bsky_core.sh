@@ -2467,7 +2467,9 @@ core_create_post_chunk()
         post_fragment.author.handle as $AUTHOR_HANDLE |
         post_fragment.replyCount as $REPLY_COUNT |
         post_fragment.repostCount as $REPOST_COUNT |
+        (post_fragment.viewer | if has("repost") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $REPOST_OWN |
         post_fragment.likeCount as $LIKE_COUNT |
+        (post_fragment.viewer | if has("like") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $LIKE_OWN |
         post_fragment.quoteCount as $QUOTE_COUNT |
         post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         if is_quoted
@@ -5715,6 +5717,228 @@ core_like()
   fi
 
   debug 'core_like' 'END'
+}
+
+core_cancel_post_verify_subject()
+{
+  param_target_uri="$1"
+  param_collection="$2"
+
+  debug 'core_cancel_post_verify_subject' 'START'
+  debug 'core_cancel_post_verify_subject' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_post_verify_subject' "param_collection:${param_collection}"
+
+  verify_result=1
+  if result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  then
+    subject_owner_handle=`_p "${result}" | jq -r '.posts[0].author.handle'`
+    if [ "${subject_owner_handle}" = "${SESSION_HANDLE}" ]
+    then
+      verify_result=0
+    fi
+  else
+    error 'specified post not found.'
+  fi
+
+  debug 'core_cancel_post_verify_subject' 'END'
+
+  return "${verify_result}"
+}
+
+core_cancel_post()
+{
+  param_target_uri="$1"
+  param_output_json="$2"
+
+  debug 'core_cancel_post' 'START'
+  debug 'core_cancel_post' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_post' "param_output_json:${param_output_json}"
+
+  if [ -z "${param_output_json}" ]
+  then
+    _pn "[cancel post uri:${param_target_uri}]"
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+  fi
+
+  collection='app.bsky.feed.post'
+
+  if core_cancel_post_verify_subject "${param_target_uri}" "${collection}"
+  then
+    read_session_file
+    repo="${SESSION_HANDLE}"
+    core_parse_at_uri "${param_target_uri}"
+    rkey="${AT_URI_ELEMENT_RKEY}"
+
+    result=`api com.atproto.repo.deleteRecord "${repo}" "${collection}" "${rkey}" '' ''`
+    status=$?
+    debug_single 'core_cancel_post'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+
+    if [ $status -eq 0 ]
+    then
+      update_delete_session_file "${SESSION_KEY_FEED_VIEW_INDEX}"
+      if [ -n "${param_output_json}" ]
+      then
+        _p "{\"cancel\":${result},\"type\":\"post\",\"uri\":[\"${param_target_uri}\"]}"
+      else
+        _pn 'post cancel complete.'
+      fi
+    else
+      error 'cancel command failed.'
+    fi
+  else
+    error 'specified post is invalid or not your own.'
+  fi
+
+  debug 'core_cancel_post' 'END'
+}
+
+core_cancel_repost_verify_subject()
+{
+  param_target_uri="$1"
+  param_collection="$2"
+
+  debug 'core_cancel_repost_verify_subject' 'START'
+  debug 'core_cancel_repost_verify_subject' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_repost_verify_subject' "param_collection:${param_collection}"
+
+  verify_result=1
+  if result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  then
+    subject_repost_uri=`_p "${result}" | jq -r '.posts[0].viewer.repost // ""'`
+    if [ -n "${subject_repost_uri}" ]
+    then
+      verify_result=0
+    fi
+    _p "${subject_repost_uri}"
+  else
+    error 'specified post not found.'
+  fi
+
+  debug 'core_cancel_repost_verify_subject' 'END'
+
+  return "${verify_result}"
+}
+
+core_cancel_repost()
+{
+  param_target_uri="$1"
+  param_output_json="$2"
+
+  debug 'core_cancel_repost' 'START'
+  debug 'core_cancel_repost' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_repost' "param_output_json:${param_output_json}"
+
+  if [ -z "${param_output_json}" ]
+  then
+    _pn "[repost cancel post uri:${param_target_uri}]"
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+  fi
+
+  collection='app.bsky.feed.repost'
+
+  if repost_uri=`core_cancel_repost_verify_subject "${param_target_uri}" "${collection}"`
+  then
+    read_session_file
+    repo="${SESSION_HANDLE}"
+    core_parse_at_uri "${repost_uri}"
+    rkey="${AT_URI_ELEMENT_RKEY}"
+
+    result=`api com.atproto.repo.deleteRecord "${repo}" "${collection}" "${rkey}" '' ''`
+    status=$?
+    debug_single 'core_cancel_repost'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+
+    if [ $status -eq 0 ]
+    then
+      if [ -n "${param_output_json}" ]
+      then
+        _p "{\"cancel\":${result},\"type\":\"repost\",\"uri\":[\"${param_target_uri}\"],\"repostUri\":[\"${repost_uri}\"]}"
+      else
+        _pn 'repost cancel complete.'
+      fi
+    else
+      error 'cancel command failed.'
+    fi
+  else
+    error 'specified post is invalid or not your own reaction.'
+  fi
+
+  debug 'core_cancel_repost' 'END'
+}
+
+core_cancel_like_verify_subject()
+{
+  param_target_uri="$1"
+  param_collection="$2"
+
+  debug 'core_cancel_like_verify_subject' 'START'
+  debug 'core_cancel_like_verify_subject' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_like_verify_subject' "param_collection:${param_collection}"
+
+  verify_result=1
+  if result=`api app.bsky.feed.getPosts "${param_target_uri}"`
+  then
+    subject_like_uri=`_p "${result}" | jq -r '.posts[0].viewer.like // ""'`
+    if [ -n "${subject_like_uri}" ]
+    then
+      verify_result=0
+    fi
+    _p "${subject_like_uri}"
+  else
+    error 'specified post not found.'
+  fi
+
+  debug 'core_cancel_like_verify_subject' 'END'
+
+  return "${verify_result}"
+}
+
+core_cancel_like()
+{
+  param_target_uri="$1"
+  param_output_json="$2"
+
+  debug 'core_cancel_like' 'START'
+  debug 'core_cancel_like' "param_target_uri:${param_target_uri}"
+  debug 'core_cancel_like' "param_output_json:${param_output_json}"
+
+  if [ -z "${param_output_json}" ]
+  then
+    _pn "[like cancel post uri:${param_target_uri}]"
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+  fi
+
+  collection='app.bsky.feed.like'
+
+  if like_uri=`core_cancel_like_verify_subject "${param_target_uri}" "${collection}"`
+  then
+    read_session_file
+    repo="${SESSION_HANDLE}"
+    core_parse_at_uri "${like_uri}"
+    rkey="${AT_URI_ELEMENT_RKEY}"
+
+    result=`api com.atproto.repo.deleteRecord "${repo}" "${collection}" "${rkey}" '' ''`
+    status=$?
+    debug_single 'core_cancel_like'
+    _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+
+    if [ $status -eq 0 ]
+    then
+      if [ -n "${param_output_json}" ]
+      then
+        _p "{\"cancel\":${result},\"type\":\"like\",\"uri\":[\"${param_target_uri}\"],\"likeUri\":[\"${like_uri}\"]}"
+      else
+        _pn 'like cancel complete.'
+      fi
+    else
+      error 'cancel command failed.'
+    fi
+  else
+    error 'specified post is invalid or not your own reaction.'
+  fi
+
+  debug 'core_cancel_like' 'END'
 }
 
 core_get_profile()
