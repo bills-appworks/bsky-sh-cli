@@ -1898,10 +1898,10 @@ command_like()
       fi
       if [ -n "${via_uri}" ] && [ -z "${via_cid}" ]
       then
-        error "parameter must either specify both --uri/--cid, or omit both"
+        error "parameter must either specify both --via-uri/--via-cid, or omit both"
       elif  [ -z "${via_uri}" ] && [ -n "${via_cid}" ]
       then
-        error "parameter must either specify both --uri/--cid, or omit both"
+        error "parameter must either specify both --via-uri/--via-cid, or omit both"
       fi
     fi
     if [ -n "${notify_origin_only}" ]
