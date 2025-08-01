@@ -5705,13 +5705,13 @@ core_like()
     else
       _p "${result}" | jq -r '"[like uri:\(.uri)]"'
     fi
-      core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
     if [ -n "${param_output_json}" ]
     then
       _p "}"
     fi
   else
-    error 'quote command failed'
+    error 'like command failed'
   fi
 
   debug 'core_like' 'END'
