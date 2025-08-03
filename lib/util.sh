@@ -1126,6 +1126,56 @@ update_session_file()
   debug 'update_session_file' 'END'
 }
 
+delete_session_info()
+{
+  param_ops="$1"
+  param_session_key="$2"
+
+  debug 'delete_session_info' 'START'
+
+  read_session_file
+  timestamp=`get_timestamp_timezone`
+  _pn "# session ${param_ops} at ${timestamp}"
+  _pn "${SESSION_KEY_RECORD_VERSION}='${BSKYSHCLI_CLI_VERSION}'"
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $BSKYSHCLI_SESSION_LIST
+  while [ $# -gt 0 ]
+  do
+    session_key="$1"
+    current_session_value=`eval _p \"\\$"${session_key}"\"`
+    if [ "${session_key}" = "${param_session_key}" ]
+    then
+      _pn "${session_key}=''"
+    else
+      _pn "${session_key}='${current_session_value}'"
+    fi
+    shift
+  done
+
+  debug 'delete_session_info' 'END'
+}
+
+update_delete_session_file()
+{
+  # CAUTION: key=value pairs are separated by tab characters
+  param_session_key="$1"
+
+  debug 'update_delete_session_file' 'START'
+
+  session_filepath=`get_session_filepath`
+  case $BSKYSHCLI_SESSION_FILE_UPDATE in
+    append)
+      delete_session_info 'delete' "${param_session_key}" >> "${session_filepath}"
+      ;;
+    overwrite|*)
+      delete_session_info 'delete' "${param_session_key}" > "${session_filepath}"
+      ;;
+  esac
+
+  debug 'update_delete_session_file' 'END'
+}
+
 clear_session_file()
 {
   debug 'clear_session_file' 'START'
