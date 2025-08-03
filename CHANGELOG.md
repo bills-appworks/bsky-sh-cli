@@ -1,3 +1,10 @@
+# v0.19.0
+## Add
+- Support for canceling posts, reposts, and likes (cancel)
+- Added an indicator to show whether you have reacted (repost/like) next to the count in post display (BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION, BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL)
+## Fix
+- Other minor fixes
+
 # v0.18.0
 ## Add
 - Support for notifications to reposters when liking/reposting a repost (like/repost)

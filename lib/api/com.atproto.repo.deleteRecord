@@ -7,11 +7,11 @@
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 #
-# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-create-record
+# API Reference: https://docs.bsky.app/docs/api/com-atproto-repo-delete-record
 IFS='
  	'
 umask 077
-FILENAME='com.atproto.repo.createRecord'
+FILENAME='com.atproto.repo.deleteRecord'
 FILE_DIR=`dirname "$0"`
 FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
 
@@ -29,12 +29,11 @@ fi
 param_repo=$1
 param_collection=$2
 param_rkey=$3
-param_validate=$4
-param_record=$5
-param_swapcommit=$6
+param_swaprecord=$4
+param_swapcommit=$5
 
 debug "${FILENAME}" 'START'
-debug "${FILENAME}" "repo:${param_repo} collection:${param_collection} rkey:${param_rkey} validate:${param_validate} record:${param_record} swapcommit:${param_swapcommit}"
+debug "${FILENAME}" "repo:${param_repo} collection:${param_collection} rkey:${param_rkey} swaprecord:${param_swaprecord} swapcommit:${param_swapcommit}"
 
 if [ -n "${param_repo}" ]
 then
@@ -61,24 +60,10 @@ then
   rkey=`create_json_keyvalue 'rkey' "${param_rkey}" 0`
   body="${body},${rkey}"
 fi
-if [ -n "${param_validate}" ]
+if [ -n "${param_swaprecord}" ]
 then
-  case $param_validate in
-    true|false)
-      ;;
-    *)
-      error "parameter validate must be specify true or false: ${param_validate}"
-      ;;
-  esac
-  validate=`create_json_keyvalue 'validate' "${param_validate}" 1`
-  body="${body},${validate}"
-fi
-if [ -n "${param_record}" ]
-then
-  record=`create_json_keyvalue 'record' "${param_record}" 1`
-  body="${body},${record}"
-else
-  error 'parameter record must be specified'
+  swaprecord=`create_json_keyvalue 'swapRecord' "${param_swaprecord}" 1`
+  body="${body},${swaprecord}"
 fi
 if [ -n "${param_swapcommit}" ]
 then
@@ -89,7 +74,6 @@ body="${body}}"
 debug "${FILENAME}" "body:${body}"
 
 debug_single "${FILENAME}"
-api_post 'com.atproto.repo.createRecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+api_post 'com.atproto.repo.deleteRecord' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
 
 debug "${FILENAME}" 'END'
-

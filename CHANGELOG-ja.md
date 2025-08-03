@@ -1,3 +1,10 @@
+# v0.19.0
+## 追加
+- ポスト・リポスト・いいねの取り消しに対応（cancel）
+- ポスト表示でリポスト・いいねの数の隣に自分がリアクションを行ったかどうかを識別する表示を追加（BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION、BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL）
+## 修正
+- その他軽微な修正
+
 # v0.18.0
 ## 追加
 - リポストに対するいいね・リポストでのリポスト者への通知に対応（like/repost）
