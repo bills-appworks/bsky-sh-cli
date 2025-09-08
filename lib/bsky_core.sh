@@ -2481,6 +2481,8 @@ core_create_post_chunk()
         (post_fragment.viewer | if has("repost") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $REPOST_OWN |
         post_fragment.likeCount as $LIKE_COUNT |
         (post_fragment.viewer | if has("like") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $LIKE_OWN |
+        post_fragment.bookmarkCount as $BOOKMARK_COUNT |
+        (post_fragment.viewer | if (has("bookmarked") and post_fragment.viewer.bookmarked == true) then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $BOOKMARKED |
         post_fragment.quoteCount as $QUOTE_COUNT |
         post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         if is_quoted
