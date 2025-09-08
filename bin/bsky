@@ -462,6 +462,7 @@ parameters:
 
   --video <path to video file>
     Specify video file path.
+    If an animated GIF file is specified, it will be converted into a video.
 
   --url <display mode>
     Specify URL display (shortening) mode.
@@ -800,7 +801,7 @@ parameters:
     The index string is output as "[ViewIndex:<index string>]" using the feed output command.
 
   --uri <uri>
-    Specify the AT URI pointing to the feed to be liked to.
+    Specify the AT URI pointing to the feed to be cancel to.
     The AT URI will be output by specifying the "--output-id" option with te feed output command.
 
   --output-json
@@ -2028,7 +2029,7 @@ command_cancel()
     then
       core_cancel_like "${uri}" "${PARSED_PARAM_KEYONLY_output_json}"
     else
-      error "parameter must be specify --post or --like"
+      error "parameter must be specify --post or --repost or --like"
     fi
   fi
 
