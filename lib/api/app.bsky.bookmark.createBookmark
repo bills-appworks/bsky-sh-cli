@@ -1,0 +1,53 @@
+#!/bin/sh -
+# Bluesky in the shell
+# A Bluesky CLI (Command Line Interface) implementation in shell script
+# Author Bluesky:@bills-appworks.blue
+# 
+# Copyright (c) 2024-2025 bills-appworks
+# This software is released under the MIT License.
+# http://opensource.org/licenses/mit-license.php
+#
+# API Reference: https://docs.bsky.app/docs/api/app-bsky-bookmark-createBookmark
+IFS='
+ 	'
+umask 077
+FILENAME='app.bsky.bookmark.createBookmark'
+FILE_DIR=`dirname "$0"`
+FILE_DIR=`(cd "${FILE_DIR}" && pwd)`
+
+if [ -z "${BSKYSHCLI_API_PATH}" ]
+then
+  BSKYSHCLI_API_PATH="${FILE_DIR}"
+fi
+# SC1091
+# shellcheck source=SCRIPTDIR/common.sh
+. "${BSKYSHCLI_API_PATH}/common.sh"
+# SC1091
+# shellcheck source=SCRIPTDIR/proxy.sh
+. "${BSKYSHCLI_API_PATH}/proxy.sh"
+
+param_uri=$1
+param_cid=$2
+
+debug "${FILENAME}" 'START'
+
+if [ -n "${param_uri}" ]
+then
+  uri=`create_json_keyvalue 'uri' "${param_uri}" 0`
+  body="{${uri}"
+else
+  error 'parameter uri must be specified'
+fi
+if [ -n "${param_cid}" ]
+then
+  cid=`create_json_keyvalue 'cid' "${param_cid}" 0`
+  body="${body},${cid}"
+else
+  error 'parameter cid must be specified'
+fi
+body="${body}}"
+
+debug_single "${FILENAME}"
+api_post 'app.bsky.bookmark.createBookmark' "${body}" | tee "${BSKYSHCLI_DEBUG_SINGLE}"
+
+debug "${FILENAME}" 'END'

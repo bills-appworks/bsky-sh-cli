@@ -1,3 +1,13 @@
+# v0.20.0
+## 追加
+- ブックマークの追加・一覧表示・削除に対応（bookmark）
+- ポスト表示でブックマーク数およびブックマーク済を識別する表示を追加（BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION、BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL）
+## 変更
+- ブックマーク関連の情報表示対応（info）
+- 動画アップロードコマンドでアニメーションGIFを指定すると動画に変換される説明を追記（post --video）
+## 修正
+- その他軽微な修正
+
 # v0.19.0
 ## 追加
 - ポスト・リポスト・いいねの取り消しに対応（cancel）

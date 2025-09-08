@@ -107,6 +107,17 @@ FOLLOW_PARSE_PROCEDURE='
     output_follow($follow_index; $follow_fragment)
   )
 '
+# shellcheck disable=SC2016
+BOOKMARK_PARSE_PROCEDURE='
+  .bookmarks |
+  to_entries |
+  foreach .[] as $bookmark_entry (0; 0;
+    $bookmark_entry.value as $bookmark_fragment |
+    ($bookmark_entry.key + 1) as $bookmark_index |
+    $bookmark_fragment |
+    output_post($bookmark_index; $bookmark_fragment.item; false; null; null)
+  )
+'
 CURSOR_TERMINATE='<<CURSOR_TERMINATE>>'
 FEED_GENERATOR_PATTERN_BSKYAPP_URL='^https://bsky\.app/profile/\([^/]*\)/feed/\([^/]*\)$'
 #FEED_GENERATOR_PATTERN_AT_URI='^at://\([^/]*\)/app.bsky.feed.generator/\([^/]*\)$'
@@ -2470,6 +2481,8 @@ core_create_post_chunk()
         (post_fragment.viewer | if has("repost") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $REPOST_OWN |
         post_fragment.likeCount as $LIKE_COUNT |
         (post_fragment.viewer | if has("like") then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $LIKE_OWN |
+        post_fragment.bookmarkCount as $BOOKMARK_COUNT |
+        (post_fragment.viewer | if (has("bookmarked") and post_fragment.viewer.bookmarked == true) then "'"${BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION}"'" else "" end) as $BOOKMARKED |
         post_fragment.quoteCount as $QUOTE_COUNT |
         post_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
         if is_quoted
@@ -6278,6 +6291,136 @@ core_social()
   return "${status}"
 }
 
+core_bookmark_add()
+{
+  param_target_uri="$1"
+  param_target_cid="$2"
+  param_output_json="$3"
+
+  debug 'core_bookmark_add' 'START'
+  debug 'core_bookmark_add' "param_target_uri:${param_target_uri}"
+  debug 'core_bookmark_add' "param_target_cid:${param_target_cid}"
+  debug 'core_bookmark_add' "param_output_json:${param_output_json}"
+
+  result=`api app.bsky.bookmark.createBookmark "${param_target_uri}" "${param_target_cid}"`
+  status=$?
+  debug_single 'core_bookmark_add'
+  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+  if [ $status -eq 0 ]
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      _p "{\"bookmark\":\"add\",\"post\":"
+    else
+      _pn "The following post has been added to your bookmarks."
+    fi
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+    if [ -n "${param_output_json}" ]
+    then
+      _p "}"
+    fi
+  else
+    error "bookmark add command failed: ${result}"
+  fi
+
+  debug 'core_bookmark_add' 'END'
+}
+
+core_bookmark_list()
+{
+  param_limit="$1"
+  param_next="$2"
+  param_output_id="$3"
+  param_output_via="$4"
+  param_output_json="$5"
+  param_output_langs="$6"
+
+  debug 'core_bookmark_list' 'START'
+  debug 'core_bookmark_list' "param_limit:${param_limit}"
+  debug 'core_bookmark_list' "param_next:${param_next}"
+  debug 'core_bookmark_list' "param_output_id:${param_output_id}"
+  debug 'core_bookmark_list' "param_output_via:${param_output_via}"
+  debug 'core_bookmark_list' "param_output_json:${param_output_json}"
+  debug 'core_bookmark_list' "param_output_langs:${param_output_langs}"
+
+  read_session_file
+  if [ -n "${param_next}" ]
+  then
+    cursor="${SESSION_BOOKMARK_CURSOR}"
+    if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
+    then
+      _pn '[next bookmark not found]'
+      return 0
+    fi
+  else
+    cursor=''
+  fi
+
+  result=`api app.bsky.bookmark.getBookmarks "${param_limit}" "${cursor}"`
+  status=$?
+  debug_single 'core_bookmark_list'
+  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+
+  if [ $status -eq 0 ]
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      _p "${result}"
+    else
+      view_post_functions=`core_create_post_chunk "${param_output_id}" "${param_output_via}" "${param_output_langs}"`
+      _pn "${BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META}"
+      _pn "${result}" | jq -r "${view_post_functions}${BOOKMARK_PARSE_PROCEDURE}"
+    fi
+
+    cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+    view_session_functions=`core_create_session_chunk`
+    feed_view_index=`_p "${result}" | jq -r -j "${view_session_functions}${BOOKMARK_PARSE_PROCEDURE}" | sed 's/.$//'`
+    # CAUTION: key=value pairs are separated by tab characters
+    update_session_file "${SESSION_KEY_BOOKMARK_CURSOR}=${cursor}	${SESSION_KEY_FEED_VIEW_INDEX}=${feed_view_index}"
+  else
+    error "bookmark list command failed: ${result}"
+  fi
+
+  debug 'core_bookmark_list' 'END'
+}
+
+core_bookmark_delete()
+{
+  param_target_uri="$1"
+  param_output_json="$2"
+
+  debug 'core_bookmark_delete' 'START'
+  debug 'core_bookmark_delete' "param_target_uri:${param_target_uri}"
+  debug 'core_bookmark_delete' "param_output_json:${param_output_json}"
+
+  if [ -z "${param_output_json}" ]
+  then
+    _pn "[delete bookmark uri:${param_target_uri}]"
+    core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+  fi
+
+  result=`api app.bsky.bookmark.deleteBookmark "${param_target_uri}"`
+  status=$?
+  debug_single 'core_bookmark_delete'
+  _p "${result}" > "${BSKYSHCLI_DEBUG_SINGLE}"
+
+  if [ $status -eq 0 ]
+  then
+    if [ -n "${param_output_json}" ]
+    then
+      _p "{\"bookmark\":\"delete\",\"post\":"
+      core_output_post "${param_target_uri}" '' '' "${param_output_json}"
+      _p "}"
+    else
+      _pn 'bookmark delete complete.'
+    fi
+  else
+    error "bookmark delete command failed: ${result}"
+  fi
+
+  debug 'core_bookmark_delete' 'END'
+}
+
 core_get_pref()
 {
   param_group="$1"
@@ -6737,7 +6880,7 @@ core_info_session_cursor()
 
   if [ -n "${param_output_json}" ]
   then
-    _p "\"cursor\":{\"timeline\":\"${SESSION_GETTIMELINE_CURSOR}\",\"feed\":\"${SESSION_GETFEED_CURSOR}\",\"authorFeed\":\"${SESSION_GETAUTHORFEED_CURSOR}\",\"follows\":\"${SESSION_FOLLOWS_CURSOR}\",\"followers\":\"${SESSION_FOLLOWERS_CURSOR}\"}"
+    _p "\"cursor\":{\"timeline\":\"${SESSION_GETTIMELINE_CURSOR}\",\"feed\":\"${SESSION_GETFEED_CURSOR}\",\"authorFeed\":\"${SESSION_GETAUTHORFEED_CURSOR}\",\"follows\":\"${SESSION_FOLLOWS_CURSOR}\",\"followers\":\"${SESSION_FOLLOWERS_CURSOR}\",\"bookmark\":\"${SESSION_BOOKMARK_CURSOR}\"}"
   else
     _pn '[cursor]'
     _pn "timeline cursor: ${SESSION_GETTIMELINE_CURSOR}"
@@ -6745,6 +6888,7 @@ core_info_session_cursor()
     _pn "author-feed cursor: ${SESSION_GETAUTHORFEED_CURSOR}"
     _pn "follows cursor: ${SESSION_FOLLOWS_CURSOR}"
     _pn "followers cursor: ${SESSION_FOLLOWERS_CURSOR}"
+    _pn "bookmark cursor: ${SESSION_BOOKMARK_CURSOR}"
   fi
 
   debug 'core_info_session_cursor' 'END'
@@ -6885,6 +7029,8 @@ core_info_meta_config()
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR'
     _p ','
+    create_json_keyvalue_variable 'BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META'
+    _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_SELFHOSTED_DOMAIN'
     _p ','
     create_json_keyvalue_variable 'BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE'
@@ -6940,6 +7086,7 @@ core_info_meta_config()
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW}'"
     _pn "BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR='${BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR}'"
+    _pn "BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META='${BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META}'"
     _pn "BSKYSHCLI_SELFHOSTED_DOMAIN='${BSKYSHCLI_SELFHOSTED_DOMAIN}'"
     _pn "BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=${BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE}"
     _pn "BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='${BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM}'"
