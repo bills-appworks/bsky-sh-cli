@@ -48,7 +48,7 @@ BSKYSHCLI_VIEW_TEMPLATE_POST_HEAD='\($AUTHOR_DISPLAYNAME)  @\($AUTHOR_HANDLE)  \
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
 # shellcheck disable=SC2016
-BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT)\($REPOST_OWN) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)\($LIKE_OWN)'
+BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT)\($REPOST_OWN) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)\($LIKE_OWN) Bookmark:\($BOOKMARK_COUNT)\($BOOKMARKED)'
 BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION='*'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_POST_SEPARATOR=''
@@ -100,6 +100,7 @@ BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
 # shellcheck disable=SC2016
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
+BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META='[bookmarks]'
 BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=2000
 BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='800x512'
 #BSKYSHCLI_VIDEO_SERVICE_DID='did:web:video.bsky.app'
@@ -209,6 +210,7 @@ commands:
   thread       show thread of specified post.
   profile      show profile.
   social       show social informations (follows/followers).
+  bookmark     bookmark add, list, or delete.
   info         show session/meta informations.
   size         show number of characters in text.
   update       update this tool.
@@ -954,6 +956,73 @@ note:
 EOS
 
   debug 'output_help_social' 'END'
+}
+
+output_help_bookmark()
+{
+  debug 'output_help_bookmark' 'START'
+
+  cat << 'EOS'
+bsky bookmark help
+
+usage: bsky bookmark --add --index <view index> [--output-json]
+       or
+       bsky bookmark --add --uri <uri> --cid <cid> [--output-json]
+       or
+       bsky bookmark --list [--limit <number>] [--next] [--output-langs] [--output-id] [--output-via] [--output-json]
+       or
+       bsky bookmark --delete --index <view index> [--output-json]
+       or
+       bsky bookmark --delete --uri <uri> [--output-json]
+
+parameters:
+  --add
+    Add the post specified by --index or --uri to bookmarks.
+
+  --list
+    Show list of bookmarks.
+
+  --delete
+    Delete the post specified by --index or --uri from bookmarks.
+
+  --index <view index>
+    Specify the index number pointing to the feed to be bookmark to.
+    The index string is output as "[ViewIndex:<index string>]" using the bookmark/feed output command.
+
+  --uri <uri>
+    Specify the AT URI pointing to the feed to be bookmark to.
+    The AT URI will be output by specifying the "--output-id" option with te bookmark/feed output command.
+
+  --cid <cid>
+    Specify the CID pointing to the feed to be bookmark to.
+    The  CID will be output by specifying the "--output-id" option with te feed output command.
+
+  --limit <number>
+    Specify limit number (default 50) of output bookmarks (from 1 to 100).
+
+  --next
+    Output next bookmarks from previous bookmark list command.
+
+  --output-langs
+    Output post language specification.
+
+  --output-id
+    Output identifier of AT protocol (uri, cid)
+
+  --output-via
+    Output via field (unofficial field indicating the posting client name)  
+
+  --output-json
+    Output JSON format. Following parameters are ignored:
+      --output-langs
+      --output-id
+      --output-via
+
+note:
+  you must have started a Bluesky session with the login command.
+EOS
+
+  debug 'output_help_bookmark' 'END'
 }
 
 output_help_pref()
@@ -2108,6 +2177,63 @@ command_social()
   debug 'command_social' 'END'
 }
 
+command_bookmark()
+{
+  debug 'command_bookmark' 'START'
+
+  if [ "$1" = 'help' ]
+  then
+    output_help_bookmark
+  else
+    parse_parameters '--add:0 --list:0 --delete:0 --index:1 --uri:1 --cid:1 --limit:1 --next:0 --output-langs:0 --output-id:0 --output-json:0' "$@"
+
+    verify_exclusive 0 '--add --list --delete' "${PARSED_PARAM_KEYONLY_add}" "${PARSED_PARAM_KEYONLY_list}" "${PARSED_PARAM_KEYONLY_delete}"
+
+
+    # dynamic assignment in parse_parameters
+    # shellcheck disable=SC2154
+    view_index="${PARSED_PARAM_KEYVALUE_index}"
+    # shellcheck disable=SC2154
+    uri="${PARSED_PARAM_KEYVALUE_uri}"
+    cid="${PARSED_PARAM_KEYVALUE_cid}"
+    if [ -n "${view_index}" ]
+    then
+      if [ -n "${uri}" ] || [ -n "${cid}" ]
+      then
+        error "--index, and --uri and/or --cid are exclusive"
+      fi
+      core_get_feed_view_index "${view_index}"
+      uri="${FEED_VIEW_INDEX_ELEMENT_URI}"
+      cid="${FEED_VIEW_INDEX_ELEMENT_CID}"
+    fi
+
+    if [ -n "${PARSED_PARAM_KEYONLY_add}" ]
+    then
+      if [ -n "${uri}" ] && [ -n "${cid}" ]
+      then
+        core_bookmark_add "${uri}" "${cid}" "${PARSED_PARAM_KEYONLY_output_json}"
+      else
+        error "parameter must be specify --index, or --uri and --cid"
+      fi
+    elif [ -n "${PARSED_PARAM_KEYONLY_list}" ]
+    then
+      core_bookmark_list "${PARSED_PARAM_KEYVALUE_limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_id}" "${PARSED_PARAM_KEYONLY_output_via}" "${PARSED_PARAM_KEYONLY_output_json}" "${PARSED_PARAM_KEYONLY_output_langs}"
+    elif [ -n "${PARSED_PARAM_KEYONLY_delete}" ]
+    then
+      if [ -n "${uri}" ]
+      then
+        core_bookmark_delete "${uri}" "${PARSED_PARAM_KEYONLY_output_json}"
+      else
+        error "parameter must be specify --index or --uri"
+      fi
+    else
+      error "parameter must be specify --add or --list or --delete"
+    fi
+  fi
+
+  debug 'command_bookmark' 'END'
+}
+
 command_pref()
 {
   debug 'command_pref' 'START'
@@ -2457,6 +2583,10 @@ case $1 in
   social)
     shift
     command_social "$@"
+    ;;
+  bookmark)
+    shift
+    command_bookmark "$@"
     ;;
   pref)  # non-public command
     shift
