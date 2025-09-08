@@ -51,7 +51,7 @@
 # template for body field in post
 #BSKYSHCLI_VIEW_TEMPLATE_POST_BODY='\($TEXT)'
 # template for tail field in post
-#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT)\($REPOST_OWN) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)\($LIKE_OWN)'
+#BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL='Reply:\($REPLY_COUNT) Repost:\($REPOST_COUNT)\($REPOST_OWN) Quote:\($QUOTE_COUNT) Like:\($LIKE_COUNT)\($LIKE_OWN) Bookmark:\($BOOKMARK_COUNT)\($BOOKMARKED)'
 # template for tail field indicator of your own reaction
 #BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION='*'
 # template for separator field in post
@@ -114,6 +114,8 @@
 #BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
 # template for separator field in social follow
 #BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
+# template for bookmark meta field
+#BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META='[bookmarks]'
 # self hosting PDS domain
 #BSKYSHCLI_SELFHOSTED_DOMAIN=
 # linkcard OGP image upload resize base file size (KB).

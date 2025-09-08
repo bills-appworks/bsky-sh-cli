@@ -1,3 +1,13 @@
+# v0.20.0
+## Add
+- Added support for adding, listing, and removing bookmarks (bookmark)
+- Added indicators in post view to show bookmark count and whether the post is bookmarked (BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL_INDICATOR_OWN_REACTION, BSKYSHCLI_VIEW_TEMPLATE_POST_TAIL)
+## Modify
+- Updated info to include bookmark-related details (info)
+- Added explanation to the video upload command that animated GIFs will be converted to video (post --video)
+## Fix
+- Other minor fixes
+
 # v0.19.0
 ## Add
 - Support for canceling posts, reposts, and likes (cancel)
