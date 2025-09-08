@@ -114,6 +114,8 @@
 #BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
 # template for separator field in social follow
 #BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
+# template for bookmark meta field
+#BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META='[bookmarks]'
 # self hosting PDS domain
 #BSKYSHCLI_SELFHOSTED_DOMAIN=
 # linkcard OGP image upload resize base file size (KB).
