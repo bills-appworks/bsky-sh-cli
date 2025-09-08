@@ -462,6 +462,7 @@ parameters:
 
   --video <path to video file>
     Specify video file path.
+    If an animated GIF file is specified, it will be converted into a video.
 
   --url <display mode>
     Specify URL display (shortening) mode.
