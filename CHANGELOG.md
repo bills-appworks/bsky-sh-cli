@@ -1,3 +1,7 @@
+# v0.20.1
+## Fix
+Fixed an issue where bookmark counts were not displayed correctly in previews for post-related commands (--preview)
+
 # v0.20.0
 ## Add
 - Added support for adding, listing, and removing bookmarks (bookmark)
