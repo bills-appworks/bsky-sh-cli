@@ -3435,6 +3435,7 @@ core_preview_post()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "bookmarkCount": 0,
             "quoteCount": 0,
             "indexedAt": .createdAt
           }
@@ -3525,6 +3526,7 @@ core_preview_posts_single()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "bookmarkCount": 0,
             "quoteCount": 0,
             "indexedAt": .createdAt
           }
@@ -3635,6 +3637,7 @@ core_preview_reply()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "bookmarkCount": 0,
             "quoteCount": 0,
             "indexedAt": .createdAt
           }
@@ -3738,6 +3741,7 @@ core_preview_quote()
             "replyCount": 0,
             "repostCount": 0,
             "likeCount": 0,
+            "bookmarkCount": 0,
             "quoteCount": 0,
             "indexedAt": .post.createdAt
           }
