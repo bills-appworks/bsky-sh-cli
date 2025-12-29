@@ -2382,6 +2382,7 @@ command_info()
 
   case $1 in
     session)
+      require_session
       shift
       command_info_session "$@"
       ;;
@@ -2530,74 +2531,92 @@ case $1 in
     command_login "$@"
     ;;
   logout)
+    require_session
     shift
     command_logout "$@"
     ;;
   timeline)
+    require_session
     shift
     command_timeline "$@"
     ;;
   feed)
+    require_session
     shift
     command_feed "$@"
     ;;
   author-feed)
+    require_session
     shift
     command_author_feed "$@"
     ;;
   post)
+    require_session
     shift
     command_post "$@"
     ;;
   posts)
+    require_session
     shift
     command_posts "$@"
     ;;
   reply)
+    require_session
     shift
     command_reply "$@"
     ;;
   repost)
+    require_session
     shift
     command_repost "$@"
     ;;
   quote)
+    require_session
     shift
     command_quote "$@"
     ;;
   like)
+    require_session
     shift
     command_like "$@"
     ;;
   cancel)
+    require_session
     shift
     command_cancel "$@"
     ;;
   thread)
+    require_session
     shift
     command_thread "$@"
     ;;
   profile)
+    require_session
     shift
     command_profile "$@"
     ;;
   social)
+    require_session
     shift
     command_social "$@"
     ;;
   bookmark)
+    require_session
     shift
     command_bookmark "$@"
     ;;
   pref)  # non-public command
+    require_session
     shift
     command_pref "$@"
     ;;
   info)
+    # session check in command_info
     shift
     command_info "$@"
     ;;
   size)
+    require_session
     shift
     command_size "$@"
     ;;

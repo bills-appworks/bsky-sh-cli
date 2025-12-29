@@ -1208,6 +1208,32 @@ is_session_exist()
   return $status
 }
 
+require_session()
+{
+  debug 'require_session' 'START'
+
+  if is_session_exist
+  then
+    :
+  else
+    profile="${BSKYSHCLI_PROFILE}"
+
+    if [ -n "${BSKYSHCLI_GLOBAL_OPTION_PROFILE}" ]
+    then
+      profile="${BSKYSHCLI_GLOBAL_OPTION_PROFILE}"
+    fi
+
+    if [ -n "${profile}" ]
+    then
+      error "specified profile session is not found: ${profile}"
+    else
+      error "session is not found"
+    fi
+  fi
+
+  debug 'require_session' 'END'
+}
+
 is_stdin_exist()
 {
   debug 'is_stdin_exist' 'START'
