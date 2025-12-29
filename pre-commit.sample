@@ -3,11 +3,40 @@
 # A Bluesky CLI (Command Line Interface) implementation in shell script
 # Author Bluesky:@bills-appworks.blue
 #
-# Copyright (c) 2024 bills-appworks
+# Copyright (c) 2024-2025 bills-appworks
 # This software is released under the MIT License.
 # http://opensource.org/licenses/mit-license.php
 
-./shellcheck.sh
+FILES=`git diff --cached --name-only`
+
+STATUS=0
+for FILE in $FILES
+do
+  if [ "${FILE}" = 'bin/bsky' ]
+  then
+    shellcheck "${FILE}"
+    FILE_STATUS=$?
+  elif echo "${FILE}" | grep -q '\.sh$'
+  then
+    shellcheck "${FILE}"
+    FILE_STATUS=$?
+  elif echo "${FILE}" | grep -q '^lib/api/'
+  then
+    shellcheck "${FILE}"
+    FILE_STATUS=$?
+  else
+    continue
+  fi
+
+  if [ "${FILE_STATUS}" -eq 0 ]
+  then
+    echo "${FILE} [PASS]"
+  else
+    echo "${FILE} [FAIL]"
+    STATUS=$FILE_STATUS
+  fi
+done
+
 STATUS=$?
 if [ $STATUS -eq 0 ]
 then
