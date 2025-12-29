@@ -1,3 +1,9 @@
+# v0.20.2
+## Modify
+- Improved pre-commit hook sample
+## Fix
+- Fixed to check for session information before executing commands that require a session
+
 # v0.20.1
 ## Fix
 Fixed an issue where bookmark counts were not displayed correctly in previews for post-related commands (--preview)
