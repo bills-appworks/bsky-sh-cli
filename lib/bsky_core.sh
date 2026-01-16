@@ -858,6 +858,51 @@ core_build_text_rels_line()
     fi
   done
 
+  # cash tag
+  tag_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
+  text_work="${display_line_text}"
+  # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
+#  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
+#  # sed not required at use grep -P, but do not use for compatibility
+#  cash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])\\\\$[^ 　]+" | sed 's/^[ 　]//'`
+  cash_tag=`echo "${text_work}" | jq -R -r 'scan("^\\\\$[^\\\\s]+|\\\\s\\\\$[A-Za-z][A-Za-z0-9]{0,4}") | sub("\\\\s"; "")'`
+  # no double quote for use word splitting
+  # shellcheck disable=SC2086
+  set -- $cash_tag
+  while [ -n "${text_work}" ]
+  do
+    cash_tag=$1
+    if [ -n "${cash_tag}" ]
+    then
+      _strlen "${cash_tag}"
+      cash_tag_length=$?
+      # cheat (use jq) for shortest match (countermeasure to same cash tag string in text)
+      cash_tag_index=`_p "${text_work}" | jq -R 'index("'"${cash_tag}"'")'`
+      # When embedding strings into facets, do not remove the leading '$' for cash tags.
+      tag=`_p "${cash_tag}"`
+      # tag facet
+      # overall index of cash tag start
+      overall_cash_tag_start=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${cash_tag_index}"`
+      # overall index of cash tag end
+      overall_cash_tag_end=`expr "${overall_cash_tag_start}" + "${cash_tag_length}"`
+      # stack on result set (tag, actual index of cash tag start, actual index of cash tag end)
+      CORE_BUILD_TEXT_RELS_tag_facets_element="${CORE_BUILD_TEXT_RELS_tag_facets_element} ${tag} ${overall_cash_tag_start} ${overall_cash_tag_end}"
+      # text work next part
+      # until end of cash tag (cut command is 1 start index)
+      text_work_cut_index=`expr "${cash_tag_index}" + "${cash_tag_length}" + 1`
+      # cut until target cash tag
+      text_work=`_p "${text_work}" | cut -b "${text_work_cut_index}"-`
+
+      # accumulate display length
+      tag_CORE_BUILD_TEXT_RELS_accum_display_length=`expr "${tag_CORE_BUILD_TEXT_RELS_accum_display_length}" + "${cash_tag_index}" + "${cash_tag_length}"`
+      # shift to next cash tag
+      shift
+    else  # cash tag not exist
+      # break to next line
+      break
+    fi
+  done
+
   # mention
   mention_CORE_BUILD_TEXT_RELS_accum_display_length=$evacuated_CORE_BUILD_TEXT_RELS_accum_display_length
   text_work="${display_line_text}"
