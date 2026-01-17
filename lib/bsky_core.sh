@@ -864,8 +864,7 @@ core_build_text_rels_line()
   # cheat (use jq) for i18n space character match. grep has i18n incompatibility between versions.
 #  # grep -o:output only match string, -i:ignore case, -E:extended regular expression
 #  # sed not required at use grep -P, but do not use for compatibility
-#  cash_tag=`echo "${text_work}" | grep -o -i -E "(^|[] 　])\\\\$[^ 　]+" | sed 's/^[ 　]//'`
-  cash_tag=`echo "${text_work}" | jq -R -r 'scan("^\\\\$[^\\\\s]+|\\\\s\\\\$[A-Za-z][A-Za-z0-9]{0,4}") | sub("\\\\s"; "")'`
+  cash_tag=`echo "${text_work}" | jq -R -r 'scan("(^|\\\\s|\\\\()(\\\\$[A-Za-z][A-Za-z0-9]{0,4})(?=\\\\s|$|[.,;:!?\\\\)\"'\''\u2019])") | .[1]'`
   # no double quote for use word splitting
   # shellcheck disable=SC2086
   set -- $cash_tag
