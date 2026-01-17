@@ -1,3 +1,7 @@
+# v0.21.0
+## Add
+- Added support for cash tag posting
+
 # v0.20.2
 ## Modify
 - Improved pre-commit hook sample
