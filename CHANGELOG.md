@@ -1,3 +1,8 @@
+# v0.21.1
+## Fix
+- Fixed a bug where an unexpected error was output in some cases of follow-related data status (social)
+- Fixed some errors in the help
+
 # v0.21.0
 ## Add
 - Added support for cash tag posting
