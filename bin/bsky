@@ -879,13 +879,13 @@ usage: bsky profile --actor <handle or did> [--output-id] [--output-json]
 
 parameters:
   --actor <handle or did>
-    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+    Specify Bluesky handle or DID for profile. Default handle domain (.bsky.social) can be omitted.
 
   --handle <handle>
-    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+    Specify Bluesky handle for profile. Default handle domain (.bsky.social) can be omitted.
 
   --did <did>
-    Specify DID of account for custom feed (feed generator) creator.
+    Specify DID of account for profile.
 
   --output-id
     Output identifier of AT protocol (uri, cid)
@@ -919,13 +919,13 @@ usage: bsky social --actor <handle or did> [--follows] [--followers] [--known-fo
 
 parameters:
   --actor <handle or did>
-    Specify Bluesky handle or DID for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+    Specify Bluesky handle or DID for display follows/followers. Default handle domain (.bsky.social) can be omitted.
 
   --handle <handle>
-    Specify Bluesky handle for custom feed (feed generator) creator. Default handle domain (.bsky.social) can be omitted.
+    Specify Bluesky handle for display follows/followers. Default handle domain (.bsky.social) can be omitted.
 
   --did <did>
-    Specify DID of account for custom feed (feed generator) creator.
+    Specify DID of account for display follows/followers.
 
   --follows
     Displays accounts followed by the account specified in actor/handle/did.

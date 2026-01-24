@@ -6107,8 +6107,8 @@ core_create_follow_chunk()
         follow_fragment.associated.starterPacks as $ASSOCIATED_STARTER_PACKS |
         follow_fragment.associated.labeler as $ASSOCIATED_LABELER |
         follow_fragment.associated.chat as $ASSOCIATED_CHAT |
-        follow_fragment.indexedAt | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
-        follow_fragment.createdAt | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
+        (follow_fragment.indexedAt // "") | '"${VIEW_TEMPLATE_INDEXED_AT}"' | . as $INDEXED_AT |
+        (follow_fragment.createdAt // "") | '"${VIEW_TEMPLATE_CREATED_AT}"' | . as $CREATED_AT |
         follow_fragment.viewer.muted as $VIEWER_MUTED |
         follow_fragment.viewer.mutedByList as $VIEWER_MUTEDBYLIST |
         follow_fragment.viewer.blockedBy as $VIEWER_BLOCKEDBY |
