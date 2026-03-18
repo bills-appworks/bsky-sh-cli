@@ -7494,3 +7494,285 @@ sudo ${FILE_DIR}/bsky update"
 
   debug 'core_update' 'END'
 }
+
+core_convo_list()
+{
+  param_limit="$1"
+  param_next="$2"
+  param_unread="$3"
+  param_output_json="$4"
+
+  debug 'core_convo_list' 'START'
+  debug 'core_convo_list' "param_limit:${param_limit}"
+  debug 'core_convo_list' "param_next:${param_next}"
+  debug 'core_convo_list' "param_unread:${param_unread}"
+  debug 'core_convo_list' "param_output_json:${param_output_json}"
+
+  read_session_file
+
+  if [ -n "${param_next}" ]
+  then
+    cursor="${SESSION_LISTCONVOS_CURSOR}"
+  else
+    cursor=''
+  fi
+
+  if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
+  then
+    if [ -z "${param_output_json}" ]
+    then
+      _pn '(next conversations not found)'
+    fi
+    return 0
+  fi
+
+  read_state=''
+  if [ -n "${param_unread}" ]
+  then
+    read_state='unread'
+  fi
+
+  result=`api chat.bsky.convo.listConvos "${param_limit}" "${cursor}" "${read_state}" ''`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error 'convo list command error occurred'
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _pn "${result}"
+  else
+    _p "${result}" | jq -r '
+      .convos |
+      to_entries |
+      .[] |
+      . as $entry |
+      ($entry.key + 1) as $idx |
+      $entry.value as $convo |
+      (
+        $convo.members |
+        map("@" + .handle) |
+        join(", ")
+      ) as $members |
+      ($convo.unreadCount // 0) as $unread |
+      ($convo.id) as $id |
+      (
+        if $convo | has("lastMessage")
+        then
+          ($convo.lastMessage.text // "")
+        else
+          ""
+        end
+      ) as $last_msg |
+      (
+        if $convo | has("lastMessage")
+        then
+          ($convo.lastMessage.sentAt // "")
+        else
+          ""
+        end
+      ) as $sent_at |
+      "\($idx). \($members)  [\($unread) unread]  [id:\($id)]",
+      (if $last_msg != "" then "  \"\($last_msg)\"  (\($sent_at))" else empty end)
+    '
+  fi
+
+  cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+  update_session_file "${SESSION_KEY_LISTCONVOS_CURSOR}=${cursor}"
+
+  debug 'core_convo_list' 'END'
+}
+
+core_convo_open()
+{
+  param_did="$1"
+  param_output_json="$2"
+
+  debug 'core_convo_open' 'START'
+  debug 'core_convo_open' "param_did:${param_did}"
+  debug 'core_convo_open' "param_output_json:${param_output_json}"
+
+  result=`api chat.bsky.convo.getConvoForMembers ${param_did}`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error 'convo open command error occurred'
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _pn "${result}"
+  else
+    _p "${result}" | jq -r '
+      .convo as $convo |
+      (
+        $convo.members |
+        map("@" + .handle) |
+        join(", ")
+      ) as $members |
+      "convoId: \($convo.id)",
+      "members: \($members)"
+    '
+  fi
+
+  debug 'core_convo_open' 'END'
+}
+
+core_convo_read()
+{
+  param_convo_id="$1"
+  param_limit="$2"
+  param_next="$3"
+  param_output_json="$4"
+
+  debug 'core_convo_read' 'START'
+  debug 'core_convo_read' "param_convo_id:${param_convo_id}"
+  debug 'core_convo_read' "param_limit:${param_limit}"
+  debug 'core_convo_read' "param_next:${param_next}"
+  debug 'core_convo_read' "param_output_json:${param_output_json}"
+
+  read_session_file
+
+  if [ -n "${param_next}" ]
+  then
+    cursor="${SESSION_GETMESSAGES_CURSOR}"
+  else
+    cursor=''
+  fi
+
+  if [ "${cursor}" = "${CURSOR_TERMINATE}" ]
+  then
+    if [ -z "${param_output_json}" ]
+    then
+      _pn '(next messages not found)'
+    fi
+    return 0
+  fi
+
+  result=`api chat.bsky.convo.getMessages "${param_convo_id}" "${param_limit}" "${cursor}"`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error 'convo read command error occurred'
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _pn "${result}"
+  else
+    _p "${result}" | jq -r --arg VIEW_TEMPLATE_CREATED_AT "${VIEW_TEMPLATE_CREATED_AT}" '
+      .messages |
+      to_entries |
+      .[] |
+      . as $entry |
+      ($entry.key + 1) as $idx |
+      $entry.value as $msg |
+      (if $msg | has("sender") then ("@" + ($msg.sender.handle // $msg.sender.did)) else "@unknown" end) as $sender |
+      ($msg.sentAt // "" | . as $raw | if test("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}") then [split(".")[0],"Z"] | join("") | try fromdate catch $raw | try strflocaltime("%F %X(%Z)") catch $raw else $raw end) as $sent_at |
+      ($msg.text // "") as $text |
+      (if ($msg | has("reactions")) and ($msg.reactions | length > 0) then ("  Reactions: " + ($msg.reactions | map(.value + (if .sender then " (@" + .sender.handle + ")" else "" end)) | join(", "))) else "" end) as $reactions |
+      "[\($idx)] \($sender)  \($sent_at)",
+      (if $text != "" then "  \($text)" else empty end),
+      (if $reactions != "" then $reactions else empty end)
+    '
+  fi
+
+  cursor=`_p "${result}" | jq -r '.cursor // "'"${CURSOR_TERMINATE}"'"'`
+  update_session_file "${SESSION_KEY_GETMESSAGES_CURSOR}=${cursor}"
+
+  debug 'core_convo_read' 'END'
+}
+
+core_convo_send()
+{
+  param_convo_id="$1"
+  param_text="$2"
+  param_output_json="$3"
+
+  debug 'core_convo_send' 'START'
+  debug 'core_convo_send' "param_convo_id:${param_convo_id}"
+  debug 'core_convo_send' "param_output_json:${param_output_json}"
+
+  result=`api chat.bsky.convo.sendMessage "${param_convo_id}" "${param_text}"`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error 'convo send command error occurred'
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _pn "${result}"
+  else
+    msg_id=`_p "${result}" | jq -r '.id // ""'`
+    _pn "Message sent. id: ${msg_id}"
+  fi
+
+  debug 'core_convo_send' 'END'
+}
+
+core_convo_react()
+{
+  param_action="$1"
+  param_convo_id="$2"
+  param_message_id="$3"
+  param_emoji="$4"
+  param_output_json="$5"
+
+  debug 'core_convo_react' 'START'
+  debug 'core_convo_react' "param_action:${param_action}"
+  debug 'core_convo_react' "param_convo_id:${param_convo_id}"
+  debug 'core_convo_react' "param_message_id:${param_message_id}"
+  debug 'core_convo_react' "param_emoji:${param_emoji}"
+  debug 'core_convo_react' "param_output_json:${param_output_json}"
+
+  case "${param_action}" in
+    add)
+      endpoint='chat.bsky.convo.addReaction'
+      ;;
+    remove)
+      endpoint='chat.bsky.convo.removeReaction'
+      ;;
+    *)
+      error "core_convo_react: unknown action: ${param_action}"
+      ;;
+  esac
+
+  result=`api "${endpoint}" "${param_convo_id}" "${param_message_id}" "${param_emoji}"`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error "convo react command error occurred"
+  fi
+
+  if [ -n "${param_output_json}" ]
+  then
+    _pn "${result}"
+  else
+    _pn "Reaction ${param_action}ed: ${param_emoji}"
+  fi
+
+  debug 'core_convo_react' 'END'
+}
+
+core_convo_log()
+{
+  param_cursor="$1"
+  param_output_json="$2"
+
+  debug 'core_convo_log' 'START'
+  debug 'core_convo_log' "param_cursor:${param_cursor}"
+  debug 'core_convo_log' "param_output_json:${param_output_json}"
+
+  result=`api chat.bsky.convo.getLog "${param_cursor}"`
+  status=$?
+  if [ $status -ne 0 ]
+  then
+    error 'convo log command error occurred'
+  fi
+
+  _pn "${result}"
+
+  debug 'core_convo_log' 'END'
+}
