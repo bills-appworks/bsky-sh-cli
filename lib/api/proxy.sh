@@ -322,6 +322,116 @@ api_post()
   debug 'api_post' 'END'
 }
 
+if [ -n "${BSKYSHCLI_CHAT_SERVICE_DOMAIN}" ]
+then
+  CHAT_ENDPOINT_BASE_URL="https://${BSKYSHCLI_CHAT_SERVICE_DOMAIN}/xrpc/"
+else
+  CHAT_ENDPOINT_BASE_URL='https://api.bsky.chat/xrpc/'
+fi
+
+api_get_chat_raw_queries()
+{
+  param_endpoint="$1"
+  param_bearer="$2"
+  param_raw_queries="$3"
+
+  debug 'api_get_chat_raw_queries' 'START'
+  debug 'api_get_chat_raw_queries' "param_endpoint:${param_endpoint}"
+  debug 'api_get_chat_raw_queries' "param_raw_queries:${param_raw_queries}"
+
+  if [ -n "${param_bearer}" ]
+  then
+    bearer="${param_bearer}"
+  else
+    read_session_file
+    bearer="${SESSION_ACCESS_JWT}"
+  fi
+  header_authorization=`create_authorization_header "${bearer}"`
+  debug_single 'api_get_chat_raw_queries'
+  api_result=`curl -s -X GET "${CHAT_ENDPOINT_BASE_URL}${param_endpoint}${param_raw_queries}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
+
+  debug 'api_get_chat_raw_queries' 'END'
+}
+
+api_get_chat()
+{
+  param_endpoint="$1"
+  param_bearer="$2"
+  shift
+  shift
+
+  debug 'api_get_chat' 'START'
+  debug 'api_get_chat' "param_endpoint:${param_endpoint}"
+  debug 'api_get_chat' "QUERIES:$*"
+
+  query_parameter=''
+  while [ $# -gt 0 ]
+  do
+    if [ $# -lt 2 ]
+    then
+      error "query key $1 must have query value"
+    fi
+    if [ "$2" != '''' ] && [ -n "$2" ]
+    then
+      query_parameter=`build_query_parameter "${query_parameter}" "$1" "$2"`
+    fi
+    shift
+    shift
+  done
+
+  if [ -n "${param_bearer}" ]
+  then
+    bearer="${param_bearer}"
+  else
+    read_session_file
+    bearer="${SESSION_ACCESS_JWT}"
+  fi
+  header_authorization=`create_authorization_header "${bearer}"`
+  debug_single 'api_get_chat'
+  api_result=`curl -s -X GET "${CHAT_ENDPOINT_BASE_URL}${param_endpoint}${query_parameter}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
+
+  debug 'api_get_chat' 'END'
+}
+
+api_post_chat()
+{
+  param_endpoint="$1"
+  param_body="$2"
+
+  debug 'api_post_chat' 'START'
+  debug 'api_post_chat' "param_endpoint:${param_endpoint}"
+  debug 'api_post_chat' "param_body:${param_body}"
+
+  read_session_file
+  bearer="${SESSION_ACCESS_JWT}"
+  header_authorization=`create_authorization_header "${bearer}"`
+  debug_single 'api_post_chat'
+  api_result=`curl -s -X POST "${CHAT_ENDPOINT_BASE_URL}${param_endpoint}" -H "${HEADER_CONTENT_TYPE}" -H "${HEADER_ACCEPT}" -H "${header_authorization}" -d "${param_body}" -w "\n%{response_code}" -i | tee "${BSKYSHCLI_DEBUG_SINGLE}"`
+  result_header=`_p "${api_result}" | sed -n -e '1,/^\r*$/p'`
+  debug 'HTTP header' "${result_header}"
+  result_body=`_p "${api_result}" | sed -e '1,/^\r$/d' -e '$d'`
+  result_status=`_p "${api_result}" | tail -n 1`
+  debug 'HTTP status' "${result_status}"
+
+  _p "${result_body}"
+
+  debug 'api_post_chat' 'END'
+}
+
 api_post_content_type()
 {
   param_endpoint="$1"

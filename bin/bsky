@@ -101,6 +101,17 @@ BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_OUTPUT_ID=' [did:\($DID)]'
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW='avatar: \($AVATAR)\n\($DISPLAYNAME)\n@\($HANDLE) <VIEW_TEMPLATE_POST_OUTPUT_ID_PLACEHOLDER>\n\($DESCRIPTION)\ncreated at: \($CREATED_AT)'
 BSKYSHCLI_VIEW_TEMPLATE_FOLLOW_SEPARATOR=''
 BSKYSHCLI_VIEW_TEMPLATE_BOOKMARK_META='[bookmarks]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_CONVO_HEAD='\($INDEX). \($MEMBERS)  [\($UNREAD) unread]'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_CONVO_LAST_MSG='  \($LAST_MSG)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_MESSAGE_HEAD='[\($INDEX)] @\($SENDER)  \($SENT_AT)'
+# shellcheck disable=SC2016
+BSKYSHCLI_VIEW_TEMPLATE_MESSAGE_BODY='  \($TEXT)'
+
+SESSION_KEY_LISTCONVOS_CURSOR='SESSION_LISTCONVOS_CURSOR'
+SESSION_KEY_GETMESSAGES_CURSOR='SESSION_GETMESSAGES_CURSOR'
 BSKYSHCLI_LINKCARD_RESIZE_MAX_FILESIZE=2000
 BSKYSHCLI_LINKCARD_RESIZE_CONVERT_PARAM='800x512'
 #BSKYSHCLI_VIDEO_SERVICE_DID='did:web:video.bsky.app'
@@ -211,6 +222,7 @@ commands:
   profile      show profile.
   social       show social informations (follows/followers).
   bookmark     bookmark add, list, or delete.
+  convo        direct messages (list, read, send, react).
   info         show session/meta informations.
   size         show number of characters in text.
   update       update this tool.
@@ -1024,6 +1036,74 @@ note:
 EOS
 
   debug 'output_help_bookmark' 'END'
+}
+
+output_help_convo()
+{
+  debug 'output_help_convo' 'START'
+
+  cat << 'EOS'
+bsky convo command help
+
+usage: bsky convo list [--limit <N>] [--next] [--unread] [--output-json]
+       or
+       bsky convo open --handle <handle> [--did <did>] [--output-json]
+       or
+       bsky convo read --id <convo-id> [--limit <N>] [--next] [--output-json]
+       or
+       bsky convo send --id <convo-id> --text <message> [--output-json]
+       or
+       bsky convo react --id <convo-id> --message-id <msg-id> --emoji <emoji> [--output-json]
+       or
+       bsky convo unreact --id <convo-id> --message-id <msg-id> --emoji <emoji> [--output-json]
+       or
+       bsky convo log [--cursor <cursor>] [--output-json]
+
+subcommands:
+  list      list conversations
+  open      get or create a conversation with a user
+  read      read messages in a conversation
+  send      send a message
+  react     add a reaction to a message
+  unreact   remove a reaction from a message
+  log       get the event log
+
+parameters:
+  --limit <N>
+    Specify the number of items to retrieve (numeric value).
+
+  --next
+    Retrieve the next page using the cursor from the previous request.
+
+  --unread
+    (list only) Filter to show only unread conversations.
+
+  --id <convo-id>
+    Specify the conversation ID.
+
+  --handle <handle>
+    Specify a Bluesky handle to open a conversation with.
+
+  --did <did>
+    Specify a DID to open a conversation with.
+
+  --text <message>
+    Specify the message text to send.
+
+  --message-id <msg-id>
+    Specify the message ID for reactions.
+
+  --emoji <emoji>
+    Specify the emoji for a reaction.
+
+  --cursor <cursor>
+    Specify a cursor for the event log.
+
+  --output-json
+    Output raw JSON response.
+EOS
+
+  debug 'output_help_convo' 'END'
 }
 
 output_help_pref()
@@ -2235,6 +2315,162 @@ command_bookmark()
   debug 'command_bookmark' 'END'
 }
 
+command_convo()
+{
+  debug 'command_convo' 'START'
+
+  subcommand="$1"
+  shift
+
+  case "${subcommand}" in
+    list)
+      parse_parameters '--limit:1 --next:0 --unread:0 --output-json:0' "$@"
+
+      if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+      then
+        verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+        limit="${PARSED_PARAM_KEYVALUE_limit}"
+      else
+        limit=''
+      fi
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      core_convo_list "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_unread}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    open)
+      parse_parameters '--handle:1 --did:1 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      did=`core_resolve_actor '' "${PARSED_PARAM_KEYVALUE_handle}" "${PARSED_PARAM_KEYVALUE_did}"`
+      status=$?
+      if [ $status -ne 0 ]
+      then
+        error 'convo open: could not resolve actor'
+      fi
+      if [ -z "${did}" ]
+      then
+        error 'convo open: --handle or --did must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      core_convo_open "${did}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    read)
+      parse_parameters '--id:1 --limit:1 --next:0 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      convo_id="${PARSED_PARAM_KEYVALUE_id}"
+      if [ -z "${convo_id}" ]
+      then
+        error 'convo read: --id must be specified'
+      fi
+
+      if [ -n "${PARSED_PARAM_KEYVALUE_limit}" ]
+      then
+        verify_numeric_range 'limit' "${PARSED_PARAM_KEYVALUE_limit}" 1 100
+        limit="${PARSED_PARAM_KEYVALUE_limit}"
+      else
+        limit=''
+      fi
+
+      # shellcheck disable=SC2154
+      core_convo_read "${convo_id}" "${limit}" "${PARSED_PARAM_KEYONLY_next}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    send)
+      parse_parameters '--id:1 --text:1 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      convo_id="${PARSED_PARAM_KEYVALUE_id}"
+      if [ -z "${convo_id}" ]
+      then
+        error 'convo send: --id must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      text="${PARSED_PARAM_KEYVALUE_text}"
+      if [ -z "${text}" ]
+      then
+        error 'convo send: --text must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      core_convo_send "${convo_id}" "${text}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    react)
+      parse_parameters '--id:1 --message-id:1 --emoji:1 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      convo_id="${PARSED_PARAM_KEYVALUE_id}"
+      if [ -z "${convo_id}" ]
+      then
+        error 'convo react: --id must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      message_id="${PARSED_PARAM_KEYVALUE_message_id}"
+      if [ -z "${message_id}" ]
+      then
+        error 'convo react: --message-id must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      emoji="${PARSED_PARAM_KEYVALUE_emoji}"
+      if [ -z "${emoji}" ]
+      then
+        error 'convo react: --emoji must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      core_convo_react 'add' "${convo_id}" "${message_id}" "${emoji}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    unreact)
+      parse_parameters '--id:1 --message-id:1 --emoji:1 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      convo_id="${PARSED_PARAM_KEYVALUE_id}"
+      if [ -z "${convo_id}" ]
+      then
+        error 'convo unreact: --id must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      message_id="${PARSED_PARAM_KEYVALUE_message_id}"
+      if [ -z "${message_id}" ]
+      then
+        error 'convo unreact: --message-id must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      emoji="${PARSED_PARAM_KEYVALUE_emoji}"
+      if [ -z "${emoji}" ]
+      then
+        error 'convo unreact: --emoji must be specified'
+      fi
+
+      # shellcheck disable=SC2154
+      core_convo_react 'remove' "${convo_id}" "${message_id}" "${emoji}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    log)
+      parse_parameters '--cursor:1 --output-json:0' "$@"
+
+      # dynamic assignment in parse_parameters
+      # shellcheck disable=SC2154
+      core_convo_log "${PARSED_PARAM_KEYVALUE_cursor}" "${PARSED_PARAM_KEYONLY_output_json}"
+      ;;
+    help|*)
+      output_help_convo
+      ;;
+  esac
+
+  debug 'command_convo' 'END'
+}
+
 command_pref()
 {
   debug 'command_pref' 'START'
@@ -2604,6 +2840,11 @@ case $1 in
     require_session
     shift
     command_bookmark "$@"
+    ;;
+  convo)
+    require_session
+    shift
+    command_convo "$@"
     ;;
   pref)  # non-public command
     require_session
